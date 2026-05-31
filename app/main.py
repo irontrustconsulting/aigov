@@ -1,8 +1,8 @@
 """
 FastAPI application entry point.
 
-For the foundation phase this holds only a health check. Routers get included
-here as you build them (e.g. app.include_router(systems.router)).
+Routers are included here under the /v1 prefix. Health checks stay at the root
+(unversioned) so liveness/readiness probes have a stable path.
 """
 
 from fastapi import Depends, FastAPI
@@ -11,11 +11,16 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
+from app.routers.v1 import tenants, reference
 
 app = FastAPI(
     title="AI Governance API",
     debug=settings.debug,
 )
+
+# Versioned API surface.
+app.include_router(tenants.router, prefix="/v1")
+app.include_router(reference.router, prefix="/v1")
 
 
 @app.get("/health")
