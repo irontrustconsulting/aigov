@@ -1,0 +1,46 @@
+# Seed data: OWASP Top 10 for LLM Applications (starter subset).
+#
+# This is CONTENT, version-controlled and hand-editable. The loader
+# (scripts/seed_risks.py) reads it and upserts into the `risk` table,
+# keyed on `code` (so re-running is idempotent — edits here get applied,
+# nothing is duplicated).
+#
+# Field reference (maps to the Risk model):
+#   code          - YOUR identifier for the risk (unique in your system)
+#   title         - human-readable name
+#   layer         - enum value: technical_security | governance_rights | adversarial_threat
+#   source        - enum value: owasp_llm | nist_ai_rmf | iso_42001 | iso_42005 | mitre_atlas | internal
+#   source_ref    - the originating framework's own identifier (may equal code)
+#   reference_url - link to the authoritative source entry (optional)
+#   description   - prose; the ">" folds wrapped lines into one paragraph
+
+- code: LLM01
+  title: Prompt Injection
+  layer: technical_security
+  source: owasp_llm
+  source_ref: LLM01
+  reference_url: https://genai.owasp.org/llmrisk/llm01-prompt-injection/
+  description: >
+    Crafted inputs manipulate the model into unintended behaviour, causing it
+    to ignore prior instructions or its guardrails, whether directly via user
+    input or indirectly via content it ingests.
+
+- code: LLM02
+  title: Sensitive Information Disclosure
+  layer: technical_security
+  source: owasp_llm
+  source_ref: LLM02
+  reference_url: https://genai.owasp.org/llmrisk/llm02-sensitive-information-disclosure/
+  description: >
+    The model exposes confidential data through its output, leaking
+    proprietary, personal, or otherwise restricted information.
+
+- code: LLM05
+  title: Improper Output Handling
+  layer: technical_security
+  source: owasp_llm
+  source_ref: LLM05
+  reference_url: https://genai.owasp.org/llmrisk/llm05-improper-output-handling/
+  description: >
+    Downstream components trust model output without validation or encoding,
+    allowing that output to inject into and compromise those systems.

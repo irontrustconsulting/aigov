@@ -1,0 +1,17 @@
+# Seed data: Risk <-> Control cross-map (representative sample).
+# References risks and controls by their human-readable codes; the loader
+# resolves them to ids. Both the risk and the control must already be seeded.
+#
+# strength: optional qualifier — e.g. "full" | "partial"
+
+- risk_code: LLM01          # Prompt Injection
+  control_code: HO-01       # Human Oversight
+  strength: partial
+
+- risk_code: LLM01
+  control_code: AC-01       # Access Control Policy
+  strength: partial
+
+- risk_code: LLM05          # Improper Output Handling
+  control_code: OUT-01      # Output Validation
+  strength: full

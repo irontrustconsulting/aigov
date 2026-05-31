@@ -1,0 +1,35 @@
+# Seed data: global catalogue (representative sample).
+# Nested by ownership: vendor -> products -> (facts, risks).
+# `risks` lists Risk codes that this product typically carries (resolved to
+# ids by the loader; the risks must already be seeded).
+#
+# provenance enum values: ai_suggested | catalogue_curated | user_confirmed | user_amended
+
+- name: Adobe
+  products:
+    - name: Firefly
+      taxonomy_tags: ["image_generation", "content_creation"]
+      facts:
+        - key: data_residency
+          value: {region: "configurable"}
+          source_label: "Adobe Trust Center"
+          provenance: catalogue_curated
+        - key: trains_on_customer_data
+          value: {answer: false}
+          source_label: "Adobe DPA"
+          provenance: catalogue_curated
+      risks:
+        - LLM05            # Improper Output Handling (e.g. provenance/IP)
+
+- name: OpenAI
+  products:
+    - name: ChatGPT Enterprise
+      taxonomy_tags: ["chatbot", "text_generation"]
+      facts:
+        - key: trains_on_customer_data
+          value: {answer: false}
+          source_label: "OpenAI Enterprise Privacy"
+          provenance: catalogue_curated
+      risks:
+        - LLM01            # Prompt Injection
+        - LLM02            # Sensitive Information Disclosure

@@ -1,0 +1,194 @@
+"""
+Assessment layer: per-use-case classification and the AIIA (with its
+feeding analyses), plus the findings that tie risks, controls and evidence
+together.
+
+Decisions (PRD 4.4 / 4.5)
+-------------------------
+* Classification is per use case, versioned, and ALWAYS carries a rationale
+  + the answers that produced it (CLS-3) — defensibility.
+* Assessment of type AIIA is the primary record; FRIA/DPIA/MODEL_RISK are
+  *also* Assessment rows linked to the same use case via `parent_aiia_id`
+  (they feed the AIIA, AIIA-3). One AIIA per use case is enforced by a
+  partial unique index (see migration notes).
+* AssessmentItem is the workhorse: a single finding/answer that can name a
+  Risk, attach Evidence, and link to Controls — so one item can satisfy
+  several controls across frameworks (the cross-map pays off here).
+* Every place the system asserts a default (classification result, proposed
+  risks, drafted text) carries provenance + is overridable + the override is
+  tracked (PRD 1.5). Overrides are recorded as AuditEvents and on the item.
+"""
+
+from __future__ import annotations
+
+import uuid
+from typing import List
+
+from sqlalchemy import (
+    String, Text, ForeignKey, Enum as SAEnum, Boolean, Integer, DateTime,
+)
+from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from datetime import datetime
+
+from .base import (
+    Base, TimestampMixin, uuid_pk,
+    EUAIActTier, AssessmentType, AssessmentStatus, ProvenanceConfidence,
+    CoverageStatus,
+)
+
+
+class Classification(Base, TimestampMixin):
+    """A versioned EU AI Act classification of a use case (PRD 4.4)."""
+    __tablename__ = "classification"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("tenant.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    use_case_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("use_case.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    tier: Mapped[EUAIActTier] = mapped_column(
+        SAEnum(EUAIActTier, name="eu_ai_act_tier"), nullable=False,
+    )
+    # The basis: which Annex/criteria drove it (shown reasoning, CLS-2).
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    # The questionnaire answers that produced the result (CLS-3).
+    answers_blob: Mapped[dict] = mapped_column(JSONB, default=dict)
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    is_current: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    # Was the system's proposed tier overridden by a human? (1.5 tracked dev.)
+    overridden: Mapped[bool] = mapped_column(Boolean, default=False)
+    proposed_tier: Mapped[EUAIActTier | None] = mapped_column(
+        SAEnum(EUAIActTier, name="eu_ai_act_tier")
+    )
+
+    use_case: Mapped["UseCase"] = relationship(back_populates="classifications")
+
+
+class Assessment(Base, TimestampMixin):
+    """An assessment record. type=AIIA is primary (one per use case);
+    FRIA/DPIA/MODEL_RISK feed the AIIA via parent_aiia_id."""
+    __tablename__ = "assessment"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("tenant.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    use_case_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("use_case.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    type: Mapped[AssessmentType] = mapped_column(
+        SAEnum(AssessmentType, name="assessment_type"), nullable=False,
+    )
+    # Feeders point at their AIIA; the AIIA itself has parent_aiia_id NULL.
+    parent_aiia_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("assessment.id", ondelete="CASCADE"),
+        index=True,
+    )
+    status: Mapped[AssessmentStatus] = mapped_column(
+        SAEnum(AssessmentStatus, name="assessment_status"),
+        default=AssessmentStatus.DRAFT, nullable=False,
+    )
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    residual_risk_summary: Mapped[str | None] = mapped_column(Text)
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    use_case: Mapped["UseCase"] = relationship(back_populates="assessments")
+    feeders: Mapped[List["Assessment"]] = relationship(
+        backref="parent_aiia", remote_side="Assessment.id",
+    )
+    items: Mapped[List["AssessmentItem"]] = relationship(
+        back_populates="assessment", cascade="all, delete-orphan"
+    )
+
+
+class AssessmentItem(Base, TimestampMixin):
+    """A single finding/answer within an assessment. The connective tissue:
+    optionally names a Risk, can carry several control links (AssessmentItemControl)
+    and evidence links (AssessmentItemEvidence). Carries provenance for the
+    strong-default/shown-reasoning/override pattern (1.5)."""
+    __tablename__ = "assessment_item"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("tenant.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("assessment.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    # Optional link to a library risk being assessed/treated here.
+    risk_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("risk.id", ondelete="SET NULL"),
+        index=True,
+    )
+    prompt: Mapped[str | None] = mapped_column(Text)     # the question/section
+    response: Mapped[str | None] = mapped_column(Text)   # the human answer
+    likelihood: Mapped[int | None] = mapped_column(Integer)
+    severity: Mapped[int | None] = mapped_column(Integer)
+    mitigation_plan: Mapped[str | None] = mapped_column(Text)  # treatment (PRD 4.1)
+    # Provenance of any system-proposed content in this item (1.5):
+    provenance: Mapped[ProvenanceConfidence] = mapped_column(
+        SAEnum(ProvenanceConfidence, name="provenance_confidence"),
+        default=ProvenanceConfidence.USER_CONFIRMED,
+    )
+    ai_suggested_text: Mapped[str | None] = mapped_column(Text)  # kept for audit
+
+    assessment: Mapped["Assessment"] = relationship(back_populates="items")
+    control_links: Mapped[List["AssessmentItemControl"]] = relationship(
+        back_populates="item", cascade="all, delete-orphan"
+    )
+    evidence_links: Mapped[List["AssessmentItemEvidence"]] = relationship(
+        back_populates="item", cascade="all, delete-orphan"
+    )
+
+
+class AssessmentItemControl(Base):
+    """Link an assessment finding to the control(s) it evidences. Because a
+    control maps to multiple frameworks, one link here propagates coverage
+    across ISO 42001 + EU AI Act simultaneously."""
+    __tablename__ = "assessment_item_control"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    item_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("assessment_item.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    control_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("control.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    coverage: Mapped[CoverageStatus] = mapped_column(
+        SAEnum(CoverageStatus, name="coverage_status"),
+        default=CoverageStatus.PARTIAL,
+    )
+
+    item: Mapped["AssessmentItem"] = relationship(back_populates="control_links")
+
+
+class AssessmentItemEvidence(Base):
+    """Link an assessment finding to a piece of evidence. Evidence is reusable
+    across items/controls (PRD 4.8 EVD-1), hence the join table."""
+    __tablename__ = "assessment_item_evidence"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    item_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("assessment_item.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    evidence_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("evidence.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+
+    item: Mapped["AssessmentItem"] = relationship(back_populates="evidence_links")

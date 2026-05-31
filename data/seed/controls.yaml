@@ -1,0 +1,40 @@
+# Seed data: Control library (representative sample).
+# Each control nests its framework mappings inline — one control can satisfy
+# several frameworks at once (that cross-walk is what lets one piece of
+# evidence cover multiple obligations).
+#
+# framework enum values: iso_42001 | iso_42005 | eu_ai_act | nist_ai_rmf
+
+- code: AC-01
+  title: Access Control Policy
+  description: >
+    Establish, document and maintain a policy governing who may access AI
+    systems and the data they process, with least-privilege as the default.
+  frameworks:
+    - framework: iso_42001
+      clause_ref: "A.6.2.1"
+      notes: Management-system control for access governance.
+    - framework: eu_ai_act
+      clause_ref: "Art. 15"
+      notes: Accuracy, robustness and cybersecurity expectations.
+
+- code: HO-01
+  title: Human Oversight
+  description: >
+    Ensure a qualified human can understand, monitor and intervene in the
+    AI system's operation, including the ability to halt or override it.
+  frameworks:
+    - framework: eu_ai_act
+      clause_ref: "Art. 14"
+      notes: Human oversight requirement for high-risk systems.
+    - framework: iso_42005
+      clause_ref: "Impact: oversight"
+
+- code: OUT-01
+  title: Output Validation
+  description: >
+    Validate, sanitise and encode AI system output before it is consumed by
+    downstream systems or presented to users.
+  frameworks:
+    - framework: iso_42001
+      clause_ref: "A.8.3"

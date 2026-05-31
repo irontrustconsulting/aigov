@@ -1,0 +1,48 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+
+    container_name: irontrustai_postgres
+    environment:
+      # Bootstrap superuser = the OWNER / migration / admin identity.
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      APP_ROLE: ${APP_ROLE}
+      # Password for the restricted runtime role created by the init script.
+      # Must match the password in the app's DATABASE_URL.
+      APP_RUNTIME_PASSWORD: ${APP_RUNTIME_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - irontrustai_pgdata:/var/lib/postgresql/data
+      # Init scripts run once, on first volume init, as the bootstrap superuser.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: irontrustai_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"    # S3 API endpoint (your app talks here)
+      - "9001:9001"    # web console (browse buckets in a browser)
+    volumes:
+      - irontrustai_miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  irontrustai_pgdata:
+  irontrustai_miniodata:

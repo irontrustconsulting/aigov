@@ -1,0 +1,39 @@
+"""
+Import all models here so that Base.metadata is fully populated for
+Alembic autogenerate and for `Base.metadata.create_all` in tests.
+
+    from models import Base
+    target_metadata = Base.metadata   # in alembic/env.py
+"""
+
+from .base import Base  # noqa: F401
+
+# Identity & tenancy
+from .identity import Tenant, User, Membership  # noqa: F401
+
+# Core domain
+from .domain import (  # noqa: F401
+    CatalogueVendor, CatalogueProduct, CatalogueFact, CatalogueProductRisk,
+    System, UseCase, VendorApproval, ProductApproval,
+)
+
+# Knowledge assets
+from .knowledge import (  # noqa: F401
+    Control, ControlFrameworkMap, Risk, RiskControlMap,
+)
+
+# Assessment
+from .assessment import (  # noqa: F401
+    Classification, Assessment, AssessmentItem,
+    AssessmentItemControl, AssessmentItemEvidence,
+)
+
+# Evidence, audit, lifecycle
+from .lifecycle import (  # noqa: F401
+    Evidence, AuditEvent, LifecycleTransition,
+)
+
+from app.models.taxonomy import (  # noqa: F401
+    EUAIActCategory, EUAIActSubcategory, ProductCategory,
+    ProductCategoryMembership, ProductCategoryEUMapping,
+)
