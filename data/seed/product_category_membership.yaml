@@ -1,0 +1,19 @@
+# Seed data: product -> product-category membership (M:N).
+#
+# Links the catalogue products you already seeded to the user-facing categories,
+# so the wizard drill-down (category -> vendors -> products) has data to return.
+# A product may belong to several categories.
+#
+# References by name (product) and code (category); loader resolves to ids.
+# Seed product_category and the catalogue first.
+
+# Firefly (Adobe) — image generation.
+- product_name: Firefly
+  product_category_code: PROD_IMAGE
+
+# ChatGPT Enterprise (OpenAI) — a general assistant; sits in writing AND can be
+# a customer-facing chatbot, demonstrating multi-category membership.
+- product_name: ChatGPT Enterprise
+  product_category_code: PROD_WRITING
+- product_name: ChatGPT Enterprise
+  product_category_code: CE_CHATBOT

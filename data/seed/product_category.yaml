@@ -1,0 +1,47 @@
+# Seed data: user-facing product categories (familiar business vocabulary).
+#
+# These are the wizard's drill-down vocabulary — what a normal business user
+# recognises, NOT compliance language. Hierarchical via `parent` (a parent
+# code; null/absent = top-level). The bridge file maps these to EU AI Act
+# subcategories for the governance translation.
+#
+# Keep this vocabulary user-friendly. The compliance mapping happens separately.
+
+# --- Top-level groups ---
+- code: HR_RECRUITMENT
+  name: HR & Recruitment
+  description: Tools used in hiring, people management and HR operations.
+
+- code: PRODUCTIVITY
+  name: Productivity & Content
+  description: General assistants for writing, summarising and content creation.
+
+- code: CUSTOMER_ENGAGEMENT
+  name: Customer Engagement
+  description: Chatbots and assistants that interact with customers.
+
+# --- Subcategories (drill-down level 2) ---
+- code: HR_HIRING
+  name: Hiring & Candidate Screening
+  parent: HR_RECRUITMENT
+  description: Sourcing, screening, ranking and evaluating candidates.
+
+- code: HR_PERFORMANCE
+  name: Performance & Workforce Management
+  parent: HR_RECRUITMENT
+  description: Task allocation, monitoring and performance evaluation.
+
+- code: PROD_WRITING
+  name: Writing & Drafting Assistants
+  parent: PRODUCTIVITY
+  description: Drafting, editing and summarising text.
+
+- code: PROD_IMAGE
+  name: Image & Media Generation
+  parent: PRODUCTIVITY
+  description: Generating or editing images and other media.
+
+- code: CE_CHATBOT
+  name: Customer-facing Chatbots
+  parent: CUSTOMER_ENGAGEMENT
+  description: Conversational agents that interact directly with customers.

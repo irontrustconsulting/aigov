@@ -1,0 +1,39 @@
+# Seed data: the BRIDGE — product category -> EU AI Act subcategory.
+#
+# ⚠️  REGULATORY MAPPING — VERIFY AS THE DOMAIN EXPERT.
+# Maps user-facing product categories to the governing EU AI Act subcategory.
+# is_primary: true marks the proposed default. Per the single-governing-tier
+# rule, the PRIMARY points at the HIGHEST-RISK applicable subcategory (propose
+# the stricter classification; the user justifies down via override/exception).
+# A category may list non-primary alternatives (other plausible regulated uses).
+#
+# References both sides by code; loader resolves to ids.
+
+# Hiring & screening -> recruitment (HIGH). The defining high-risk employment case.
+- product_category_code: HR_HIRING
+  eu_ai_act_subcategory_code: EMP-RECRUIT
+  is_primary: true
+
+# Performance & workforce mgmt -> worker management decisions (HIGH).
+- product_category_code: HR_PERFORMANCE
+  eu_ai_act_subcategory_code: EMP-MANAGE
+  is_primary: true
+
+# Writing assistants -> synthetic text generation transparency (LIMITED).
+# (No high-risk trigger for general drafting; transparency/marking may apply.)
+- product_category_code: PROD_WRITING
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+
+# Image generation -> synthetic content marking / deep-fake transparency (LIMITED).
+- product_category_code: PROD_IMAGE
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+- product_category_code: PROD_IMAGE
+  eu_ai_act_subcategory_code: TRANS-DEEPFAKE
+  is_primary: false
+
+# Customer chatbots -> direct-interaction transparency (LIMITED).
+- product_category_code: CE_CHATBOT
+  eu_ai_act_subcategory_code: TRANS-DIRECT-INTERACTION
+  is_primary: true

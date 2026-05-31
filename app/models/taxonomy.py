@@ -85,6 +85,8 @@ class EUAIActSubcategory(Base, TimestampMixin):
         SAEnum(EUAIActTier, name="eu_ai_act_tier"), nullable=False, index=True,
     )
 
+    legal_ref: Mapped[str | None] = mapped_column(String(120))
+
     category: Mapped["EUAIActCategory"] = relationship(back_populates="subcategories")
     eu_mappings: Mapped[list["ProductCategoryEUMapping"]] = relationship(
         back_populates="eu_ai_act_subcategory", cascade="all, delete-orphan"

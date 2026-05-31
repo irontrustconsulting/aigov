@@ -1,0 +1,383 @@
+# Seed data: EU AI Act governance taxonomy — SOURCE-GROUNDED.
+#
+# Built from the text of the EU AI Act provided by the domain owner:
+#   - Annex III (Art. 6(2))  -> high_risk
+#   - Article 5              -> prohibited
+#   - Article 50            -> limited_risk (transparency obligations)
+#
+# ⚠️  The domain owner (ISO 42001 auditor) vouches for regulatory accuracy.
+# This file transcribes the structure/wording of the source texts. Tier
+# assignments: everything in Annex III is high_risk by definition; everything
+# in Art. 5 is prohibited; Art. 50 systems carry transparency (limited_risk)
+# obligations. Exclusions/carve-outs are kept PROMINENT in descriptions
+# (structured exception handling is a later enhancement).
+#
+# Single governing tier per use case (highest applicable). Where a system also
+# carries a transparency obligation on top of a high-risk classification, that
+# is handled later via the obligations/controls layer, not as a competing tier.
+#
+# Fields: code (readable), legal_ref (citation, for defensibility), name,
+# description; subcategories also carry tier.
+# tier enum values: prohibited | high_risk | limited_risk | minimal_risk | unclassified
+
+# ===========================================================================
+# HIGH-RISK  (Annex III, Art. 6(2)) — all subcategories tier: high_risk
+# ===========================================================================
+
+- code: HR-BIOMETRICS
+  name: Biometrics
+  description: >
+    High-risk biometric systems, in so far as their use is permitted under
+    relevant Union or national law.
+  subcategories:
+    - code: BIO-REMOTE-ID
+      legal_ref: "Annex III(1)(a)"
+      name: Remote biometric identification
+      tier: high_risk
+      description: >
+        Remote biometric identification systems. EXCLUDES systems used solely
+        for biometric verification whose only purpose is to confirm a person is
+        who they claim to be.
+    - code: BIO-CATEGORISATION
+      legal_ref: "Annex III(1)(b)"
+      name: Biometric categorisation by sensitive attributes
+      tier: high_risk
+      description: >
+        Biometric categorisation according to sensitive or protected attributes
+        or characteristics based on inference of those attributes.
+    - code: BIO-EMOTION
+      legal_ref: "Annex III(1)(c)"
+      name: Emotion recognition
+      tier: high_risk
+      description: >
+        Emotion recognition systems. (Note: prohibited outright in workplace and
+        education contexts per Art. 5; transparency duty per Art. 50(3).)
+
+- code: HR-CRITICAL-INFRA
+  name: Critical infrastructure
+  description: >
+    Safety components in the management and operation of critical infrastructure.
+  subcategories:
+    - code: INFRA-SAFETY-COMPONENT
+      legal_ref: "Annex III(2)"
+      name: Safety components for critical infrastructure
+      tier: high_risk
+      description: >
+        AI as safety components in the management/operation of critical digital
+        infrastructure, road traffic, or supply of water, gas, heating, electricity.
+
+- code: HR-EDUCATION
+  name: Education and vocational training
+  description: >
+    AI used in access, evaluation and monitoring within education and vocational
+    training institutions.
+  subcategories:
+    - code: EDU-ADMISSION
+      legal_ref: "Annex III(3)(a)"
+      name: Access, admission and assignment
+      tier: high_risk
+      description: >
+        Determining access or admission, or assigning persons to educational and
+        vocational training institutions at all levels.
+    - code: EDU-EVALUATION
+      legal_ref: "Annex III(3)(b)"
+      name: Evaluation of learning outcomes
+      tier: high_risk
+      description: >
+        Evaluating learning outcomes, including where used to steer the learning
+        process.
+    - code: EDU-ASSESS-LEVEL
+      legal_ref: "Annex III(3)(c)"
+      name: Assessing appropriate level of education
+      tier: high_risk
+      description: >
+        Assessing the appropriate level of education an individual will receive or
+        be able to access.
+    - code: EDU-PROCTORING
+      legal_ref: "Annex III(3)(d)"
+      name: Monitoring prohibited behaviour during tests
+      tier: high_risk
+      description: >
+        Monitoring and detecting prohibited behaviour of students during tests.
+
+- code: HR-EMPLOYMENT
+  name: Employment, workers management and access to self-employment
+  description: >
+    AI used in recruitment, selection, and management of workers.
+  subcategories:
+    - code: EMP-RECRUIT
+      legal_ref: "Annex III(4)(a)"
+      name: Recruitment and selection
+      tier: high_risk
+      description: >
+        Recruitment or selection of persons — placing targeted job advertisements,
+        analysing and filtering applications, and evaluating candidates.
+    - code: EMP-MANAGE
+      legal_ref: "Annex III(4)(b)"
+      name: Work decisions, task allocation and performance monitoring
+      tier: high_risk
+      description: >
+        Decisions affecting terms of work relationships, promotion/termination,
+        task allocation based on behaviour/traits, or monitoring and evaluating
+        performance and behaviour.
+
+- code: HR-ESSENTIAL-SERVICES
+  name: Access to essential private and public services and benefits
+  description: >
+    AI used to determine access to, or terms of, essential services and benefits.
+  subcategories:
+    - code: SVC-PUBLIC-BENEFITS
+      legal_ref: "Annex III(5)(a)"
+      name: Eligibility for public assistance benefits and services
+      tier: high_risk
+      description: >
+        Used by/for public authorities to evaluate eligibility for essential public
+        assistance benefits and services (incl. healthcare), and to grant, reduce,
+        revoke or reclaim them.
+    - code: SVC-CREDIT
+      legal_ref: "Annex III(5)(b)"
+      name: Creditworthiness and credit scoring
+      tier: high_risk
+      description: >
+        Evaluating creditworthiness or establishing credit score. EXCLUDES AI used
+        for the purpose of detecting financial fraud.
+    - code: SVC-INSURANCE
+      legal_ref: "Annex III(5)(c)"
+      name: Risk assessment and pricing for life and health insurance
+      tier: high_risk
+      description: >
+        Risk assessment and pricing in relation to natural persons for life and
+        health insurance.
+    - code: SVC-EMERGENCY
+      legal_ref: "Annex III(5)(d)"
+      name: Emergency call classification and dispatch
+      tier: high_risk
+      description: >
+        Evaluating/classifying emergency calls, or dispatching or prioritising
+        emergency first-response services and patient triage.
+
+- code: HR-LAW-ENFORCEMENT
+  name: Law enforcement
+  description: >
+    AI used by or for law enforcement, in so far as permitted under relevant Union
+    or national law.
+  subcategories:
+    - code: LAW-VICTIM-RISK
+      legal_ref: "Annex III(6)(a)"
+      name: Risk of becoming a victim of crime
+      tier: high_risk
+      description: >
+        Assessing the risk of a natural person becoming the victim of criminal
+        offences.
+    - code: LAW-POLYGRAPH
+      legal_ref: "Annex III(6)(b)"
+      name: Polygraphs and similar tools
+      tier: high_risk
+      description: >
+        Use as polygraphs or similar tools in support of law enforcement.
+    - code: LAW-EVIDENCE-RELIABILITY
+      legal_ref: "Annex III(6)(c)"
+      name: Reliability of evidence
+      tier: high_risk
+      description: >
+        Evaluating the reliability of evidence in the course of investigation or
+        prosecution of criminal offences.
+    - code: LAW-OFFENDING-RISK
+      legal_ref: "Annex III(6)(d)"
+      name: Risk of offending or re-offending
+      tier: high_risk
+      description: >
+        Assessing the risk of a person offending or re-offending (not solely on
+        the basis of profiling per Art. 3(4) of Directive (EU) 2016/680), or
+        assessing personality traits/characteristics or past criminal behaviour.
+    - code: LAW-PROFILING
+      legal_ref: "Annex III(6)(e)"
+      name: Profiling in detection/investigation
+      tier: high_risk
+      description: >
+        Profiling of natural persons (per Art. 3(4) of Directive (EU) 2016/680) in
+        the course of detection, investigation or prosecution of criminal offences.
+
+- code: HR-MIGRATION
+  name: Migration, asylum and border control management
+  description: >
+    AI used by or for competent authorities in migration/asylum/border control, in
+    so far as permitted under relevant Union or national law.
+  subcategories:
+    - code: MIG-POLYGRAPH
+      legal_ref: "Annex III(7)(a)"
+      name: Polygraphs and similar tools
+      tier: high_risk
+      description: >
+        Use as polygraphs or similar tools by/for competent authorities.
+    - code: MIG-RISK-ASSESS
+      legal_ref: "Annex III(7)(b)"
+      name: Risk assessment of persons entering
+      tier: high_risk
+      description: >
+        Assessing a security, irregular-migration or health risk posed by a person
+        who intends to enter or has entered a Member State.
+    - code: MIG-APPLICATION-EXAM
+      legal_ref: "Annex III(7)(c)"
+      name: Examination of asylum, visa and residence applications
+      tier: high_risk
+      description: >
+        Assisting examination of applications for asylum, visa or residence permits
+        and associated complaints, including assessing reliability of evidence.
+    - code: MIG-DETECT-IDENTIFY
+      legal_ref: "Annex III(7)(d)"
+      name: Detection and identification of persons
+      tier: high_risk
+      description: >
+        Detecting, recognising or identifying natural persons in the migration/
+        asylum/border context. EXCLUDES verification of travel documents.
+
+- code: HR-JUSTICE-DEMOCRACY
+  name: Administration of justice and democratic processes
+  description: >
+    AI used in judicial decision-support and in electoral processes.
+  subcategories:
+    - code: JUST-JUDICIAL-SUPPORT
+      legal_ref: "Annex III(8)(a)"
+      name: Judicial research and application of law
+      tier: high_risk
+      description: >
+        Assisting a judicial authority in researching/interpreting facts and law and
+        applying law to facts, or similar use in alternative dispute resolution.
+    - code: JUST-ELECTION-INFLUENCE
+      legal_ref: "Annex III(8)(b)"
+      name: Influencing elections and voting behaviour
+      tier: high_risk
+      description: >
+        Influencing the outcome of an election/referendum or voting behaviour.
+        EXCLUDES systems whose output natural persons are not directly exposed to,
+        such as tools used to organise/optimise/structure campaigns administratively.
+
+# ===========================================================================
+# PROHIBITED  (Article 5) — all subcategories tier: prohibited
+# ===========================================================================
+
+- code: PROHIBITED
+  name: Prohibited AI practices
+  description: >
+    AI practices banned outright in the EU under Article 5.
+  subcategories:
+    - code: PROHIB-SUBLIMINAL
+      legal_ref: "Art. 5(1)(a)"
+      name: Subliminal, manipulative or deceptive techniques
+      tier: prohibited
+      description: >
+        Subliminal techniques beyond consciousness, or purposefully manipulative/
+        deceptive techniques, that materially distort behaviour and cause or are
+        likely to cause significant harm.
+    - code: PROHIB-EXPLOIT-VULNERABILITY
+      legal_ref: "Art. 5(1)(b)"
+      name: Exploiting vulnerabilities
+      tier: prohibited
+      description: >
+        Exploiting vulnerabilities due to age, disability, or specific social/
+        economic situation, materially distorting behaviour and causing or likely
+        to cause significant harm.
+    - code: PROHIB-SOCIAL-SCORING
+      legal_ref: "Art. 5(1)(c)"
+      name: Social scoring
+      tier: prohibited
+      description: >
+        Evaluating/classifying persons over time based on social behaviour or
+        personal characteristics, where the social score leads to detrimental or
+        unjustified/disproportionate treatment, including in unrelated contexts.
+    - code: PROHIB-PREDICTIVE-POLICING
+      legal_ref: "Art. 5(1)(d)"
+      name: Predictive policing based solely on profiling
+      tier: prohibited
+      description: >
+        Risk assessment to predict a person committing a criminal offence based
+        SOLELY on profiling or personality traits. EXCLUDES systems supporting
+        human assessment already based on objective, verifiable facts directly
+        linked to criminal activity.
+    - code: PROHIB-FACIAL-SCRAPING
+      legal_ref: "Art. 5(1)(e)"
+      name: Untargeted facial-image scraping
+      tier: prohibited
+      description: >
+        Creating or expanding facial-recognition databases through untargeted
+        scraping of facial images from the internet or CCTV footage.
+    - code: PROHIB-EMOTION-WORK-EDU
+      legal_ref: "Art. 5(1)(f)"
+      name: Emotion inference in workplace and education
+      tier: prohibited
+      description: >
+        Inferring emotions of persons in workplace and education institutions.
+        EXCLUDES use intended for medical or safety reasons.
+    - code: PROHIB-BIOMETRIC-SENSITIVE
+      legal_ref: "Art. 5(1)(g)"
+      name: Biometric categorisation by sensitive attributes
+      tier: prohibited
+      description: >
+        Biometric categorisation deducing/inferring race, political opinions, trade
+        union membership, religious/philosophical beliefs, sex life or sexual
+        orientation. EXCLUDES lawful labelling/filtering of lawfully acquired
+        biometric datasets in the area of law enforcement.
+    - code: PROHIB-REALTIME-RBI
+      legal_ref: "Art. 5(1)(h)"
+      name: Real-time remote biometric identification in public (law enforcement)
+      tier: prohibited
+      description: >
+        Real-time remote biometric identification in publicly accessible spaces for
+        law enforcement. Prohibited UNLESS strictly necessary for narrow enumerated
+        objectives (targeted search for victims; prevention of substantial imminent
+        threat/terrorism; localisation/identification of suspects for serious
+        offences) AND subject to judicial authorisation, FRIA (Art. 27) and EU
+        database registration (Art. 49). Treat as prohibited by default.
+
+# ===========================================================================
+# TRANSPARENCY  (Article 50) — all subcategories tier: limited_risk
+# ===========================================================================
+
+- code: TRANSPARENCY
+  name: Transparency-obligation systems
+  description: >
+    Systems carrying transparency/disclosure obligations under Article 50. These
+    obligations may apply IN ADDITION to a high-risk classification (Art. 50(6):
+    without prejudice to Chapter III).
+  subcategories:
+    - code: TRANS-DIRECT-INTERACTION
+      legal_ref: "Art. 50(1)"
+      name: Direct interaction with people (chatbots)
+      tier: limited_risk
+      description: >
+        Systems intended to interact directly with natural persons must inform them
+        they are interacting with an AI. EXCLUDES where obvious to a reasonably
+        informed person, and certain law-enforcement uses.
+    - code: TRANS-SYNTHETIC-CONTENT
+      legal_ref: "Art. 50(2)"
+      name: Synthetic content generation (marking)
+      tier: limited_risk
+      description: >
+        Providers of systems generating synthetic audio/image/video/text must mark
+        outputs as machine-readable and detectable as artificially generated.
+        EXCLUDES assistive standard-editing functions that do not substantially
+        alter input, and certain law-enforcement uses.
+    - code: TRANS-EMOTION-BIOMETRIC-DISCLOSURE
+      legal_ref: "Art. 50(3)"
+      name: Emotion recognition / biometric categorisation disclosure
+      tier: limited_risk
+      description: >
+        Deployers of emotion-recognition or biometric-categorisation systems must
+        inform exposed persons. EXCLUDES certain permitted law-enforcement uses.
+    - code: TRANS-DEEPFAKE
+      legal_ref: "Art. 50(4)"
+      name: Deep fakes (image/audio/video disclosure)
+      tier: limited_risk
+      description: >
+        Deployers must disclose artificially generated/manipulated deep-fake
+        content. Limited disclosure for evidently artistic/satirical/fictional work;
+        excludes certain law-enforcement uses.
+    - code: TRANS-PUBLIC-INTEREST-TEXT
+      legal_ref: "Art. 50(4)"
+      name: AI-generated public-interest text disclosure
+      tier: limited_risk
+      description: >
+        Deployers must disclose AI-generated/manipulated text published to inform
+        the public on matters of public interest. EXCLUDES where human editorial
+        review/responsibility applies, and certain law-enforcement uses.
