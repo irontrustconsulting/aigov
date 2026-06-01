@@ -13,12 +13,20 @@ from app.config import settings
 from app.db import get_db
 from app.routers.v1 import tenants, reference
 
+from app.auth.cognito import verify_cognito_token, CognitoClaims
+
 app = FastAPI(
     title="AI Governance API",
     debug=settings.debug,
 )
 
 # Versioned API surface.
+
+@app.get("/v1/whoami")
+def whoami(claims: CognitoClaims = Depends(verify_cognito_token)) -> dict:
+    return {"sub": claims.sub, "email": claims.email,
+            "name": claims.name, "tenant_id": claims.tenant_id, "role": claims.role}
+
 app.include_router(tenants.router, prefix="/v1")
 app.include_router(reference.router, prefix="/v1")
 

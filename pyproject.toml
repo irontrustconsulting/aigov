@@ -12,6 +12,7 @@ dependencies = [
     "pydantic>=2.10",
     "pydantic-settings>=2.7",        # env-driven Settings
     "python-dotenv>=1.0",            # loads .env in dev
+    "pyjwt[crypto]>=2.13"
 ]
 
 [project.optional-dependencies]
