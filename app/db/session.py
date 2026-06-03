@@ -26,6 +26,20 @@ SessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
+# Resolver engine — used ONLY by identity resolution (get_tenant_context).
+# Bound to irontrustai_resolver: BYPASSRLS, read-only on identity tables.
+resolver_engine = create_engine(
+    settings.resolver_database_url,
+    echo=settings.debug,
+    pool_pre_ping=True,
+)
+
+ResolverSessionLocal = sessionmaker(
+    bind=resolver_engine,
+    autoflush=False,
+    autocommit=False,
+    expire_on_commit=False,
+)
 
 def get_db() -> Generator[Session, None, None]:
     """FastAPI dependency. Yields a session, always closes it.

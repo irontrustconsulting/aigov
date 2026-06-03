@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     # Restricted runtime role: NOBYPASSRLS, DML only. Used by the running app.
     app_role: str
     app_runtime_password: str
+    resolver_db_user: str = "irontrustai_resolver"
+    resolver_db_password: str   # from .env, no default — it's a secret
     # Connection target (same host/port for both roles in dev).
     db_host: str = Field(default="localhost")
     db_port: int = Field(default=5432)
@@ -76,6 +78,18 @@ class Settings(BaseSettings):
             port=self.db_port,
             database=self.postgres_db,
         ).render_as_string(hide_password=False)
+    
+    @property
+    def resolver_database_url(self) -> URL:
+        return URL.create(
+            "postgresql+psycopg",
+            username=self.resolver_db_user,
+            password=self.resolver_db_password,
+            host=self.db_host,
+            port=self.db_port,
+            database=self.postgres_db,
+        )
+       
 
 
 @lru_cache
