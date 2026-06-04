@@ -32,7 +32,13 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     ALTER DEFAULT PRIVILEGES IN SCHEMA public
         GRANT USAGE, SELECT ON SEQUENCES TO ${APP_ROLE};
     
-    -- Dedicated identity-resolution role: sees across tenants (BYPASSRLS) but is
+EOSQL
+
+echo "${APP_ROLE}  rolescreated."
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+
+-- Dedicated identity-resolution role: sees across tenants (BYPASSRLS) but is
     -- fenced to read-only on the three identity tables by its grants alone.
     CREATE ROLE ${APP_RESOLVER_ROLE} LOGIN PASSWORD '${RESOLVER_DB_PASSWORD}' BYPASSRLS;
 
@@ -42,6 +48,39 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     -- It needs to connect and see the schema:
     GRANT CONNECT ON DATABASE irontrustai TO irontrustai_resolver;
     GRANT USAGE ON SCHEMA public TO irontrustai_resolver;
+
+echo "${APP_RESOLVER_ROLE} roles created."
+
 EOSQL
 
-echo "${APP_ROLE} and ${APP_RESOLVER_ROLE} roles created."
+# --- Provisioner role: stands up new tenants (sales-led provisioning) ---
+#
+# One job only: create a new tenant and its first owner. Invoked solely by the
+# platform-admin provisioning path, through its own connection/engine (exactly
+# like the resolver), never by normal request handling.
+#
+# Why BYPASSRLS: provisioning creates a tenant that has no context yet, so the
+# INSERTs can't satisfy tenant-scoped RLS. As with the resolver, the bypass is
+# made safe by GRANTS, not RLS — the role is granted privileges on only the
+# three identity tables, so BYPASSRLS buys it nothing anywhere else
+# (no privilege = no access).
+#
+# Why SELECT/INSERT only (no UPDATE/DELETE) and explicit table grants (NOT
+# ALTER DEFAULT PRIVILEGES like app_runtime): this role only ever *creates*.
+# It must not modify or remove identity rows, and must not silently inherit
+# rights on future tables. Least privilege, scoped by hand.
+#
+# Password from env var PROVISIONER_PASSWORD; must match the provisioner URL in
+# app config. Never hardcoded, never committed.
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE ROLE ${PROVISIONER_DB_USER} WITH LOGIN PASSWORD '${PROVISIONER_DB_PASSWORD}'
+        NOSUPERUSER NOCREATEDB NOCREATEROLE BYPASSRLS;
+
+    GRANT USAGE ON SCHEMA public TO irontrustai_provisioner;
+
+    -- Create-and-read on the three identity tables, and ONLY those.
+    GRANT SELECT, INSERT ON tenant, app_user, membership TO irontrustai_provisioner;
+EOSQL
+
+echo "irontrustai_provisioner role created."

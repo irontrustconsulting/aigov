@@ -41,6 +41,20 @@ ResolverSessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
+# Provisioner engine: used ONLY by the platform-admin provisioning path to
+# stand up a new tenant + its first owner. Mirrors the resolver — a separate,
+# least-privilege connection for exactly one job.
+provisioner_engine = create_engine(
+    settings.provisioner_database_url,
+    echo=settings.debug,
+    pool_pre_ping=True,            # match whatever kwargs your resolver_engine uses
+)
+ProvisionerSessionLocal = sessionmaker(
+    bind=provisioner_engine,
+    autoflush=False,              # we control flush ourselves (flush tenant → Cognito → insert user)
+    expire_on_commit=False,       # keep the created objects usable after commit (for the response)
+)
+
 def get_db() -> Generator[Session, None, None]:
     """FastAPI dependency. Yields a session, always closes it.
 

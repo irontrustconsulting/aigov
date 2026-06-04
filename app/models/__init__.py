@@ -6,7 +6,7 @@ Alembic autogenerate and for `Base.metadata.create_all` in tests.
     target_metadata = Base.metadata   # in alembic/env.py
 """
 
-from .base import Base  # noqa: F401
+from .base import Base, UserRole # noqa: F401
 
 # Identity & tenancy
 from .identity import Tenant, User, Membership  # noqa: F401

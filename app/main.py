@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
-from app.routers.v1 import tenants, reference, systems
+from app.routers.v1 import reference, systems
 
 from app.auth.cognito import verify_cognito_token, CognitoClaims
 
@@ -27,7 +27,6 @@ def whoami(claims: CognitoClaims = Depends(verify_cognito_token)) -> dict:
     return {"sub": claims.sub, "email": claims.email,
             "name": claims.name, "tenant_id": claims.tenant_id, "role": claims.role}
 
-app.include_router(tenants.router, prefix="/v1")
 app.include_router(reference.router, prefix="/v1")
 app.include_router(systems.router, prefix="/v1")
 

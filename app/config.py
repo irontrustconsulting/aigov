@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     app_runtime_password: str
     resolver_db_user: str = "irontrustai_resolver"
     resolver_db_password: str   # from .env, no default — it's a secret
+    provisioner_db_user: str # from .env
+    provisioner_db_password: str   # from .env, no default — it's a secret
     # Connection target (same host/port for both roles in dev).
     db_host: str = Field(default="localhost")
     db_port: int = Field(default=5432)
@@ -56,7 +58,7 @@ class Settings(BaseSettings):
 
     # --- Computed connection URLs (assembled from components above) ---
     @property
-    def database_url(self) -> str:
+    def database_url(self) -> URL:
         """Restricted runtime role — what the app connects as."""
         return URL.create(
             "postgresql+psycopg",
@@ -65,7 +67,7 @@ class Settings(BaseSettings):
             host=self.db_host,
             port=self.db_port,
             database=self.postgres_db,
-        ).render_as_string(hide_password=False)
+        )
 
     @property
     def migration_database_url(self) -> str:
@@ -89,6 +91,18 @@ class Settings(BaseSettings):
             port=self.db_port,
             database=self.postgres_db,
         )
+    @property
+    def provisioner_database_url(self) -> URL:
+        return URL.create(
+            "postgresql+psycopg",
+            username=self.provisioner_db_user,
+            password=self.provisioner_db_password,
+            host=self.db_host,
+            port=self.db_port,
+            database=self.postgres_db,
+        )
+    
+    
        
 
 
