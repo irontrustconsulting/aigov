@@ -55,6 +55,54 @@ ProvisionerSessionLocal = sessionmaker(
     expire_on_commit=False,       # keep the created objects usable after commit (for the response)
 )
 
+# Operator-provisioner engine — used ONLY by the create-operator CLI command.
+# Bound to irontrustai_operator_provisioner: SELECT,INSERT on operator/operator_role;
+# SELECT on role. NOBYPASSRLS (those tables carry no RLS).
+operator_provisioner_engine = create_engine(
+    settings.operator_provisioner_database_url,
+    echo=settings.debug,
+    pool_pre_ping=True,
+)
+
+OperatorProvisionerSessionLocal = sessionmaker(
+    bind=operator_provisioner_engine,
+    autoflush=False,
+    autocommit=False,
+    expire_on_commit=False,
+)
+
+# Platform read-only engine — used ONLY by the operator authZ seam.
+# Bound to irontrustai_platform_ro: BYPASSRLS, SELECT on RBAC tables only.
+platform_ro_engine = create_engine(
+    settings.platform_ro_database_url,
+    echo=settings.debug,
+    pool_pre_ping=True,
+)
+
+PlatformROSessionLocal = sessionmaker(
+    bind=platform_ro_engine,
+    autoflush=False,
+    autocommit=False,
+    expire_on_commit=False,
+)
+
+
+def get_provisioner_db() -> Generator[Session, None, None]:
+    db = ProvisionerSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_platform_ro_db() -> Generator[Session, None, None]:
+    db = PlatformROSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 def get_db() -> Generator[Session, None, None]:
     """FastAPI dependency. Yields a session, always closes it.
 

@@ -29,6 +29,7 @@ get_db dependency that commits at request end can't express that.
 from __future__ import annotations
 
 import uuid
+from typing import TYPE_CHECKING
 
 import boto3
 from botocore.exceptions import ClientError
@@ -37,6 +38,10 @@ from sqlalchemy import select
 from app.config import settings
 from app.db.session import ProvisionerSessionLocal
 from app.models import Tenant, User, Membership, UserRole
+from app.services.audit import record_platform_event
+
+if TYPE_CHECKING:
+    from app.auth.operator_authz import CurrentOperator
 
 
 class ProvisioningError(Exception):
@@ -104,6 +109,8 @@ def provision_tenant(
     slug: str,
     owner_email: str,
     owner_name: str,
+    actor: "CurrentOperator | None" = None,
+    source: str = "cli",
 ) -> tuple[uuid.UUID, uuid.UUID]:
     """Create a tenant and its first owner. Returns (tenant_id, owner_user_id).
 
@@ -154,7 +161,18 @@ def provision_tenant(
             Membership(user_id=user.id, tenant_id=tenant_id, role=UserRole.ADMIN)
         )
 
-        # 5. Commit. If THIS fails, Cognito already holds the user -> compensate.
+        # 5. Stage audit row, then commit atomically.
+        record_platform_event(
+            session,
+            actor=actor,
+            action="PROVISION_TENANT",
+            target_type="tenant",
+            target_id=tenant_id,
+            target_ref=slug,
+            source=source,
+            detail={"org_name": org_name, "owner_email": owner_email},
+        )
+
         try:
             session.commit()
         except Exception:

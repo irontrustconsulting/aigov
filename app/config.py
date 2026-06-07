@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     resolver_db_password: str   # from .env, no default — it's a secret
     provisioner_db_user: str # from .env
     provisioner_db_password: str   # from .env, no default — it's a secret
+    platform_ro_db_user: str                # env var PLATFORM_RO_DB_USER
+    platform_ro_db_password: str            # env var PLATFORM_RO_DB_PASSWORD — secret, no default
+    operator_provisioner_db_user: str       # env var OPERATOR_PROVISIONER_DB_USER
+    operator_provisioner_db_password: str   # env var OPERATOR_PROVISIONER_DB_PASSWORD — secret, no default
     # Connection target (same host/port for both roles in dev).
     db_host: str = Field(default="localhost")
     db_port: int = Field(default=5432)
@@ -55,6 +59,12 @@ class Settings(BaseSettings):
     cognito_region: str | None = Field(default=None)
     cognito_user_pool_id: str | None = Field(default=None)
     cognito_app_client_id: str | None = Field(default=None)
+
+    # --- Cognito: operator/platform pool (separate from the customer pool above) ---
+    # Internal staff identities. authN only — no custom:tenant_id, no role attrs.
+    cognito_operator_pool_issuer: str | None = Field(default=None)   # full iss URL — verifier uses this
+    cognito_operator_app_client_id: str | None = Field(default=None) # checked as `aud`
+    cognito_operator_user_pool_id: str | None = Field(default=None)  # bare pool id — for boto3 admin calls (create-operator)
 
     # --- Computed connection URLs (assembled from components above) ---
     @property
@@ -101,9 +111,29 @@ class Settings(BaseSettings):
             port=self.db_port,
             database=self.postgres_db,
         )
-    
-    
-       
+
+    @property
+    def operator_provisioner_database_url(self) -> URL:
+        return URL.create(
+            "postgresql+psycopg",
+            username=self.operator_provisioner_db_user,
+            password=self.operator_provisioner_db_password,
+            host=self.db_host,
+            port=self.db_port,
+            database=self.postgres_db,
+        )
+
+    @property
+    def platform_ro_database_url(self) -> URL:
+        return URL.create(
+            "postgresql+psycopg",
+            username=self.platform_ro_db_user,
+            password=self.platform_ro_db_password,
+            host=self.db_host,
+            port=self.db_port,
+            database=self.postgres_db,
+        )
+
 
 
 @lru_cache

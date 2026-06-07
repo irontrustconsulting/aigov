@@ -160,3 +160,7 @@ class UserRole(str, enum.Enum):
     REVIEWER = "reviewer"
     CONTRIBUTOR = "contributor"
     AUDITOR_READONLY = "auditor_readonly"
+
+class OperatorStatus(str, enum.Enum):
+    ACTIVE = "active"
+    DISABLED = "disabled"

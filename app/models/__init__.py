@@ -37,3 +37,9 @@ from app.models.taxonomy import (  # noqa: F401
     EUAIActCategory, EUAIActSubcategory, ProductCategory,
     ProductCategoryMembership, ProductCategoryEUMapping,
 )
+
+from app.models.platform_rbac import (
+    Operator, Permission, Role, RolePermission, OperatorRole
+)
+
+from app.models.platform_audit import PlatformAuditEvent  # noqa: F401

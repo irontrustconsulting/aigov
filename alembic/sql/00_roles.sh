@@ -84,3 +84,25 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
 EOSQL
 
 echo "irontrustai_provisioner role created."
+
+# --- Platform read role: request-time platform reads (operator resolution, ----
+# later GET /platform/tenants). BYPASSRLS fenced by grants, exactly like the
+# resolver. Table grants live in the operator-rbac migration, not here.
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE ROLE ${PLATFORM_RO_DB_USER} WITH LOGIN PASSWORD '${PLATFORM_RO_DB_PASSWORD}'
+        NOSUPERUSER NOCREATEDB NOCREATEROLE BYPASSRLS;
+    GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO ${PLATFORM_RO_DB_USER};
+    GRANT USAGE ON SCHEMA public TO ${PLATFORM_RO_DB_USER};
+EOSQL
+echo "${PLATFORM_RO_DB_USER} role created."
+
+# --- Operator-provisioner role: stands up new operators (create-operator). ----
+# Platform-plane analogue of the tenant provisioner, but NOBYPASSRLS — its
+# tables carry no RLS. Table grants (SELECT, INSERT) live in the migration.
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE ROLE ${OPERATOR_PROVISIONER_DB_USER} WITH LOGIN PASSWORD '${OPERATOR_PROVISIONER_DB_PASSWORD}'
+        NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+    GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO ${OPERATOR_PROVISIONER_DB_USER};
+    GRANT USAGE ON SCHEMA public TO ${OPERATOR_PROVISIONER_DB_USER};
+EOSQL
+echo "${OPERATOR_PROVISIONER_DB_USER} role created."
