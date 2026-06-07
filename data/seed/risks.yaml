@@ -1,46 +1,364 @@
-# Seed data: OWASP Top 10 for LLM Applications (starter subset).
+# Seed data: AI Risk Library — full coverage.
 #
-# This is CONTENT, version-controlled and hand-editable. The loader
-# (scripts/seed_risks.py) reads it and upserts into the `risk` table,
-# keyed on `code` (so re-running is idempotent — edits here get applied,
-# nothing is duplicated).
+# TWO LAYERS seeded here:
 #
-# Field reference (maps to the Risk model):
-#   code          - YOUR identifier for the risk (unique in your system)
+#   LAYER 1 — OWASP Top 10 for LLM Applications 2025 (technical_security)
+#   The complete 10-entry list, sourced directly from the OWASP Gen AI Security
+#   Project. Codes use the OWASP 2025 numbering (LLM01–LLM10).
+#   Source: https://genai.owasp.org/llm-top-10/
+#   Version published: November 2024.
+#
+#   LAYER 2 — Governance & Fundamental Rights (governance_rights)
+#   A curated set of governance and societal risks derived from:
+#     - NIST AI Risk Management Framework 1.0 (Jan 2023)
+#       https://doi.org/10.6028/NIST.AI.100-1
+#     - ISO/IEC 42001:2023 — AI Management Systems
+#     - ISO/IEC 42005:2024 — AI System Impact Assessment
+#   source_ref cites the NIST AI RMF function/category (e.g. "MAP 5.2")
+#   or ISO standard clause where applicable.
+#
+# FIELD REFERENCE:
+#   code          - unique identifier in this system
 #   title         - human-readable name
-#   layer         - enum value: technical_security | governance_rights | adversarial_threat
-#   source        - enum value: owasp_llm | nist_ai_rmf | iso_42001 | iso_42005 | mitre_atlas | internal
-#   source_ref    - the originating framework's own identifier (may equal code)
-#   reference_url - link to the authoritative source entry (optional)
-#   description   - prose; the ">" folds wrapped lines into one paragraph
+#   layer         - technical_security | governance_rights | adversarial_threat
+#   source        - owasp_llm | nist_ai_rmf | iso_42001 | iso_42005
+#   source_ref    - the source framework's own identifier or clause
+#   reference_url - canonical URL for the source entry
+#   description   - ">" folds wrapped lines into one paragraph
+
+# ===========================================================================
+# LAYER 1: OWASP Top 10 for LLM Applications 2025
+# Source: https://genai.owasp.org/llm-top-10/
+# ===========================================================================
 
 - code: LLM01
   title: Prompt Injection
   layer: technical_security
   source: owasp_llm
-  source_ref: LLM01
-  reference_url: https://genai.owasp.org/llmrisk/llm01-prompt-injection/
+  source_ref: "LLM01:2025"
+  reference_url: "https://genai.owasp.org/llmrisk/llm01-prompt-injection/"
   description: >
-    Crafted inputs manipulate the model into unintended behaviour, causing it
-    to ignore prior instructions or its guardrails, whether directly via user
-    input or indirectly via content it ingests.
+    Crafted inputs manipulate the LLM into ignoring prior instructions or
+    guardrails — either directly (user-supplied input) or indirectly (malicious
+    content in retrieved documents, tool outputs, or external data the model
+    ingests). In agentic systems this can cascade into unintended tool calls or
+    data exfiltration.
 
 - code: LLM02
   title: Sensitive Information Disclosure
   layer: technical_security
   source: owasp_llm
-  source_ref: LLM02
-  reference_url: https://genai.owasp.org/llmrisk/llm02-sensitive-information-disclosure/
+  source_ref: "LLM02:2025"
+  reference_url: "https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/"
   description: >
-    The model exposes confidential data through its output, leaking
-    proprietary, personal, or otherwise restricted information.
+    The model exposes confidential data through its outputs — including
+    personally identifiable information, proprietary business data, credentials,
+    or training-data memorisation artefacts — either via targeted extraction or
+    as unintentional leakage in normal responses.
+
+- code: LLM03
+  title: Supply Chain Vulnerabilities
+  layer: technical_security
+  source: owasp_llm
+  source_ref: "LLM03:2025"
+  reference_url: "https://genai.owasp.org/llmrisk/llm032025-supply-chain/"
+  description: >
+    Third-party components across the LLM supply chain — pre-trained base
+    models, fine-tuning datasets, plugins, vector databases, and deployment
+    infrastructure — introduce integrity risks. A compromised upstream component
+    can embed backdoors, biases, or vulnerabilities that propagate silently into
+    production applications.
+
+- code: LLM04
+  title: Data and Model Poisoning
+  layer: technical_security
+  source: owasp_llm
+  source_ref: "LLM04:2025"
+  reference_url: "https://genai.owasp.org/llmrisk/llm042025-data-and-model-poisoning/"
+  description: >
+    Malicious manipulation of pre-training, fine-tuning, or retrieval-augmented
+    data introduces backdoors, biases, or incorrect behaviours into the model.
+    Poisoning can be targeted (activating on specific triggers) or diffuse
+    (systematically skewing outputs for certain topics or groups).
 
 - code: LLM05
   title: Improper Output Handling
   layer: technical_security
   source: owasp_llm
-  source_ref: LLM05
-  reference_url: https://genai.owasp.org/llmrisk/llm05-improper-output-handling/
+  source_ref: "LLM05:2025"
+  reference_url: "https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/"
   description: >
-    Downstream components trust model output without validation or encoding,
-    allowing that output to inject into and compromise those systems.
+    Downstream components consume LLM-generated content without sufficient
+    validation, sanitisation or encoding. This can enable cross-site scripting,
+    SQL injection, server-side request forgery, or command injection when
+    model outputs are passed directly into interpreters, browsers, or APIs.
+
+- code: LLM06
+  title: Excessive Agency
+  layer: technical_security
+  source: owasp_llm
+  source_ref: "LLM06:2025"
+  reference_url: "https://genai.owasp.org/llmrisk/llm062025-excessive-agency/"
+  description: >
+    An LLM-based system is granted more functions, permissions, or autonomy than
+    necessary for its task. When the model produces erroneous or manipulated
+    outputs, excessive agency allows those outputs to trigger unintended
+    real-world actions — including data modification, external communications, or
+    system changes — without adequate human confirmation.
+
+- code: LLM07
+  title: System Prompt Leakage
+  layer: technical_security
+  source: owasp_llm
+  source_ref: "LLM07:2025"
+  reference_url: "https://genai.owasp.org/llmrisk/llm072025-system-prompt-leakage/"
+  description: >
+    The system prompt — which encodes business rules, guardrails, persona
+    instructions, and confidential operational context — is exposed through
+    model outputs or elicited via adversarial querying. Leakage reveals
+    proprietary logic, enables bypass of safety controls, and may constitute a
+    disclosure of confidential business information.
+
+- code: LLM08
+  title: Vector and Embedding Weaknesses
+  layer: technical_security
+  source: owasp_llm
+  source_ref: "LLM08:2025"
+  reference_url: "https://genai.owasp.org/llmrisk/llm082025-vector-and-embedding-weaknesses/"
+  description: >
+    Weaknesses in vector stores and embedding representations create attack
+    surfaces in retrieval-augmented generation (RAG) systems. Adversaries can
+    manipulate retrieval results, inject poisoned documents into the knowledge
+    base, or infer sensitive data encoded in embeddings through query-response
+    analysis — undermining the integrity and confidentiality of AI-augmented
+    knowledge systems.
+
+- code: LLM09
+  title: Misinformation
+  layer: technical_security
+  source: owasp_llm
+  source_ref: "LLM09:2025"
+  reference_url: "https://genai.owasp.org/llmrisk/llm092025-misinformation/"
+  description: >
+    LLMs generate confident, plausible-sounding but factually incorrect,
+    misleading, or unverifiable content — including fabricated citations, legal
+    authorities, medical facts, or financial data. When users rely on these
+    outputs uncritically, or when outputs are published without human review,
+    the consequences range from poor decisions to legal liability and reputational
+    harm. Also known as hallucination or confabulation.
+
+- code: LLM10
+  title: Unbounded Consumption
+  layer: technical_security
+  source: owasp_llm
+  source_ref: "LLM10:2025"
+  reference_url: "https://genai.owasp.org/llmrisk/llm102025-unbounded-consumption/"
+  description: >
+    An LLM application allows resource consumption (tokens, API calls, compute,
+    cost) to grow without effective bounds. Exploitation via crafted inputs that
+    force expensive inference, or operational misconfiguration, can cause denial
+    of service for legitimate users, unexpected financial costs, and platform
+    instability. Previously overlapped with Model Denial of Service (v1.1) and
+    Model Theft concerns.
+
+# ===========================================================================
+# LAYER 2: Governance & Fundamental Rights
+# Primary sources: NIST AI RMF 1.0, ISO/IEC 42001:2023, ISO/IEC 42005:2024
+# ===========================================================================
+
+- code: GOV-BIAS
+  title: Algorithmic Bias and Discriminatory Outcomes
+  layer: governance_rights
+  source: nist_ai_rmf
+  source_ref: "MAP 5.2 / MEASURE 2.5"
+  reference_url: "https://airc.nist.gov/RMF"
+  description: >
+    The AI system produces outputs that systematically disadvantage individuals
+    or groups based on protected characteristics — including race, gender, age,
+    disability, religion, or national origin — whether as a result of biased
+    training data, biased objective functions, or unrepresentative test sets.
+    In high-risk contexts (hiring, credit, healthcare) discriminatory AI
+    outputs may constitute unlawful treatment and breach the EU AI Act's
+    requirements for fundamental-rights impact assessment (Annex III / Art. 27).
+    Cross-referenced: ISO/IEC 42001:2023 §A.6.2.5; EU AI Act Art. 10(5).
+
+- code: GOV-EXPLAINABILITY
+  title: Lack of Explainability and Interpretability
+  layer: governance_rights
+  source: nist_ai_rmf
+  source_ref: "GOVERN 1.2 / MAP 3.5"
+  reference_url: "https://airc.nist.gov/RMF"
+  description: >
+    The AI system cannot provide a meaningful, human-understandable explanation
+    of how it reached a conclusion or recommendation. Absence of explainability
+    prevents affected persons from understanding, contesting, or correcting
+    AI-influenced decisions; undermines accountability for reviewers and auditors;
+    and may violate requirements for technical documentation and transparency
+    under the EU AI Act (Arts. 13–14) and GDPR Art. 22 automated decision-making
+    safeguards. Cross-referenced: ISO/IEC 42001:2023 §A.6.2.4.
+
+- code: GOV-OVERSIGHT
+  title: Inadequate Human Oversight and Control
+  layer: governance_rights
+  source: nist_ai_rmf
+  source_ref: "GOVERN 1.3 / GOVERN 6.2"
+  reference_url: "https://airc.nist.gov/RMF"
+  description: >
+    Qualified humans cannot effectively monitor, understand, intervene in, or
+    override the AI system's operation. Without meaningful oversight, errors,
+    biased outputs, and harmful decisions propagate without correction.
+    The EU AI Act mandates human oversight measures for high-risk systems
+    (Art. 14), including the ability to halt the system. Human oversight is
+    also the primary defence against LLM confabulation and excessive agency.
+    Cross-referenced: ISO/IEC 42001:2023 §A.6.2.6; ISO/IEC 42005:2024.
+
+- code: GOV-ACCOUNTABILITY
+  title: Insufficient AI Governance and Accountability
+  layer: governance_rights
+  source: nist_ai_rmf
+  source_ref: "GOVERN 1.1 / GOVERN 2.1"
+  reference_url: "https://airc.nist.gov/RMF"
+  description: >
+    Roles, responsibilities, and processes for governing AI system development,
+    deployment, monitoring, and remediation are undefined, undocumented, or not
+    enforced. Gaps in accountability mean harms may go undetected, unaddressed,
+    and unattributed. The EU AI Act and ISO/IEC 42001 both require documented
+    management-system governance, with clear role assignment for operators and
+    deployers. Cross-referenced: ISO/IEC 42001:2023 §6.1; EU AI Act Arts. 25–26.
+
+- code: GOV-PRIVACY
+  title: AI-specific Privacy Violations
+  layer: governance_rights
+  source: nist_ai_rmf
+  source_ref: "MAP 5.1 / MEASURE 2.7"
+  reference_url: "https://airc.nist.gov/RMF"
+  description: >
+    AI systems introduce privacy risks beyond traditional data processing:
+    training data may contain personal data without lawful basis; models may
+    memorise and regurgitate personal information; inference attacks can derive
+    sensitive attributes from seemingly innocuous inputs; and combining AI
+    outputs with other data enables re-identification. These risks are distinct
+    from general GDPR obligations and require AI-specific data protection impact
+    assessments. Cross-referenced: ISO/IEC 42001:2023 §A.8.4; GDPR Arts. 35–36.
+
+- code: GOV-SAFETY
+  title: AI Safety and Reliability Failures
+  layer: governance_rights
+  source: nist_ai_rmf
+  source_ref: "MAP 2.1 / MEASURE 2.1"
+  reference_url: "https://airc.nist.gov/RMF"
+  description: >
+    The AI system behaves in unintended ways that cause harm — including
+    generating harmful, dangerous, or illegal content; failing in high-stakes
+    edge cases; performing inconsistently under distribution shift; or
+    experiencing unexpected failures in safety-critical contexts. Safety
+    failures are distinct from security attacks: they arise from model
+    limitations, insufficient testing, or deployment outside the system's
+    intended operational domain. Cross-referenced: ISO/IEC 42001:2023 §A.8.1;
+    EU AI Act Art. 9 (risk management system).
+
+- code: GOV-ROBUSTNESS
+  title: Adversarial Robustness and Resilience Failures
+  layer: governance_rights
+  source: nist_ai_rmf
+  source_ref: "MEASURE 2.6"
+  reference_url: "https://airc.nist.gov/RMF"
+  description: >
+    The AI system is susceptible to performance degradation or manipulation
+    under adversarial inputs, distribution shift, or operational perturbations.
+    Robustness failures can be exploited intentionally (adversarial attacks) or
+    occur incidentally (out-of-distribution inputs at deployment). For high-risk
+    systems the EU AI Act requires documented robustness testing (Art. 15).
+    Cross-referenced: ISO/IEC 42001:2023 §A.8.5.
+
+- code: GOV-DATA-QUALITY
+  title: Training and Input Data Quality
+  layer: governance_rights
+  source: nist_ai_rmf
+  source_ref: "MAP 3.1"
+  reference_url: "https://airc.nist.gov/RMF"
+  description: >
+    Low-quality, unrepresentative, or unlawfully obtained training data degrades
+    model performance, amplifies bias, and undermines the trustworthiness of
+    AI outputs. Data quality failures include insufficient diversity, stale data
+    that no longer reflects current conditions, mislabelled examples, and
+    training on data collected without appropriate legal basis. The EU AI Act
+    requires data governance practices and documentation of training data
+    characteristics (Art. 10). Cross-referenced: ISO/IEC 42001:2023 §A.8.2.
+
+- code: GOV-CONFABULATION
+  title: Confabulation (Hallucination) Risk
+  layer: governance_rights
+  source: iso_42005
+  source_ref: "Impact assessment — accuracy and reliability"
+  reference_url: "https://www.iso.org/standard/77608.html"
+  description: >
+    The AI system generates outputs that are syntactically fluent and
+    contextually plausible but factually incorrect, unverifiable, or
+    internally inconsistent — without signalling uncertainty. Confabulation
+    risk is highest where the model is used for factual claims in professional
+    contexts (legal, medical, financial, regulatory compliance) and where
+    outputs are acted upon without independent verification. Distinguished from
+    LLM09 (which addresses the broader misinformation category including
+    deliberate misuse): this entry focuses on the inherent reliability
+    limitation of generative AI. Cross-referenced: NIST AI RMF MEASURE 2.1.
+
+- code: GOV-IP
+  title: Intellectual Property and Copyright Infringement
+  layer: governance_rights
+  source: nist_ai_rmf
+  source_ref: "MAP 5.2"
+  reference_url: "https://airc.nist.gov/RMF"
+  description: >
+    AI systems trained on copyrighted material may reproduce substantial
+    portions of protected works in their outputs, exposing the deploying
+    organisation to intellectual property liability. This applies to code
+    (LLM-generated code replicating GPL or proprietary licensed code), images
+    (reproducing artists' styles or specific works), and text (reproducing
+    published documents). The risk is heightened where outputs are used
+    commercially without provenance review. Cross-referenced: ISO/IEC 42001:2023.
+
+- code: GOV-SUPPLY-CHAIN
+  title: Third-party AI Supply Chain Risk
+  layer: governance_rights
+  source: nist_ai_rmf
+  source_ref: "MAP 3.5"
+  reference_url: "https://airc.nist.gov/RMF"
+  description: >
+    The organisation's AI system depends on third-party foundation models, APIs,
+    datasets, plugins, or infrastructure components whose trustworthiness,
+    availability, privacy posture, and alignment with governance requirements
+    cannot be fully verified. Changes to a foundation model's behaviour,
+    pricing, availability, or data processing terms upstream can cascade into
+    the deploying organisation's risk profile without warning.
+    Cross-referenced: ISO/IEC 42001:2023 §A.6.2.3; EU AI Act Art. 25.
+
+- code: GOV-AUTONOMY
+  title: Erosion of Human Agency and Over-reliance
+  layer: governance_rights
+  source: nist_ai_rmf
+  source_ref: "GOVERN 1.3"
+  reference_url: "https://airc.nist.gov/RMF"
+  description: >
+    Excessive reliance on AI recommendations atrophies human judgement and
+    critical reasoning over time, making it difficult for operators to exercise
+    genuine oversight. Automation bias — the tendency to favour AI outputs over
+    conflicting human expertise — is particularly acute in high-volume or
+    time-pressured decision environments. For high-risk systems, the EU AI Act
+    mandates that human oversight must remain effective and not nominal
+    (Art. 14). Cross-referenced: ISO/IEC 42005:2024.
+
+- code: GOV-MISUSE
+  title: AI Misuse and Dual-use Risk
+  layer: governance_rights
+  source: nist_ai_rmf
+  source_ref: "MAP 5.2"
+  reference_url: "https://airc.nist.gov/RMF"
+  description: >
+    The AI system is intentionally misused for purposes beyond its intended
+    scope — including generating disinformation, deepfakes, phishing content,
+    discriminatory screening tools, or surveillance infrastructure. Dual-use
+    risk arises where the same capability that serves a legitimate function
+    can be repurposed for harm. Deployers bear responsibility for use-case
+    scoping, access controls, and monitoring to detect and respond to misuse.
+    Cross-referenced: ISO/IEC 42001:2023 §A.6.2.8; EU AI Act Arts. 5, 50.

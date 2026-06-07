@@ -1,17 +1,431 @@
-# Seed data: Risk <-> Control cross-map (representative sample).
-# References risks and controls by their human-readable codes; the loader
-# resolves them to ids. Both the risk and the control must already be seeded.
+# Seed data: Risk <-> Control cross-map — full coverage.
 #
-# strength: optional qualifier — e.g. "full" | "partial"
+# Every risk in risks.yaml is mapped to the controls in controls.yaml that
+# mitigate it. One risk can map to multiple controls; one control can mitigate
+# multiple risks — this is the cross-walk that propagates evidence across
+# frameworks (ISO 42001, EU AI Act, NIST AI RMF) simultaneously.
+#
+# strength values:
+#   full    — the control directly and substantially addresses the risk
+#   partial — the control contributes to mitigation but does not fully cover it
+#
+# References both sides by their human-readable codes; the loader resolves
+# to ids. Both the risk and the control must be seeded before this map runs.
 
-- risk_code: LLM01          # Prompt Injection
-  control_code: HO-01       # Human Oversight
+# ===========================================================================
+# OWASP LLM RISKS
+# ===========================================================================
+
+# LLM01: Prompt Injection
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: LLM01
+  control_code: HO-01        # Human oversight can detect/correct injected behaviour
   strength: partial
 
 - risk_code: LLM01
-  control_code: AC-01       # Access Control Policy
+  control_code: AC-01        # Restrict who/what can supply inputs to the system
   strength: partial
 
-- risk_code: LLM05          # Improper Output Handling
-  control_code: OUT-01      # Output Validation
+- risk_code: LLM01
+  control_code: OUT-01       # Validate outputs to limit damage from injected commands
+  strength: partial
+
+- risk_code: LLM01
+  control_code: PE-01        # Purpose limitation constrains what actions the model can take
+  strength: partial
+
+- risk_code: LLM01
+  control_code: MC-01        # Monitor for anomalous outputs indicative of injection
+  strength: partial
+
+# LLM02: Sensitive Information Disclosure
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: LLM02
+  control_code: DP-01        # Privacy by design — minimise personal data in training/context
   strength: full
+
+- risk_code: LLM02
+  control_code: AC-01        # Control access to sensitive data fed into the model
+  strength: partial
+
+- risk_code: LLM02
+  control_code: OUT-01       # Filter and monitor outputs for sensitive data leakage
+  strength: partial
+
+- risk_code: LLM02
+  control_code: AU-01        # Log disclosures for audit and incident investigation
+  strength: partial
+
+# LLM03: Supply Chain Vulnerabilities
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: LLM03
+  control_code: SC-01        # Supply chain risk management — due diligence on components
+  strength: full
+
+- risk_code: LLM03
+  control_code: AC-01        # Restrict integration of unvetted third-party components
+  strength: partial
+
+- risk_code: LLM03
+  control_code: DQ-01        # Validate data provenance including from third-party sources
+  strength: partial
+
+- risk_code: LLM03
+  control_code: RB-01        # Test for anomalous behaviour from third-party models
+  strength: partial
+
+# LLM04: Data and Model Poisoning
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: LLM04
+  control_code: DQ-01        # Data governance — verify provenance, integrity of training data
+  strength: full
+
+- risk_code: LLM04
+  control_code: RB-01        # Adversarial testing can detect poisoned model behaviour
+  strength: partial
+
+- risk_code: LLM04
+  control_code: AU-01        # Logging model version and training lineage supports detection
+  strength: partial
+
+- risk_code: LLM04
+  control_code: SC-01        # Vetting third-party datasets reduces supply-chain poisoning
+  strength: partial
+
+# LLM05: Improper Output Handling
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: LLM05
+  control_code: OUT-01       # Output validation is the primary direct control
+  strength: full
+
+- risk_code: LLM05
+  control_code: HO-01        # Human review before outputs reach downstream systems
+  strength: partial
+
+# LLM06: Excessive Agency
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: LLM06
+  control_code: HO-01        # Human oversight and approval before consequential actions
+  strength: full
+
+- risk_code: LLM06
+  control_code: PE-01        # Purpose limitation — constrain what functions the model can invoke
+  strength: full
+
+- risk_code: LLM06
+  control_code: AC-01        # Least-privilege access for tools and APIs exposed to the model
+  strength: full
+
+- risk_code: LLM06
+  control_code: AU-01        # Log all agentic actions for audit and incident review
+  strength: partial
+
+- risk_code: LLM06
+  control_code: MC-01        # Monitor for unexpected agentic actions in production
+  strength: partial
+
+# LLM07: System Prompt Leakage
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: LLM07
+  control_code: AC-01        # Restrict who can query the system and how
+  strength: partial
+
+- risk_code: LLM07
+  control_code: OUT-01       # Output monitoring to detect system-prompt echoing
+  strength: partial
+
+- risk_code: LLM07
+  control_code: RB-01        # Adversarial testing should include prompt extraction attempts
+  strength: partial
+
+# LLM08: Vector and Embedding Weaknesses
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: LLM08
+  control_code: DQ-01        # Data governance includes integrity of vector store contents
+  strength: partial
+
+- risk_code: LLM08
+  control_code: RB-01        # Testing should include RAG poisoning and embedding attack scenarios
+  strength: partial
+
+- risk_code: LLM08
+  control_code: AC-01        # Control who can write to vector stores
+  strength: partial
+
+- risk_code: LLM08
+  control_code: AU-01        # Log retrieval queries and results to detect anomalies
+  strength: partial
+
+# LLM09: Misinformation
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: LLM09
+  control_code: HO-01        # Human review of AI outputs before publication/action
+  strength: full
+
+- risk_code: LLM09
+  control_code: OUT-01       # Output validation — including source citation checks
+  strength: partial
+
+- risk_code: LLM09
+  control_code: TP-01        # Transparency: disclose AI involvement and uncertainty
+  strength: partial
+
+- risk_code: LLM09
+  control_code: MC-01        # Monitor for escalating error rates or false-claim complaints
+  strength: partial
+
+# LLM10: Unbounded Consumption
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: LLM10
+  control_code: AC-01        # Rate limiting and access controls to bound consumption
+  strength: full
+
+- risk_code: LLM10
+  control_code: MC-01        # Monitor token usage, costs, and anomalous request patterns
+  strength: full
+
+- risk_code: LLM10
+  control_code: PE-01        # Scope the system to its intended use to prevent abuse
+  strength: partial
+
+# ===========================================================================
+# GOVERNANCE & FUNDAMENTAL RIGHTS RISKS
+# ===========================================================================
+
+# GOV-BIAS: Algorithmic Bias and Discriminatory Outcomes
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-BIAS
+  control_code: BI-01        # Bias testing is the primary direct control
+  strength: full
+
+- risk_code: GOV-BIAS
+  control_code: DQ-01        # Representative training data reduces bias at source
+  strength: full
+
+- risk_code: GOV-BIAS
+  control_code: HO-01        # Human oversight of decisions affecting individuals
+  strength: partial
+
+- risk_code: GOV-BIAS
+  control_code: AU-01        # Logging enables post-hoc bias detection and investigation
+  strength: partial
+
+- risk_code: GOV-BIAS
+  control_code: MC-01        # Ongoing monitoring for emerging or shifting bias patterns
+  strength: partial
+
+- risk_code: GOV-BIAS
+  control_code: IC-01        # Incident response when discriminatory outputs are discovered
+  strength: partial
+
+# GOV-EXPLAINABILITY: Lack of Explainability and Interpretability
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-EXPLAINABILITY
+  control_code: TP-01        # Transparency and explainability is the primary direct control
+  strength: full
+
+- risk_code: GOV-EXPLAINABILITY
+  control_code: HO-01        # Humans must be able to interpret outputs to exercise oversight
+  strength: partial
+
+- risk_code: GOV-EXPLAINABILITY
+  control_code: AU-01        # Audit logging captures the inputs and context driving decisions
+  strength: partial
+
+# GOV-OVERSIGHT: Inadequate Human Oversight and Control
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-OVERSIGHT
+  control_code: HO-01        # Human oversight is the primary direct control
+  strength: full
+
+- risk_code: GOV-OVERSIGHT
+  control_code: AG-01        # Governance framework assigns accountability for oversight
+  strength: full
+
+- risk_code: GOV-OVERSIGHT
+  control_code: AU-01        # Logging enables after-the-fact review when oversight fails
+  strength: partial
+
+- risk_code: GOV-OVERSIGHT
+  control_code: MC-01        # Monitoring detects when oversight gaps are causing harm
+  strength: partial
+
+# GOV-ACCOUNTABILITY: Insufficient AI Governance and Accountability
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-ACCOUNTABILITY
+  control_code: AG-01        # Governance framework is the primary direct control
+  strength: full
+
+- risk_code: GOV-ACCOUNTABILITY
+  control_code: AU-01        # Audit trail makes accountability demonstrable
+  strength: full
+
+- risk_code: GOV-ACCOUNTABILITY
+  control_code: IC-01        # Incident response establishes accountability when harm occurs
+  strength: partial
+
+# GOV-PRIVACY: AI-specific Privacy Violations
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-PRIVACY
+  control_code: DP-01        # Privacy by design is the primary direct control
+  strength: full
+
+- risk_code: GOV-PRIVACY
+  control_code: AC-01        # Access controls limit exposure of personal data
+  strength: partial
+
+- risk_code: GOV-PRIVACY
+  control_code: DQ-01        # Training data governance — lawful basis and minimisation
+  strength: partial
+
+- risk_code: GOV-PRIVACY
+  control_code: AU-01        # Logging personal data processing for accountability
+  strength: partial
+
+- risk_code: GOV-PRIVACY
+  control_code: IC-01        # Privacy incident response and notification procedures
+  strength: partial
+
+# GOV-SAFETY: AI Safety and Reliability Failures
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-SAFETY
+  control_code: RB-01        # Robustness and safety testing before deployment
+  strength: full
+
+- risk_code: GOV-SAFETY
+  control_code: HO-01        # Human oversight to catch and correct safety failures
+  strength: full
+
+- risk_code: GOV-SAFETY
+  control_code: MC-01        # Ongoing monitoring for safety-relevant failures in production
+  strength: full
+
+- risk_code: GOV-SAFETY
+  control_code: IC-01        # Incident response when safety failures occur
+  strength: partial
+
+- risk_code: GOV-SAFETY
+  control_code: PE-01        # Purpose limitation prevents deployment outside tested scope
+  strength: partial
+
+# GOV-ROBUSTNESS: Adversarial Robustness and Resilience Failures
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-ROBUSTNESS
+  control_code: RB-01        # Adversarial robustness testing is the primary direct control
+  strength: full
+
+- risk_code: GOV-ROBUSTNESS
+  control_code: MC-01        # Monitor for performance degradation signals in production
+  strength: partial
+
+- risk_code: GOV-ROBUSTNESS
+  control_code: DQ-01        # Quality training data improves inherent robustness
+  strength: partial
+
+# GOV-DATA-QUALITY: Training and Input Data Quality
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-DATA-QUALITY
+  control_code: DQ-01        # Data governance is the primary direct control
+  strength: full
+
+- risk_code: GOV-DATA-QUALITY
+  control_code: AU-01        # Data lineage and version logging supports traceability
+  strength: partial
+
+- risk_code: GOV-DATA-QUALITY
+  control_code: BI-01        # Bias testing reveals data quality issues affecting fairness
+  strength: partial
+
+# GOV-CONFABULATION: Confabulation (Hallucination) Risk
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-CONFABULATION
+  control_code: HO-01        # Human review of AI outputs — especially factual claims
+  strength: full
+
+- risk_code: GOV-CONFABULATION
+  control_code: OUT-01       # Output validation with source citation and fact-check steps
+  strength: partial
+
+- risk_code: GOV-CONFABULATION
+  control_code: TP-01        # Transparency — disclose uncertainty and AI-generated nature
+  strength: partial
+
+- risk_code: GOV-CONFABULATION
+  control_code: MC-01        # Monitor user complaints and error reports for hallucination patterns
+  strength: partial
+
+# GOV-IP: Intellectual Property and Copyright Infringement
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-IP
+  control_code: DQ-01        # Training data governance — verify licensing of training content
+  strength: partial
+
+- risk_code: GOV-IP
+  control_code: PE-01        # Scope control — restrict commercial use of unverified outputs
+  strength: partial
+
+- risk_code: GOV-IP
+  control_code: OUT-01       # Output review for verbatim or near-verbatim reproduction
+  strength: partial
+
+- risk_code: GOV-IP
+  control_code: AU-01        # Log generated content for IP audit trail
+  strength: partial
+
+# GOV-SUPPLY-CHAIN: Third-party AI Supply Chain Risk
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-SUPPLY-CHAIN
+  control_code: SC-01        # Supply chain risk management is the primary direct control
+  strength: full
+
+- risk_code: GOV-SUPPLY-CHAIN
+  control_code: AG-01        # Governance framework assigns responsibility for vendor oversight
+  strength: partial
+
+- risk_code: GOV-SUPPLY-CHAIN
+  control_code: AC-01        # Control third-party integrations and API access
+  strength: partial
+
+- risk_code: GOV-SUPPLY-CHAIN
+  control_code: MC-01        # Monitor for upstream changes in third-party model behaviour
+  strength: partial
+
+# GOV-AUTONOMY: Erosion of Human Agency and Over-reliance
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-AUTONOMY
+  control_code: HO-01        # Effective human oversight prevents automation bias
+  strength: full
+
+- risk_code: GOV-AUTONOMY
+  control_code: PE-01        # Purpose limitation prevents scope creep into unreviewed decisions
+  strength: partial
+
+- risk_code: GOV-AUTONOMY
+  control_code: TP-01        # Transparency about AI limitations reduces blind trust
+  strength: partial
+
+- risk_code: GOV-AUTONOMY
+  control_code: AG-01        # Governance framework explicitly defines human decision authority
+  strength: partial
+
+# GOV-MISUSE: AI Misuse and Dual-use Risk
+# ─────────────────────────────────────────────────────────────────────────
+- risk_code: GOV-MISUSE
+  control_code: PE-01        # Purpose limitation and use-case scoping controls misuse
+  strength: full
+
+- risk_code: GOV-MISUSE
+  control_code: AC-01        # Access controls limit who can deploy the system
+  strength: full
+
+- risk_code: GOV-MISUSE
+  control_code: AG-01        # Governance framework defines acceptable use policy
+  strength: partial
+
+- risk_code: GOV-MISUSE
+  control_code: MC-01        # Monitoring detects use outside intended purpose
+  strength: partial
+
+- risk_code: GOV-MISUSE
+  control_code: IC-01        # Incident response for discovered misuse cases
+  strength: partial

@@ -1,35 +1,3233 @@
-# Seed data: global catalogue (representative sample).
-# Nested by ownership: vendor -> products -> (facts, risks).
-# `risks` lists Risk codes that this product typically carries (resolved to
-# ids by the loader; the risks must already be seeded).
-#
-# provenance enum values: ai_suggested | catalogue_curated | user_confirmed | user_amended
-
-- name: Adobe
-  products:
-    - name: Firefly
-      taxonomy_tags: ["image_generation", "content_creation"]
-      facts:
-        - key: data_residency
-          value: {region: "configurable"}
-          source_label: "Adobe Trust Center"
-          provenance: catalogue_curated
-        - key: trains_on_customer_data
-          value: {answer: false}
-          source_label: "Adobe DPA"
-          provenance: catalogue_curated
-      risks:
-        - LLM05            # Improper Output Handling (e.g. provenance/IP)
-
 - name: OpenAI
+  last_verified_at: '2025-04-01'
   products:
-    - name: ChatGPT Enterprise
-      taxonomy_tags: ["chatbot", "text_generation"]
-      facts:
-        - key: trains_on_customer_data
-          value: {answer: false}
-          source_label: "OpenAI Enterprise Privacy"
-          provenance: catalogue_curated
-      risks:
-        - LLM01            # Prompt Injection
-        - LLM02            # Sensitive Information Disclosure
+  - name: ChatGPT Enterprise
+    taxonomy_tags:
+    - general_ai_assistant
+    - text_generation
+    - chatbot
+    - document_analysis
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: OpenAI does not use ChatGPT Enterprise customer data to train models.
+      source_url: https://openai.com/enterprise-privacy
+      source_label: OpenAI Enterprise Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: encryption_at_rest
+      value:
+        standard: AES-256
+      source_url: https://openai.com/enterprise-privacy
+      source_label: OpenAI Enterprise Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: encryption_in_transit
+      value:
+        standard: TLS 1.2+
+      source_url: https://openai.com/enterprise-privacy
+      source_label: OpenAI Enterprise Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2
+      source_url: https://openai.com/enterprise-privacy
+      source_label: OpenAI Enterprise Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - US
+        note: Default US; EU data residency available via OpenAI EU offering.
+      source_url: https://openai.com/enterprise-privacy
+      source_label: OpenAI Enterprise Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: sso_saml_available
+      value:
+        answer: true
+      source_url: https://openai.com/enterprise-privacy
+      source_label: OpenAI Enterprise Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        models:
+        - GPT-4o
+        - o1
+        - o3
+      source_url: https://platform.openai.com/docs/models
+      source_label: OpenAI Model Documentation
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+  - name: OpenAI API
+    taxonomy_tags:
+    - foundation_model_api
+    - text_generation
+    - multimodal
+    - developer_platform
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: API inputs and outputs are not used to train OpenAI models by default. Opt-in zero data
+          retention available.
+      source_url: https://platform.openai.com/docs/models/default-usage-policies-by-endpoint
+      source_label: OpenAI API Data Usage Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://openai.com/policies/data-processing-addendum/
+      source_label: OpenAI Data Processing Addendum
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_retention_default
+      value:
+        days: 30
+        note: API data retained up to 30 days for abuse monitoring. Zero data retention available for
+          eligible endpoints.
+      source_url: https://platform.openai.com/docs/models/default-usage-policies-by-endpoint
+      source_label: OpenAI API Data Usage Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        models:
+        - GPT-4o
+        - GPT-4o mini
+        - o1
+        - o3
+        - DALL-E 3
+        - Whisper
+        - TTS
+      source_url: https://platform.openai.com/docs/models
+      source_label: OpenAI Model Documentation
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Microsoft
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Microsoft 365 Copilot
+    taxonomy_tags:
+    - general_ai_assistant
+    - text_generation
+    - document_analysis
+    - productivity_suite
+    - email_calendar
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Prompts, responses and Microsoft Graph data are not used to train foundation LLMs.
+      source_url: https://learn.microsoft.com/en-us/copilot/microsoft-365/microsoft-365-copilot-privacy
+      source_label: Microsoft 365 Copilot Privacy Documentation
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - EU Data Boundary available
+        note: EU customers' data stays within the EU Data Boundary. Data residency commitments in Microsoft
+          Product Terms from March 2024.
+      source_url: https://learn.microsoft.com/en-us/copilot/microsoft-365/microsoft-365-copilot-privacy
+      source_label: Microsoft 365 Copilot Privacy Documentation
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - GDPR
+        - ISO 27001
+        - HIPAA
+        - ISO 42001
+        - SOC 2
+      source_url: https://learn.microsoft.com/en-us/copilot/microsoft-365/microsoft-365-copilot-privacy
+      source_label: Microsoft 365 Copilot Privacy Documentation
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+        url: https://aka.ms/DPA
+      source_url: https://www.microsoft.com/licensing/docs/view/Microsoft-Products-and-Services-Data-Protection-Addendum-DPA
+      source_label: Microsoft Data Protection Addendum
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        models:
+        - GPT-4o (Azure OpenAI)
+        - Phi
+        - 'note: Anthropic models available as subprocessor from Jan 2026'
+      source_url: https://learn.microsoft.com/en-us/copilot/microsoft-365/microsoft-365-copilot-privacy
+      source_label: Microsoft 365 Copilot Privacy Documentation
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: sub_processors_listed
+      value:
+        answer: true
+        url: https://go.microsoft.com/fwlink/?linkid=2096306
+      source_url: https://www.microsoft.com/en-us/trust-center/privacy
+      source_label: Microsoft Trust Centre — Subprocessors
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+  - name: Azure OpenAI Service
+    taxonomy_tags:
+    - foundation_model_api
+    - text_generation
+    - multimodal
+    - developer_platform
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Customer data is not used to train, retrain or improve Azure OpenAI foundation models.
+      source_url: https://learn.microsoft.com/en-us/azure/ai-services/openai/faq
+      source_label: Azure OpenAI Service FAQ
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - configurable — 60+ Azure regions
+        note: Data stored in the chosen Azure region. EU data boundary compliance available.
+      source_url: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models
+      source_label: Azure OpenAI Documentation
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2
+        - SOC 3
+        - ISO 27001
+        - ISO 27018
+        - GDPR
+        - HIPAA
+        - FedRAMP High
+      source_url: https://learn.microsoft.com/en-us/azure/compliance/offerings/offering-azure-openai
+      source_label: Azure OpenAI Compliance Offerings
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+        url: https://aka.ms/DPA
+      source_url: https://www.microsoft.com/licensing/docs/view/Microsoft-Products-and-Services-Data-Protection-Addendum-DPA
+      source_label: Microsoft Data Protection Addendum
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        models:
+        - GPT-4o
+        - GPT-4o mini
+        - o1
+        - DALL-E 3
+        - Whisper
+        - Embeddings
+      source_url: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models
+      source_label: Azure OpenAI Models Documentation
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+  - name: GitHub Copilot
+    taxonomy_tags:
+    - code_assistant
+    - code_generation
+    - developer_productivity
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: GitHub Copilot Business and Enterprise do not use customer code snippets or suggestions
+          to train the underlying model. Telemetry may be collected unless disabled.
+      source_url: https://docs.github.com/en/copilot/overview-of-github-copilot/about-github-copilot-for-business#about-privacy-of-code-snippets-in-github-copilot
+      source_label: GitHub Copilot for Business — Privacy of Code Snippets
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - ISO 27001
+        - GDPR
+      source_url: https://github.com/trust-center
+      source_label: GitHub Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        models:
+        - OpenAI GPT-4o (via Azure OpenAI)
+        - Claude (Anthropic)
+        - Gemini
+      source_url: https://docs.github.com/en/copilot/using-github-copilot/ai-models/changing-the-ai-model-for-github-copilot-chat
+      source_label: GitHub Copilot — Model Selection Documentation
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: responsible_ai_standard
+      value:
+        framework: Microsoft Responsible AI Standard
+        note: GitHub follows Microsoft's Responsible AI Standard, aligned to NIST AI RMF.
+      source_url: https://github.com/trust-center
+      source_label: GitHub Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM05
+    - LLM06
+    - LLM07
+    - GOV-IP
+    - GOV-SUPPLY-CHAIN
+  - name: Copilot Studio
+    taxonomy_tags:
+    - low_code_ai
+    - chatbot_builder
+    - ai_agent_platform
+    - enterprise_automation
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Copilot Studio inherits M365 Copilot privacy commitments — customer data not used to train
+          foundation models.
+      source_url: https://learn.microsoft.com/en-us/microsoft-copilot-studio/privacy-data-security
+      source_label: Microsoft Copilot Studio — Privacy and Data Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+        url: https://aka.ms/DPA
+      source_url: https://learn.microsoft.com/en-us/microsoft-copilot-studio/privacy-data-security
+      source_label: Microsoft Copilot Studio — Privacy and Data Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - configurable — Microsoft Azure regions
+        note: Follows Microsoft Azure data residency; EU Data Boundary applicable.
+      source_url: https://learn.microsoft.com/en-us/microsoft-copilot-studio/privacy-data-security
+      source_label: Microsoft Copilot Studio — Privacy and Data Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM06
+    - LLM07
+    - GOV-OVERSIGHT
+    - GOV-SUPPLY-CHAIN
+    - GOV-AUTONOMY
+- name: Anthropic
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Claude API
+    taxonomy_tags:
+    - foundation_model_api
+    - text_generation
+    - document_analysis
+    - developer_platform
+    - multimodal
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Anthropic may not train models on Customer Content from Services. Direct quote from Commercial
+          Terms.
+      source_url: https://www.anthropic.com/legal/commercial-terms
+      source_label: Anthropic Commercial Terms of Service (Section B)
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://www.anthropic.com/legal/data-processing-addendum
+      source_label: Anthropic Data Processing Addendum
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: eea_entity
+      value:
+        entity: Anthropic Ireland, Limited
+        note: For EEA/UK/Switzerland customers the contracting entity is Anthropic Ireland, Limited.
+      source_url: https://www.anthropic.com/legal/commercial-terms
+      source_label: Anthropic Commercial Terms of Service (Section A)
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        models:
+        - Claude 3 Opus
+        - Claude 3.5/3.7 Sonnet
+        - Claude 3 Haiku
+        - Claude 4
+      source_url: https://www.anthropic.com/claude
+      source_label: Anthropic Claude Model Overview
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+      source_url: https://trust.anthropic.com/
+      source_label: Anthropic Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_retention
+      value:
+        note: Inputs/outputs not retained beyond the immediate request unless customer opts in or where
+          required for safety monitoring. See DPA for specifics.
+      source_url: https://www.anthropic.com/legal/data-processing-addendum
+      source_label: Anthropic Data Processing Addendum
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Google
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Gemini for Google Workspace
+    taxonomy_tags:
+    - general_ai_assistant
+    - text_generation
+    - document_analysis
+    - email_calendar
+    - productivity_suite
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Google does not use Workspace customer data to train Gemini AI models for Enterprise/Business
+          customers. This applies to Google Workspace for Business and Enterprise plans.
+      source_url: https://workspace.google.com/intl/en/terms/user_features_terms.html
+      source_label: Google Workspace — Generative AI Additional Terms
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - EU
+        - US
+        - APAC
+        - configurable
+        note: Data residency options available for Google Workspace Enterprise. EU processing available.
+      source_url: https://workspace.google.com/intl/en/about/data-regions/
+      source_label: Google Workspace Data Regions
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - ISO 27017
+        - ISO 27018
+        - SOC 2
+        - SOC 3
+        - GDPR
+      source_url: https://workspace.google.com/security/
+      source_label: Google Workspace Security and Compliance
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://workspace.google.com/intl/en/terms/dpa_terms.html
+      source_label: Google Workspace Data Processing Amendment
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        models:
+        - Gemini 1.5 Pro
+        - Gemini 2.0 Flash
+        - Gemini Ultra
+      source_url: https://workspace.google.com/products/gemini/
+      source_label: Google Workspace Gemini Features
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+  - name: Vertex AI (Gemini API)
+    taxonomy_tags:
+    - foundation_model_api
+    - developer_platform
+    - text_generation
+    - multimodal
+    - ml_platform
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Google does not use customer data submitted to Vertex AI to train its generative AI foundation
+          models. Customer data processed under Google Cloud DPA.
+      source_url: https://cloud.google.com/terms/cloud-privacy-notice
+      source_label: Google Cloud Privacy Notice
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - ISO 27017
+        - ISO 27018
+        - SOC 2
+        - SOC 3
+        - FedRAMP High
+        - GDPR
+        - HIPAA
+      source_url: https://cloud.google.com/security/compliance/compliance-reports-manager
+      source_label: Google Cloud Compliance Reports
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://cloud.google.com/terms/data-processing-addendum
+      source_label: Google Cloud Data Processing Addendum
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - configurable — 40+ Google Cloud regions
+        note: Data residency configurable per region selection. EU and regional options available.
+      source_url: https://cloud.google.com/about/locations
+      source_label: Google Cloud Regions
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-DATA-QUALITY
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Amazon Web Services
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Amazon Bedrock
+    taxonomy_tags:
+    - foundation_model_api
+    - developer_platform
+    - text_generation
+    - multimodal
+    - ml_platform
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: AWS does not use customer inputs to, outputs from, or fine-tuning data for Amazon Bedrock
+          to train any foundational models. Stated in AWS FAQ.
+      source_url: https://aws.amazon.com/bedrock/faqs/
+      source_label: Amazon Bedrock FAQ
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 1/2/3
+        - ISO 27001
+        - ISO 27017
+        - ISO 27018
+        - GDPR
+        - HIPAA
+        - FedRAMP High
+        - C5 (Germany)
+      source_url: https://aws.amazon.com/compliance/services-in-scope/
+      source_label: AWS Services in Scope for Compliance Programs
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - configurable — AWS Regions
+        note: Data stays within the selected AWS Region. Prompt data not shared across regions by default.
+      source_url: https://aws.amazon.com/bedrock/faqs/
+      source_label: Amazon Bedrock FAQ
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://aws.amazon.com/service-terms/
+      source_label: AWS Service Terms (GDPR DPA incorporated)
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        models:
+        - Amazon Titan
+        - Claude (Anthropic)
+        - Llama (Meta)
+        - Mistral
+        - Command (Cohere)
+        - Stable Diffusion
+        - Jurassic
+      source_url: https://aws.amazon.com/bedrock/
+      source_label: Amazon Bedrock Model Documentation
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-DATA-QUALITY
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+  - name: Amazon Q Business
+    taxonomy_tags:
+    - enterprise_ai_search
+    - general_ai_assistant
+    - knowledge_management
+    - document_analysis
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Amazon Q Business does not use customer data to train the underlying LLM. All responses
+          are grounded on customer's own connected data sources.
+      source_url: https://aws.amazon.com/q/business/faqs/
+      source_label: Amazon Q Business FAQ
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2
+        - ISO 27001
+        - GDPR
+        - HIPAA
+      source_url: https://aws.amazon.com/compliance/services-in-scope/
+      source_label: AWS Services in Scope for Compliance Programs
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - configurable — AWS Regions
+        note: Data processed in chosen AWS Region.
+      source_url: https://aws.amazon.com/q/business/faqs/
+      source_label: Amazon Q Business FAQ
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: IBM
+  last_verified_at: '2025-04-01'
+  products:
+  - name: IBM watsonx.ai
+    taxonomy_tags:
+    - foundation_model_api
+    - ml_platform
+    - text_generation
+    - developer_platform
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: IBM does not use client data to train IBM's foundational AI models. Client data is isolated
+          and used only to fine-tune models for that client with their consent.
+      source_url: https://www.ibm.com/us-en/data-responsibility/commitment
+      source_label: IBM Data Responsibility Commitment
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+        - FedRAMP
+      source_url: https://www.ibm.com/trust/security-certifications
+      source_label: IBM Trust and Security Certifications
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - configurable — IBM Cloud regions including EU
+      source_url: https://www.ibm.com/cloud/data-centers
+      source_label: IBM Cloud Data Centers
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        models:
+        - Granite (IBM)
+        - Llama (Meta)
+        - Mixtral (Mistral)
+        - 'note: IBM-developed Granite models trained on curated, licensed data'
+      source_url: https://www.ibm.com/products/watsonx-ai/foundation-models
+      source_label: IBM watsonx.ai Foundation Models
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-DATA-QUALITY
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+  - name: IBM watsonx Assistant
+    taxonomy_tags:
+    - chatbot
+    - conversational_ai
+    - customer_support
+    - employee_self_service
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: IBM does not use client data to train IBM's foundational AI models.
+      source_url: https://www.ibm.com/us-en/data-responsibility/commitment
+      source_label: IBM Data Responsibility Commitment
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+        - HIPAA
+      source_url: https://www.ibm.com/trust/security-certifications
+      source_label: IBM Trust and Security Certifications
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Cohere
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Cohere Platform (Command R+)
+    taxonomy_tags:
+    - foundation_model_api
+    - text_generation
+    - enterprise_search
+    - developer_platform
+    - rag
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Cohere does not use customer data passed through the API to train its production models
+          without explicit customer consent.
+      source_url: https://cohere.com/privacy
+      source_label: Cohere Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://cohere.com/legal/data-processing-addendum
+      source_label: Cohere Data Processing Addendum
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+      source_url: https://cohere.com/security
+      source_label: Cohere Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: deployment_options
+      value:
+        options:
+        - Cohere hosted (US/EU)
+        - AWS
+        - Azure
+        - GCP
+        - private cloud / on-premise
+      source_url: https://cohere.com/deployment-options
+      source_label: Cohere Deployment Options
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-OVERSIGHT
+    - GOV-SUPPLY-CHAIN
+    - GOV-AUTONOMY
+- name: Mistral AI
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Mistral API (le Chat Enterprise)
+    taxonomy_tags:
+    - foundation_model_api
+    - text_generation
+    - developer_platform
+    - european_ai
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Mistral AI does not use API call data to train models by default. Enterprise customers have
+          contractual data isolation.
+      source_url: https://mistral.ai/terms-of-service-enterprise
+      source_label: Mistral AI Enterprise Terms
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - EU (France / Europe)
+        note: Mistral AI is headquartered in France; infrastructure hosted in Europe. EU-only data residency
+          option available for enterprise.
+      source_url: https://mistral.ai/privacy
+      source_label: Mistral AI Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: eea_entity
+      value:
+        entity: Mistral AI SAS (France)
+        note: Incorporated in France — inherently subject to EU data protection law (GDPR).
+      source_url: https://mistral.ai/about
+      source_label: Mistral AI About
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - GDPR
+        - ISO 27001 (in progress as at 2025)
+      source_url: https://mistral.ai/security
+      source_label: Mistral AI Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        models:
+        - Mistral Large
+        - Mistral Small
+        - Codestral
+        - Pixtral
+      source_url: https://docs.mistral.ai/getting-started/models/
+      source_label: Mistral AI Model Documentation
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Salesforce
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Agentforce (Einstein AI)
+    taxonomy_tags:
+    - crm_ai
+    - sales_ai
+    - customer_service_ai
+    - general_ai_assistant
+    - ai_agent_platform
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: The Einstein Trust Layer ensures that customer data sent to LLM providers is not retained
+          or used to train external foundation models. Zero data retention from LLM providers is enforced
+          contractually.
+      source_url: https://www.salesforce.com/artificial-intelligence/einstein-trust-layer/
+      source_label: Salesforce Einstein Trust Layer
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 1/2
+        - GDPR
+        - FedRAMP Moderate
+      source_url: https://trust.salesforce.com/en/compliance/
+      source_label: Salesforce Trust — Compliance
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - US
+        - EU
+        - APAC
+        note: Data residency configurable. Hyperforce enables customer choice of cloud infrastructure
+          region.
+      source_url: https://www.salesforce.com/products/platform/hyperforce/
+      source_label: Salesforce Hyperforce Data Residency
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: trust_layer_features
+      value:
+        features:
+        - Dynamic Grounding
+        - Toxicity Detection
+        - PII Masking
+        - Zero Data Retention from LLMs
+        - Audit Trail
+      source_url: https://www.salesforce.com/artificial-intelligence/einstein-trust-layer/
+      source_label: Salesforce Einstein Trust Layer
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-OVERSIGHT
+    - GOV-SUPPLY-CHAIN
+    - GOV-AUTONOMY
+  - name: Tableau Pulse
+    taxonomy_tags:
+    - bi_analytics
+    - data_visualisation
+    - ai_analytics
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Tableau Pulse uses Salesforce Einstein Trust Layer; LLM providers do not retain or train
+          on customer data.
+      source_url: https://www.salesforce.com/artificial-intelligence/einstein-trust-layer/
+      source_label: Salesforce Einstein Trust Layer
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2
+        - GDPR
+      source_url: https://trust.salesforce.com/en/compliance/
+      source_label: Salesforce Trust — Compliance
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM09
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: ServiceNow
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Now Assist
+    taxonomy_tags:
+    - itsm_ai
+    - enterprise_automation
+    - employee_self_service
+    - general_ai_assistant
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: ServiceNow does not use customer data to train Now Assist AI models. ServiceNow's third-party
+          LLM providers are contractually prohibited from using customer data for training.
+      source_url: https://www.servicenow.com/company/privacy-data-governance.html
+      source_label: ServiceNow Privacy and Data Governance
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - ISO 27001
+        - ISO 27018
+        - GDPR
+        - FedRAMP High
+      source_url: https://www.servicenow.com/company/trust/certifications-and-attestations.html
+      source_label: ServiceNow Trust — Certifications
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - configurable — ServiceNow data centres in US, EU, APAC
+        note: Customers choose their instance region. EU data residency available.
+      source_url: https://www.servicenow.com/company/trust/data-centres.html
+      source_label: ServiceNow Data Centres
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-OVERSIGHT
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+    - GOV-AUTONOMY
+- name: Workday
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Workday AI (Illuminate)
+    taxonomy_tags:
+    - hrms_ai
+    - workforce_analytics
+    - recruiting_ai
+    - employee_experience
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Workday does not cross-train its AI models on data from one customer to benefit another.
+          Customer data isolation is maintained.
+      source_url: https://www.workday.com/en-us/pages/workday-responsible-ai.html
+      source_label: Workday Responsible AI
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - ISO 27018
+        - SOC 1/2
+        - GDPR
+        - FedRAMP Moderate
+      source_url: https://www.workday.com/en-us/pages/workday-data-security.html
+      source_label: Workday Data Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - US
+        - EU
+        - APAC
+        note: Customers can specify primary data residency. EU data residency available.
+      source_url: https://www.workday.com/en-us/pages/workday-data-security.html
+      source_label: Workday Data Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM02
+    - GOV-BIAS
+    - GOV-DATA-QUALITY
+    - GOV-EXPLAINABILITY
+    - GOV-OVERSIGHT
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: SAP
+  last_verified_at: '2025-04-01'
+  products:
+  - name: SAP Joule
+    taxonomy_tags:
+    - erp_ai
+    - general_ai_assistant
+    - enterprise_automation
+    - productivity_suite
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: SAP does not use customer data to train Joule's AI models. SAP's generative AI hub provides
+          a privacy-preserving layer between customer data and foundation models.
+      source_url: https://www.sap.com/corporate/en/company/privacy.html
+      source_label: SAP AI Ethics and Privacy Statement
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.sap.com/uk/products/erp/cloud-erp-certification.html
+      source_label: SAP Cloud ERP Certifications
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - configurable — SAP Cloud regions including EU
+        note: SAP Business Technology Platform allows region selection. EU residency available.
+      source_url: https://www.sap.com/products/technology-platform/data-residency.html
+      source_label: SAP Data Residency
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-OVERSIGHT
+    - GOV-SUPPLY-CHAIN
+    - GOV-AUTONOMY
+- name: HubSpot
+  last_verified_at: '2025-04-01'
+  products:
+  - name: HubSpot Breeze AI
+    taxonomy_tags:
+    - crm_ai
+    - marketing_ai
+    - sales_ai
+    - customer_service_ai
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: HubSpot does not sell customer data or use identifiable customer CRM content to train AI
+          models for use by other customers.
+      source_url: https://legal.hubspot.com/product-privacy-policy
+      source_label: HubSpot Product Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://trust.hubspot.com/
+      source_label: HubSpot Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://legal.hubspot.com/dpa
+      source_label: HubSpot Data Processing Agreement
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: Zendesk
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Zendesk AI (Advanced AI)
+    taxonomy_tags:
+    - customer_support_ai
+    - chatbot
+    - ticket_management
+    - sentiment_analysis
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Zendesk does not use customer data to train models that are shared with other customers.
+          AI models may be fine-tuned per-customer with that customer's own data only.
+      source_url: https://www.zendesk.com/company/privacy-and-data-protection/
+      source_label: Zendesk Privacy and Data Protection
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+        - HIPAA (available)
+      source_url: https://www.zendesk.com/trust/
+      source_label: Zendesk Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://www.zendesk.com/company/customers-partners/global-privacy-and-data-protection/
+      source_label: Zendesk Global Privacy and Data Protection
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Freshworks
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Freddy AI
+    taxonomy_tags:
+    - customer_support_ai
+    - chatbot
+    - crm_ai
+    - itsm_ai
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Freshworks does not use customer data to train Freddy AI models for other customers. Customer
+          data is used only to personalise the model for that specific customer account.
+      source_url: https://www.freshworks.com/security/
+      source_label: Freshworks Security and Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.freshworks.com/security/
+      source_label: Freshworks Security and Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: Adobe
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Firefly
+    taxonomy_tags:
+    - image_generation
+    - content_creation
+    - creative_ai
+    - video_generation
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Adobe Firefly is not trained on customer content. It is trained on licensed content, openly
+          licensed works and public domain content.
+      source_url: https://www.adobe.com/trust/ai-ethics.html
+      source_label: Adobe AI Ethics
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: training_data_provenance
+      value:
+        note: Firefly trained on Adobe Stock, openly licensed content, and public domain works. Commercial
+          users have indemnification under Adobe's Content Credentials and IP indemnity commitment.
+      source_url: https://www.adobe.com/trust/ai-ethics.html
+      source_label: Adobe AI Ethics
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2
+        - SOC 3
+        - GDPR
+      source_url: https://www.adobe.com/trust.html
+      source_label: Adobe Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: content_credentials
+      value:
+        answer: true
+        note: Adobe Firefly outputs include Content Credentials (C2PA metadata) marking outputs as AI-generated.
+      source_url: https://www.adobe.com/products/firefly/content-credentials.html
+      source_label: Adobe Content Credentials
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM05
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+  - name: Adobe Acrobat AI Assistant
+    taxonomy_tags:
+    - document_analysis
+    - text_generation
+    - summarisation
+    - productivity_suite
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Adobe does not use customer documents or content uploaded to Acrobat AI Assistant to train
+          Adobe's AI models.
+      source_url: https://www.adobe.com/privacy/acrobat-ai-assistant.html
+      source_label: Adobe Acrobat AI Assistant Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2
+        - GDPR
+      source_url: https://www.adobe.com/trust.html
+      source_label: Adobe Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: Notion
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Notion AI
+    taxonomy_tags:
+    - writing_assistant
+    - summarisation
+    - knowledge_management
+    - productivity_suite
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Notion does not use customer workspace content to train the AI model. Customer content is
+          not used for any ML training purposes.
+      source_url: https://www.notion.so/privacy
+      source_label: Notion Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.notion.so/security
+      source_label: Notion Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: Grammarly
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Grammarly Business
+    taxonomy_tags:
+    - writing_assistant
+    - text_generation
+    - productivity_suite
+    - email_drafting
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Grammarly does not sell user data. Customer text processed to provide suggestions; Business
+          and Enterprise tiers have enhanced zero-retention options.
+      source_url: https://www.grammarly.com/trust
+      source_label: Grammarly Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - ISO 27001
+        - GDPR
+        - CCPA
+      source_url: https://www.grammarly.com/trust
+      source_label: Grammarly Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://www.grammarly.com/dpa
+      source_label: Grammarly Data Processing Addendum
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: Atlassian
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Atlassian Intelligence
+    taxonomy_tags:
+    - project_management_ai
+    - writing_assistant
+    - developer_productivity
+    - knowledge_management
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Atlassian does not use customer content to train Atlassian Intelligence's AI features. Third-party
+          LLM providers are prohibited from retaining or training on Atlassian customer data.
+      source_url: https://www.atlassian.com/trust/privacy
+      source_label: Atlassian Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+        - ISO 27018
+      source_url: https://www.atlassian.com/trust/compliance
+      source_label: Atlassian Trust — Compliance
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://www.atlassian.com/legal/data-processing-addendum
+      source_label: Atlassian Data Processing Addendum
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        note: Powered by OpenAI GPT models via Microsoft Azure OpenAI Service.
+      source_url: https://support.atlassian.com/atlassian-account/docs/atlassian-intelligence/
+      source_label: Atlassian Intelligence Documentation
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-SUPPLY-CHAIN
+- name: Jasper
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Jasper AI
+    taxonomy_tags:
+    - marketing_content
+    - text_generation
+    - copywriting
+    - brand_voice
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Jasper does not use customer content to train the underlying AI models. Brand Voice data
+          used only for the customer's own outputs.
+      source_url: https://www.jasper.ai/privacy
+      source_label: Jasper Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.jasper.ai/security
+      source_label: Jasper Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Copy.ai
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Copy.ai
+    taxonomy_tags:
+    - marketing_content
+    - text_generation
+    - sales_content
+    - copywriting
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Copy.ai does not use customer content to train its underlying models.
+      source_url: https://www.copy.ai/privacy-policy
+      source_label: Copy.ai Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.copy.ai/security
+      source_label: Copy.ai Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Writer
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Writer Enterprise
+    taxonomy_tags:
+    - enterprise_ai_assistant
+    - text_generation
+    - marketing_content
+    - compliance_ai
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Writer does not use customer data to train its Palmyra foundation models. Enterprise models
+          are isolated per customer.
+      source_url: https://writer.com/privacy/
+      source_label: Writer Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - GDPR
+        - HIPAA
+      source_url: https://writer.com/security/
+      source_label: Writer Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        models:
+        - Palmyra (Writer proprietary)
+        note: Writer builds and hosts its own Palmyra models, not reliant on third-party LLMs.
+      source_url: https://writer.com/research/
+      source_label: Writer Research
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Perplexity AI
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Perplexity Enterprise Pro
+    taxonomy_tags:
+    - enterprise_search
+    - ai_research
+    - knowledge_management
+    - text_generation
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Perplexity Enterprise Pro does not use customer queries to train its models and offers zero
+          data retention.
+      source_url: https://www.perplexity.ai/hub/blog/perplexity-enterprise-pro
+      source_label: Perplexity Enterprise Pro
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.perplexity.ai/security
+      source_label: Perplexity Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: Zoom
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Zoom AI Companion
+    taxonomy_tags:
+    - meeting_ai
+    - transcription
+    - summarisation
+    - productivity_suite
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Zoom does not use audio, video, chat, screen sharing, attachments or other customer content
+          to train Zoom's or third-party AI models without customer consent. Zoom AI Companion features
+          are powered by Zoom's own models and third-party AI.
+      source_url: https://explore.zoom.us/en/trust/ai/
+      source_label: Zoom AI Trust
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+        - HIPAA
+        - FedRAMP Moderate
+      source_url: https://explore.zoom.us/en/trust/
+      source_label: Zoom Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://explore.zoom.us/en/gdpr/
+      source_label: Zoom GDPR and Data Processing
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Otter.ai
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Otter Business
+    taxonomy_tags:
+    - meeting_ai
+    - transcription
+    - summarisation
+    - note_taking
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Otter Business and Enterprise accounts opt out of using audio/transcripts to improve Otter's
+          models by default.
+      source_url: https://otter.ai/privacy
+      source_label: Otter.ai Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+      source_url: https://otter.ai/security
+      source_label: Otter.ai Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Fireflies.ai
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Fireflies Business
+    taxonomy_tags:
+    - meeting_ai
+    - transcription
+    - summarisation
+    - crm_integration
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Fireflies Business and Enterprise plans include data retention controls and do not use customer
+          meeting data to train AI models.
+      source_url: https://fireflies.ai/privacy
+      source_label: Fireflies.ai Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://fireflies.ai/security
+      source_label: Fireflies.ai Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Slack Technologies (Salesforce)
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Slack AI
+    taxonomy_tags:
+    - messaging_ai
+    - summarisation
+    - knowledge_search
+    - productivity_suite
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Slack does not use customer data (messages, files, etc.) to train Slack AI models or third-party
+          LLMs. Slack AI processes data within Slack's existing security perimeter.
+      source_url: https://slack.com/trust/privacy/ai-privacy-principles
+      source_label: Slack AI Privacy Principles
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+        - FedRAMP Moderate
+      source_url: https://slack.com/trust/compliance
+      source_label: Slack Compliance
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: Gong
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Gong Revenue Intelligence
+    taxonomy_tags:
+    - sales_intelligence
+    - call_recording
+    - conversation_analytics
+    - revenue_forecasting
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Gong does not use customer call data to train Gong models for other customers. Customer
+          data is isolated within the Gong platform.
+      source_url: https://www.gong.io/privacy/
+      source_label: Gong Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.gong.io/trust/
+      source_label: Gong Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://www.gong.io/gdpr-dpa/
+      source_label: Gong GDPR DPA
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM02
+    - LLM09
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-OVERSIGHT
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Outreach
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Outreach Sales Execution AI
+    taxonomy_tags:
+    - sales_engagement
+    - crm_ai
+    - email_outreach
+    - revenue_intelligence
+    facts:
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - ISO 27001
+        - GDPR
+      source_url: https://www.outreach.io/company/trust/
+      source_label: Outreach Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://www.outreach.io/legal/dpa/
+      source_label: Outreach Data Processing Addendum
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Intercom
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Intercom Fin AI Agent
+    taxonomy_tags:
+    - customer_support_ai
+    - chatbot
+    - self_service
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Intercom's Fin AI Agent is built on OpenAI. Customer data is not used to train OpenAI's
+          base models (OpenAI Enterprise API terms apply). Intercom does not use customer conversation
+          data to train Fin.
+      source_url: https://www.intercom.com/security
+      source_label: Intercom Security and Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.intercom.com/security
+      source_label: Intercom Security and Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: Eightfold AI
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Eightfold Talent Intelligence
+    taxonomy_tags:
+    - talent_intelligence
+    - skills_platform
+    - recruiting_ai
+    - workforce_planning
+    facts:
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://eightfold.ai/security/
+      source_label: Eightfold AI Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: bias_testing
+      value:
+        answer: true
+        note: Eightfold publishes that its models are designed to surface skills over demographic signals
+          and undergoes bias testing.
+      source_url: https://eightfold.ai/responsible-ai/
+      source_label: Eightfold Responsible AI
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM02
+    - GOV-BIAS
+    - GOV-DATA-QUALITY
+    - GOV-EXPLAINABILITY
+    - GOV-OVERSIGHT
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: HireVue
+  last_verified_at: '2025-04-01'
+  products:
+  - name: HireVue Video Interviewing
+    taxonomy_tags:
+    - video_interviewing
+    - hiring_screening
+    - ai_assessment
+    facts:
+    - key: bias_audit
+      value:
+        answer: true
+        note: HireVue undergoes annual independent bias audits. Committed to transparency; removed facial
+          expression analysis in 2021 following scrutiny.
+      source_url: https://www.hirevue.com/trust
+      source_label: HireVue Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - ISO 27001
+        - GDPR
+      source_url: https://www.hirevue.com/trust
+      source_label: HireVue Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: regulatory_note
+      value:
+        note: HireVue is subject to Illinois AEIA (Artificial Intelligence Video Interview Act) which
+          requires disclosure, consent and bias audit. Verify local regulations before deployment.
+      source_url: https://ilga.gov/legislation/ilcs/ilcs3.asp?ActID=4015
+      source_label: Illinois Artificial Intelligence Video Interview Act
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM02
+    - GOV-BIAS
+    - GOV-DATA-QUALITY
+    - GOV-EXPLAINABILITY
+    - GOV-OVERSIGHT
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Paradox
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Olivia (Paradox AI)
+    taxonomy_tags:
+    - hr_chatbot
+    - recruiting_ai
+    - candidate_engagement
+    - scheduling_ai
+    facts:
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.paradox.ai/security/
+      source_label: Paradox Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM09
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-DATA-QUALITY
+    - GOV-EXPLAINABILITY
+    - GOV-OVERSIGHT
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Phenom People
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Phenom Talent AI
+    taxonomy_tags:
+    - talent_experience
+    - recruiting_ai
+    - skills_matching
+    - career_pathing
+    facts:
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - ISO 27001
+        - GDPR
+      source_url: https://www.phenom.com/security
+      source_label: Phenom Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM02
+    - GOV-BIAS
+    - GOV-DATA-QUALITY
+    - GOV-EXPLAINABILITY
+    - GOV-OVERSIGHT
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Textio
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Textio
+    taxonomy_tags:
+    - writing_assistant
+    - hr_writing
+    - job_description_ai
+    - bias_detection
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Textio uses anonymised, aggregate data to improve language models; customer-identifying
+          content is not shared or used to train models for other customers.
+      source_url: https://textio.com/privacy
+      source_label: Textio Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://textio.com/security
+      source_label: Textio Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: Leena AI
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Leena AI (WorkLM)
+    taxonomy_tags:
+    - hr_chatbot
+    - employee_self_service
+    - knowledge_management
+    - enterprise_automation
+    facts:
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://leena.ai/security/
+      source_label: Leena AI Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM06
+    - LLM07
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-OVERSIGHT
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+    - GOV-AUTONOMY
+- name: Midjourney
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Midjourney
+    taxonomy_tags:
+    - image_generation
+    - creative_ai
+    - art_generation
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: true
+        note: 'By default, Midjourney may use prompts and generated images to train/improve its models
+          unless on an Enterprise plan with privacy mode enabled. VERIFY: Enterprise plan terms should
+          be checked for specific data use.'
+      source_url: https://docs.midjourney.com/docs/privacy
+      source_label: Midjourney Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: enterprise_privacy_mode
+      value:
+        note: Midjourney Enterprise allows private (stealth) mode — images not publicly visible and not
+          used for training without customer consent. Enterprises must confirm their plan terms.
+      source_url: https://www.midjourney.com/home#enterprise
+      source_label: Midjourney Enterprise
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: content_policy
+      value:
+        note: Midjourney images generated using the service are subject to Midjourney's terms regarding
+          commercial use.
+      source_url: https://docs.midjourney.com/docs/terms-of-service
+      source_label: Midjourney Terms of Service
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM05
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Stability AI
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Stable Diffusion API
+    taxonomy_tags:
+    - image_generation
+    - developer_platform
+    - creative_ai
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: The Stability AI API does not use customer API calls or uploaded images to train or fine-tune
+          base models. Fine-tuning on customer data is a separate, explicit opt-in service.
+      source_url: https://platform.stability.ai/docs/privacy
+      source_label: Stability AI Platform Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: training_data_note
+      value:
+        note: Stable Diffusion base models were trained on publicly available datasets (LAION-5B). Training
+          data provenance is a documented area of ongoing scrutiny and litigation.
+      source_url: https://stability.ai/use-policy
+      source_label: Stability AI Use Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Synthesia
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Synthesia Enterprise
+    taxonomy_tags:
+    - ai_video_generation
+    - avatar_video
+    - synthetic_content
+    - e_learning_content
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Synthesia does not use customer content or custom avatars to train its base models.
+      source_url: https://www.synthesia.io/privacy
+      source_label: Synthesia Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.synthesia.io/security
+      source_label: Synthesia Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: synthetic_content_marking
+      value:
+        note: Synthesia applies C2PA metadata to mark AI-generated video as machine-generated. Supports
+          Content Credentials.
+      source_url: https://www.synthesia.io/blog/synthesia-content-credentials
+      source_label: Synthesia Content Credentials
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: deepfake_policy
+      value:
+        note: Requires explicit informed consent from individuals for personal avatar creation. Prohibits
+          creating deepfakes of real individuals without consent.
+      source_url: https://www.synthesia.io/acceptable-use-policy
+      source_label: Synthesia Acceptable Use Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM05
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Runway
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Runway Gen-3 (Enterprise)
+    taxonomy_tags:
+    - ai_video_generation
+    - video_editing
+    - image_generation
+    - creative_ai
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Runway Enterprise plans have data privacy provisions preventing use of customer assets for
+          training. Free/personal tier users should review the standard terms.
+      source_url: https://runwayml.com/privacy
+      source_label: Runway Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+      source_url: https://runwayml.com/security
+      source_label: Runway Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM05
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: ElevenLabs
+  last_verified_at: '2025-04-01'
+  products:
+  - name: ElevenLabs Business
+    taxonomy_tags:
+    - voice_synthesis
+    - ai_audio
+    - text_to_speech
+    - voice_cloning
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: 'ElevenLabs Business and Enterprise plans include privacy provisions: custom voice data
+          and generated audio are not used to train or improve ElevenLabs'' base voice models without
+          consent.'
+      source_url: https://elevenlabs.io/privacy
+      source_label: ElevenLabs Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://elevenlabs.io/security
+      source_label: ElevenLabs Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: voice_cloning_consent
+      value:
+        note: Voice cloning requires explicit consent from the voice owner. ElevenLabs applies voice authentication
+          and abuse prevention. Usage for impersonation or misrepresentation is prohibited.
+      source_url: https://elevenlabs.io/acceptable-use-policy
+      source_label: ElevenLabs Acceptable Use Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM05
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: ABBYY
+  last_verified_at: '2025-04-01'
+  products:
+  - name: ABBYY Vantage
+    taxonomy_tags:
+    - intelligent_document_processing
+    - ocr
+    - data_extraction
+    - document_classification
+    facts:
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+        - HIPAA
+      source_url: https://www.abbyy.com/company/corporate-information/data-privacy-security/
+      source_label: ABBYY Data Privacy and Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: deployment_options
+      value:
+        options:
+        - Cloud (SaaS)
+        - On-premise
+        - Private cloud
+      source_url: https://www.abbyy.com/vantage/
+      source_label: ABBYY Vantage Product Page
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM02
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: UiPath
+  last_verified_at: '2025-04-01'
+  products:
+  - name: UiPath Document Understanding
+    taxonomy_tags:
+    - intelligent_document_processing
+    - rpa
+    - data_extraction
+    - enterprise_automation
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: UiPath does not use customer documents or extracted data to train UiPath's AI models for
+          other customers.
+      source_url: https://www.uipath.com/legal/trust-and-security/privacy-policy
+      source_label: UiPath Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.uipath.com/legal/trust-and-security
+      source_label: UiPath Trust and Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM06
+    - LLM07
+    - GOV-OVERSIGHT
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+    - GOV-AUTONOMY
+- name: Harvey AI
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Harvey (Legal AI)
+    taxonomy_tags:
+    - legal_research
+    - contract_review
+    - legal_drafting
+    - regulatory_analysis
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Harvey does not use customer legal documents or queries to train its underlying models without
+          explicit agreement. Customer data is isolated per firm.
+      source_url: https://www.harvey.ai/security
+      source_label: Harvey Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - ISO 27001
+        - GDPR
+      source_url: https://www.harvey.ai/security
+      source_label: Harvey Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: model_family
+      value:
+        note: Built on OpenAI GPT-4 and Anthropic Claude models, with law-specific fine-tuning.
+      source_url: https://www.harvey.ai
+      source_label: Harvey AI Product Overview
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-OVERSIGHT
+    - GOV-SUPPLY-CHAIN
+- name: LexisNexis
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Lexis+ AI
+    taxonomy_tags:
+    - legal_research
+    - case_law_analysis
+    - regulatory_analysis
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: LexisNexis Lexis+ AI does not use customer queries or firm-specific data to train its AI
+          models.
+      source_url: https://www.lexisnexis.com/en-us/products/lexis-plus-ai/ai-responsibly.page
+      source_label: LexisNexis AI Responsibly
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2
+        - GDPR
+      source_url: https://www.lexisnexis.com/en-us/about-us/security.page
+      source_label: LexisNexis Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-OVERSIGHT
+    - GOV-SUPPLY-CHAIN
+- name: Relativity
+  last_verified_at: '2025-04-01'
+  products:
+  - name: RelativityOne AI
+    taxonomy_tags:
+    - ediscovery
+    - document_review
+    - legal_ai
+    - contract_analysis
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Relativity does not use customer documents or review decisions to train AI models for use
+          by other customers.
+      source_url: https://www.relativity.com/resources/trust/
+      source_label: Relativity Trust
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - FedRAMP Moderate
+        - GDPR
+      source_url: https://www.relativity.com/resources/trust/
+      source_label: Relativity Trust
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-OVERSIGHT
+    - GOV-SUPPLY-CHAIN
+- name: DeepL
+  last_verified_at: '2025-04-01'
+  products:
+  - name: DeepL Pro
+    taxonomy_tags:
+    - machine_translation
+    - language_processing
+    - productivity_suite
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Texts submitted via DeepL Pro are not used for training. Texts are deleted after translation.
+          Free plan users should review separately.
+      source_url: https://www.deepl.com/pro-data-security
+      source_label: DeepL Pro Data Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_deletion
+      value:
+        note: Text inputs deleted immediately after translation is complete for DeepL Pro/API users.
+      source_url: https://www.deepl.com/pro-data-security
+      source_label: DeepL Pro Data Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - EU (Germany)
+        note: DeepL is a German company (Cologne). API infrastructure hosted in the EU.
+      source_url: https://www.deepl.com/privacy
+      source_label: DeepL Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - GDPR
+      source_url: https://www.deepl.com/security
+      source_label: DeepL Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: eea_entity
+      value:
+        entity: DeepL SE (Germany)
+        note: GDPR-resident entity.
+      source_url: https://www.deepl.com/about
+      source_label: DeepL About
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Glean
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Glean Work AI
+    taxonomy_tags:
+    - enterprise_search
+    - knowledge_management
+    - ai_assistant
+    - rag
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Glean does not use customer data to train models for other customers. The AI assistant is
+          grounded entirely on the customer's own connected enterprise data.
+      source_url: https://www.glean.com/security
+      source_label: Glean Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - ISO 27001
+        - GDPR
+      source_url: https://www.glean.com/security
+      source_label: Glean Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: deployment_options
+      value:
+        options:
+        - Customer-managed AWS/GCP/Azure VPC
+        - Glean managed cloud
+      source_url: https://www.glean.com/security
+      source_label: Glean Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM06
+    - LLM07
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-OVERSIGHT
+    - GOV-SUPPLY-CHAIN
+    - GOV-AUTONOMY
+- name: Guru
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Guru AI Knowledge
+    taxonomy_tags:
+    - knowledge_management
+    - enterprise_search
+    - employee_self_service
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Guru does not use customer knowledge base content to train AI models for other customers.
+      source_url: https://www.getguru.com/security
+      source_label: Guru Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.getguru.com/security
+      source_label: Guru Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Darktrace
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Darktrace AI Platform
+    taxonomy_tags:
+    - ai_security
+    - threat_detection
+    - network_security
+    - anomaly_detection
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: true
+        note: Darktrace's self-learning AI trains exclusively on each organisation's own network data
+          to create a bespoke model of 'normal'. No cross-customer training.
+      source_url: https://darktrace.com/cyber-ai-research/technology/
+      source_label: Darktrace Technology Overview
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2
+        - GDPR
+      source_url: https://darktrace.com/security-and-privacy/
+      source_label: Darktrace Security and Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM02
+    - GOV-CONFABULATION
+    - GOV-DATA-QUALITY
+    - GOV-ROBUSTNESS
+- name: CrowdStrike
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Charlotte AI (Falcon Platform)
+    taxonomy_tags:
+    - ai_security
+    - threat_detection
+    - soc_ai
+    - endpoint_security
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Charlotte AI is powered by CrowdStrike's threat intelligence and the Falcon platform's graph.
+          Customer telemetry contributes to shared threat intelligence with consent, per standard CrowdStrike
+          licensing.
+      source_url: https://www.crowdstrike.com/products/charlotte-ai/
+      source_label: CrowdStrike Charlotte AI
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+        - FedRAMP High
+      source_url: https://www.crowdstrike.com/trust-center/
+      source_label: CrowdStrike Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM02
+    - GOV-CONFABULATION
+    - GOV-DATA-QUALITY
+    - GOV-ROBUSTNESS
+- name: ThoughtSpot
+  last_verified_at: '2025-04-01'
+  products:
+  - name: ThoughtSpot AI Analytics
+    taxonomy_tags:
+    - bi_analytics
+    - natural_language_analytics
+    - data_visualisation
+    - ai_analytics
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: ThoughtSpot Spotter AI does not use customer analytical queries or business data to train
+          its base models.
+      source_url: https://www.thoughtspot.com/legal/privacy
+      source_label: ThoughtSpot Privacy Policy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.thoughtspot.com/trust
+      source_label: ThoughtSpot Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM09
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: Databricks
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Databricks Assistant & DBRX
+    taxonomy_tags:
+    - ml_platform
+    - data_engineering
+    - ai_analytics
+    - developer_platform
+    - foundation_model_api
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Databricks does not use customer data to train DBRX or Databricks Assistant models for other
+          customers. Customer data stays in the customer's cloud account.
+      source_url: https://www.databricks.com/trust
+      source_label: Databricks Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+        - HIPAA
+        - FedRAMP
+      source_url: https://www.databricks.com/trust
+      source_label: Databricks Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: deployment_options
+      value:
+        options:
+        - Customer-managed cloud (AWS, Azure, GCP)
+      source_url: https://www.databricks.com/product/platform
+      source_label: Databricks Platform
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-DATA-QUALITY
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Palantir Technologies
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Palantir AIP (AI Platform)
+    taxonomy_tags:
+    - enterprise_ai_platform
+    - decision_support
+    - ai_analytics
+    - agentic_ai
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Palantir AIP is designed to run LLMs within the customer's own controlled infrastructure
+          without exposing data to external model providers. Data does not leave the customer's environment.
+      source_url: https://www.palantir.com/platforms/aip/security/
+      source_label: Palantir AIP Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - FedRAMP High
+        - IL5
+        - SOC 2 Type II
+        - ISO 27001
+        - GDPR
+      source_url: https://www.palantir.com/platforms/aip/security/
+      source_label: Palantir AIP Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: deployment_options
+      value:
+        options:
+        - On-premise
+        - Private cloud
+        - FedCloud
+        - Palantir Cloud
+      source_url: https://www.palantir.com/platforms/aip/
+      source_label: Palantir AIP
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM06
+    - LLM07
+    - LLM09
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-OVERSIGHT
+    - GOV-SUPPLY-CHAIN
+    - GOV-AUTONOMY
+- name: Box
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Box AI
+    taxonomy_tags:
+    - document_analysis
+    - knowledge_management
+    - content_management
+    - enterprise_search
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Box does not use customer content to train Box AI's underlying models. Box AI requests are
+          sent to third-party LLM providers who are contractually prohibited from using the data for training.
+      source_url: https://www.box.com/en-gb/security
+      source_label: Box Security and Compliance
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - ISO 27018
+        - SOC 2 Type II
+        - GDPR
+        - HIPAA
+        - FedRAMP
+      source_url: https://www.box.com/en-gb/security
+      source_label: Box Security and Compliance
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: Moveworks
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Moveworks AI Platform
+    taxonomy_tags:
+    - employee_self_service
+    - it_helpdesk
+    - enterprise_automation
+    - chatbot
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Moveworks does not use customer data to train its core AI models for other customers. Customer
+          environments are isolated.
+      source_url: https://www.moveworks.com/security
+      source_label: Moveworks Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.moveworks.com/security
+      source_label: Moveworks Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM09
+    - GOV-CONFABULATION
+    - GOV-OVERSIGHT
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+    - GOV-AUTONOMY
+- name: Pendo
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Pendo AI
+    taxonomy_tags:
+    - product_analytics
+    - user_experience
+    - in_app_guidance
+    - ai_analytics
+    facts:
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+      source_url: https://www.pendo.io/security/
+      source_label: Pendo Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM09
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-SUPPLY-CHAIN
+- name: Snowflake
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Snowflake Cortex AI
+    taxonomy_tags:
+    - ml_platform
+    - ai_analytics
+    - data_engineering
+    - foundation_model_api
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Snowflake Cortex AI processes queries within the customer's Snowflake account. Data does
+          not leave the Snowflake environment and is not used to train external foundation models.
+      source_url: https://www.snowflake.com/product/ai-data-cloud/
+      source_label: Snowflake AI and Data Cloud
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+        - HIPAA
+        - FedRAMP High
+        - PCI DSS
+      source_url: https://trust.snowflake.com/
+      source_label: Snowflake Trust Centre
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-DATA-QUALITY
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Checkr
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Checkr AI Background Screening
+    taxonomy_tags:
+    - background_check
+    - hiring_ai
+    - compliance_screening
+    facts:
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - ISO 27001
+        - FCRA compliant
+        - GDPR
+      source_url: https://checkr.com/security
+      source_label: Checkr Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: regulatory_note
+      value:
+        note: Checkr operates under the US Fair Credit Reporting Act (FCRA) and equivalent international
+          laws governing consumer reporting. Background check AI decisions require adverse action procedures.
+          Verify applicable law for EU deployment.
+      source_url: https://checkr.com/compliance
+      source_label: Checkr Compliance
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM02
+    - GOV-BIAS
+    - GOV-DATA-QUALITY
+    - GOV-PRIVACY
+    - GOV-SUPPLY-CHAIN
+- name: Scale AI
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Scale Data Engine (Enterprise)
+    taxonomy_tags:
+    - ai_training_data
+    - data_labelling
+    - ml_platform
+    - developer_platform
+    facts:
+    - key: certifications
+      value:
+        list:
+        - SOC 2 Type II
+        - ISO 27001
+        - GDPR
+      source_url: https://scale.com/security
+      source_label: Scale AI Security
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: dpa_available
+      value:
+        answer: true
+      source_url: https://scale.com/legal
+      source_label: Scale AI Legal
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-BIAS
+    - GOV-CONFABULATION
+    - GOV-DATA-QUALITY
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN
+- name: Oracle
+  last_verified_at: '2025-04-01'
+  products:
+  - name: Oracle AI Services
+    taxonomy_tags:
+    - foundation_model_api
+    - developer_platform
+    - enterprise_ai
+    - document_analysis
+    facts:
+    - key: trains_on_customer_data
+      value:
+        answer: false
+        note: Oracle does not use customer data to train Oracle AI Services models. Customer data in Oracle
+          Cloud Infrastructure is isolated and private.
+      source_url: https://www.oracle.com/cloud/ai/privacy/
+      source_label: Oracle AI Privacy
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: certifications
+      value:
+        list:
+        - ISO 27001
+        - SOC 2 Type II
+        - GDPR
+        - FedRAMP High
+      source_url: https://www.oracle.com/cloud/compliance/
+      source_label: Oracle Cloud Compliance
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    - key: data_residency
+      value:
+        regions:
+        - configurable — 40+ Oracle Cloud regions including EU
+        note: Oracle Cloud offers EU Sovereign Cloud with data residency within the EU.
+      source_url: https://www.oracle.com/cloud/eu-sovereign-cloud/
+      source_label: Oracle EU Sovereign Cloud
+      provenance: catalogue_curated
+      last_checked_at: '2025-04-01'
+    risks:
+    - LLM01
+    - LLM02
+    - LLM03
+    - LLM04
+    - LLM05
+    - LLM06
+    - LLM07
+    - LLM08
+    - LLM09
+    - LLM10
+    - GOV-CONFABULATION
+    - GOV-IP
+    - GOV-MISUSE
+    - GOV-SUPPLY-CHAIN

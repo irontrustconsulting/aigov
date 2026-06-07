@@ -7,7 +7,10 @@
 #
 # Keep this vocabulary user-friendly. The compliance mapping happens separately.
 
-# --- Top-level groups ---
+# ===========================================================================
+# TOP-LEVEL GROUPS
+# ===========================================================================
+
 - code: HR_RECRUITMENT
   name: HR & Recruitment
   description: Tools used in hiring, people management and HR operations.
@@ -18,9 +21,57 @@
 
 - code: CUSTOMER_ENGAGEMENT
   name: Customer Engagement
-  description: Chatbots and assistants that interact with customers.
+  description: Chatbots and assistants that interact with customers or employees.
 
-# --- Subcategories (drill-down level 2) ---
+- code: DEVELOPER_TOOLS
+  name: Developer & Engineering Tools
+  description: AI tools that assist software development, code generation and testing.
+
+- code: SALES_CRM
+  name: Sales & CRM
+  description: AI tools embedded in or augmenting sales, revenue and CRM workflows.
+
+- code: MARKETING
+  name: Marketing & Advertising
+  description: AI tools for content creation, campaign management and personalisation.
+
+- code: DATA_ANALYTICS
+  name: Data & Analytics
+  description: AI-powered analytics, business intelligence and data platform tools.
+
+- code: SECURITY_OPS
+  name: Security & Threat Detection
+  description: AI tools for cybersecurity operations, threat detection and response.
+
+- code: COMMUNICATIONS
+  name: Communications & Meetings
+  description: AI tools embedded in video conferencing, messaging and note-taking.
+
+- code: DOCUMENT_PROCESSING
+  name: Document Processing & Automation
+  description: AI for extracting, classifying and processing unstructured documents.
+
+- code: LEGAL_COMPLIANCE
+  name: Legal & Compliance
+  description: AI tools assisting legal research, contract review and regulatory compliance.
+
+- code: MEDIA_GENERATION
+  name: Media Generation
+  description: AI tools for generating or editing images, video, audio and voice.
+
+- code: SEARCH_KNOWLEDGE
+  name: Search & Knowledge Management
+  description: AI-powered enterprise search and knowledge-base tools.
+
+- code: TRANSLATION_LANGUAGE
+  name: Translation & Language
+  description: AI translation, localisation and language processing tools.
+
+# ===========================================================================
+# SUB-CATEGORIES (drill-down level 2)
+# ===========================================================================
+
+# --- HR & Recruitment ---
 - code: HR_HIRING
   name: Hiring & Candidate Screening
   parent: HR_RECRUITMENT
@@ -31,6 +82,17 @@
   parent: HR_RECRUITMENT
   description: Task allocation, monitoring and performance evaluation.
 
+- code: HR_TALENT_INTEL
+  name: Talent Intelligence & Skills
+  parent: HR_RECRUITMENT
+  description: AI-driven skills mapping, career pathing and talent marketplace tools.
+
+- code: HR_CONVERSATIONAL
+  name: HR Conversational AI
+  parent: HR_RECRUITMENT
+  description: Employee-facing chatbots for HR queries, onboarding and support.
+
+# --- Productivity & Content ---
 - code: PROD_WRITING
   name: Writing & Drafting Assistants
   parent: PRODUCTIVITY
@@ -41,7 +103,139 @@
   parent: PRODUCTIVITY
   description: Generating or editing images and other media.
 
+- code: PROD_GENERAL_ASSISTANT
+  name: General AI Assistants
+  parent: PRODUCTIVITY
+  description: Multi-modal AI assistants embedded in productivity suites (email, docs, calendar).
+
+# --- Customer Engagement ---
 - code: CE_CHATBOT
   name: Customer-facing Chatbots
   parent: CUSTOMER_ENGAGEMENT
   description: Conversational agents that interact directly with customers.
+
+- code: CE_VOICE_BOT
+  name: AI Voice & Phone Agents
+  parent: CUSTOMER_ENGAGEMENT
+  description: AI agents that interact with customers over phone or voice channels.
+
+- code: CE_EMPLOYEE_BOT
+  name: Employee-facing AI Assistants
+  parent: CUSTOMER_ENGAGEMENT
+  description: Internal AI agents for IT helpdesk, HR queries and employee self-service.
+
+# --- Developer Tools ---
+- code: DEV_CODE_ASSIST
+  name: AI Code Assistants
+  parent: DEVELOPER_TOOLS
+  description: In-IDE code completion, generation and review tools powered by AI.
+
+- code: DEV_TESTING_QA
+  name: AI Testing & Quality Assurance
+  parent: DEVELOPER_TOOLS
+  description: Automated test generation, bug detection and code quality tools.
+
+- code: DEV_PLATFORM_API
+  name: Foundation Model APIs & Platforms
+  parent: DEVELOPER_TOOLS
+  description: APIs providing access to large language models and AI platforms for building custom applications.
+
+# --- Sales & CRM ---
+- code: SALES_REVENUE_INTEL
+  name: Revenue Intelligence & Call Analytics
+  parent: SALES_CRM
+  description: AI tools that record, transcribe and analyse sales conversations.
+
+- code: SALES_ENGAGEMENT
+  name: Sales Engagement & Sequencing
+  parent: SALES_CRM
+  description: AI tools for outreach sequencing, lead scoring and pipeline management.
+
+# --- Marketing ---
+- code: MKTG_CONTENT
+  name: Marketing Content Generation
+  parent: MARKETING
+  description: AI for generating marketing copy, ads, social content and campaign materials.
+
+- code: MKTG_PERSONALISATION
+  name: AI Personalisation & Targeting
+  parent: MARKETING
+  description: AI-driven customer segmentation, personalisation and predictive targeting.
+
+# --- Data & Analytics ---
+- code: DA_BI_ANALYTICS
+  name: AI-powered Business Intelligence
+  parent: DATA_ANALYTICS
+  description: Conversational analytics, natural-language BI queries and AI-driven insights.
+
+- code: DA_ML_PLATFORM
+  name: ML & Data Science Platforms
+  parent: DATA_ANALYTICS
+  description: Platforms for building, training and deploying machine learning models.
+
+# --- Security ---
+- code: SEC_THREAT_DETECT
+  name: AI Threat Detection & SOC
+  parent: SECURITY_OPS
+  description: AI-powered threat detection, SIEM and security operations centre tools.
+
+- code: SEC_VULN_CODE
+  name: AI Code & Vulnerability Security
+  parent: SECURITY_OPS
+  description: AI tools that detect vulnerabilities, secrets and insecure code patterns.
+
+# --- Communications & Meetings ---
+- code: COMMS_MEETING_AI
+  name: Meeting Intelligence & Summaries
+  parent: COMMUNICATIONS
+  description: AI tools that transcribe, summarise and extract action items from meetings.
+
+- code: COMMS_PRODUCTIVITY
+  name: AI-augmented Messaging & Productivity
+  parent: COMMUNICATIONS
+  description: AI features embedded in team messaging and collaboration platforms.
+
+# --- Document Processing ---
+- code: DOC_IDP
+  name: Intelligent Document Processing
+  parent: DOCUMENT_PROCESSING
+  description: AI extraction, classification and processing of unstructured documents.
+
+- code: DOC_CONTRACT_AI
+  name: Contract & Legal Document AI
+  parent: DOCUMENT_PROCESSING
+  description: AI tools for contract review, obligation extraction and clause analysis.
+
+# --- Legal & Compliance ---
+- code: LEGAL_RESEARCH
+  name: Legal Research AI
+  parent: LEGAL_COMPLIANCE
+  description: AI tools for legal research, case law analysis and statutory interpretation.
+
+# --- Media Generation ---
+- code: MEDIA_IMAGE_GEN
+  name: AI Image Generation
+  parent: MEDIA_GENERATION
+  description: AI tools for generating and editing images from text prompts.
+
+- code: MEDIA_VIDEO_SYNTH
+  name: AI Video & Avatar Generation
+  parent: MEDIA_GENERATION
+  description: AI tools for generating synthetic video, presenter avatars and video editing.
+
+- code: MEDIA_VOICE_SYNTH
+  name: AI Voice Synthesis
+  parent: MEDIA_GENERATION
+  description: AI tools for generating realistic synthetic speech and voice cloning.
+
+# --- Search & Knowledge ---
+- code: SEARCH_ENTERPRISE
+  name: Enterprise AI Search
+  parent: SEARCH_KNOWLEDGE
+  description: AI-powered semantic search across enterprise knowledge and content sources.
+
+# --- Translation ---
+- code: TRANS_MACHINE
+  name: AI Machine Translation
+  parent: TRANSLATION_LANGUAGE
+  description: AI translation tools supporting multilingual business communication.

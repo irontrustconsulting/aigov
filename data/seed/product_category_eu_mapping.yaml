@@ -2,38 +2,264 @@
 #
 # ⚠️  REGULATORY MAPPING — VERIFY AS THE DOMAIN EXPERT.
 # Maps user-facing product categories to the governing EU AI Act subcategory.
-# is_primary: true marks the proposed default. Per the single-governing-tier
-# rule, the PRIMARY points at the HIGHEST-RISK applicable subcategory (propose
-# the stricter classification; the user justifies down via override/exception).
+#
+# is_primary: true marks the proposed default. Per the single-governing-tier rule,
+# the PRIMARY points at the HIGHEST-RISK applicable subcategory where applicable
+# (propose the stricter classification; the user justifies down via override).
 # A category may list non-primary alternatives (other plausible regulated uses).
+#
+# IMPORTANT DISCLAIMER ON MAPPING CONFIDENCE:
+#   CONFIRMED (⬛): Mapping is well-grounded in the Act's text — the category
+#     clearly falls within the cited Annex/Article.
+#   PLAUSIBLE (◻): The Act is ambiguous or the category spans multiple risk levels
+#     depending on deployment context. The classification engine must drive the
+#     final determination; this is the default starting point only.
+#   MINIMAL / UNCLASSIFIED: For categories with no specific EU AI Act trigger,
+#     the classification wizard routes the user through context questions.
+#     These categories carry no primary EU mapping; the wizard is the correct path.
 #
 # References both sides by code; loader resolves to ids.
 
-# Hiring & screening -> recruitment (HIGH). The defining high-risk employment case.
+# ===========================================================================
+# ORIGINAL CATEGORIES (carried forward)
+# ===========================================================================
+
+# Hiring & screening -> EMP-RECRUIT (HIGH RISK, Annex III(4)(a)) ⬛
+# Clear: AI that filters, analyses and evaluates candidates in employment.
 - product_category_code: HR_HIRING
   eu_ai_act_subcategory_code: EMP-RECRUIT
   is_primary: true
 
-# Performance & workforce mgmt -> worker management decisions (HIGH).
+# Performance & workforce mgmt -> EMP-MANAGE (HIGH RISK, Annex III(4)(b)) ⬛
+# Clear: AI used for performance monitoring, task allocation and promotion/termination.
 - product_category_code: HR_PERFORMANCE
   eu_ai_act_subcategory_code: EMP-MANAGE
   is_primary: true
 
-# Writing assistants -> synthetic text generation transparency (LIMITED).
-# (No high-risk trigger for general drafting; transparency/marking may apply.)
+# Writing assistants -> TRANS-SYNTHETIC-CONTENT (LIMITED, Art. 50(2)) ◻
+# General drafting assistance may trigger synthetic content marking obligations.
+# Many deployers will confirm minimal risk after reviewing context.
 - product_category_code: PROD_WRITING
   eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
   is_primary: true
 
-# Image generation -> synthetic content marking / deep-fake transparency (LIMITED).
+# Image generation -> TRANS-SYNTHETIC-CONTENT (LIMITED, Art. 50(2)) ⬛
+# AI-generated images require machine-readable marking as AI-generated.
 - product_category_code: PROD_IMAGE
   eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
   is_primary: true
+
+# Image generation -> TRANS-DEEPFAKE (LIMITED, Art. 50(4)) ◻ (non-primary)
+# Where generated images depict real people, deepfake disclosure may apply.
 - product_category_code: PROD_IMAGE
   eu_ai_act_subcategory_code: TRANS-DEEPFAKE
   is_primary: false
 
-# Customer chatbots -> direct-interaction transparency (LIMITED).
+# Customer chatbots -> TRANS-DIRECT-INTERACTION (LIMITED, Art. 50(1)) ⬛
+# Systems interacting directly with people must disclose they are AI.
 - product_category_code: CE_CHATBOT
   eu_ai_act_subcategory_code: TRANS-DIRECT-INTERACTION
   is_primary: true
+
+# ===========================================================================
+# NEW CATEGORIES
+# ===========================================================================
+
+# HR Talent Intelligence & Skills
+# Depends heavily on deployment: if used to make or assist hiring/promotion
+# decisions -> HIGH RISK (EMP-RECRUIT or EMP-MANAGE). If used for internal
+# skills mapping / career development without employment decisions -> lower risk.
+# Primary: EMP-RECRUIT as the conservative default. ◻
+- product_category_code: HR_TALENT_INTEL
+  eu_ai_act_subcategory_code: EMP-RECRUIT
+  is_primary: true
+- product_category_code: HR_TALENT_INTEL
+  eu_ai_act_subcategory_code: EMP-MANAGE
+  is_primary: false
+
+# HR Conversational AI (employee-facing chatbots)
+# Must disclose AI nature to employees under Art. 50(1). ⬛
+- product_category_code: HR_CONVERSATIONAL
+  eu_ai_act_subcategory_code: TRANS-DIRECT-INTERACTION
+  is_primary: true
+
+# General AI Assistants (productivity suites)
+# Output containing synthetic text may trigger Art. 50(2) marking obligations.
+# Context-dependent — the classification wizard must determine deployment-specific tier. ◻
+- product_category_code: PROD_GENERAL_ASSISTANT
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+
+# AI Voice & Phone Agents
+# Direct AI interaction with customers/employees triggers Art. 50(1) disclosure. ⬛
+- product_category_code: CE_VOICE_BOT
+  eu_ai_act_subcategory_code: TRANS-DIRECT-INTERACTION
+  is_primary: true
+
+# Employee-facing AI Assistants
+# Direct AI interaction with employees triggers Art. 50(1) disclosure. ⬛
+# If used for performance assessment / task allocation -> HIGH RISK (EMP-MANAGE). ◻
+- product_category_code: CE_EMPLOYEE_BOT
+  eu_ai_act_subcategory_code: TRANS-DIRECT-INTERACTION
+  is_primary: true
+- product_category_code: CE_EMPLOYEE_BOT
+  eu_ai_act_subcategory_code: EMP-MANAGE
+  is_primary: false
+
+# AI Code Assistants
+# No specific Annex III trigger for general code assistance.
+# Outputs (generated code) may constitute synthetic text subject to Art. 50(2). ◻
+# Classification wizard needed for context-specific determination.
+- product_category_code: DEV_CODE_ASSIST
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+
+# Foundation Model APIs & Platforms
+# These are general-purpose AI systems. Tier depends entirely on downstream
+# deployment context. Synthetic output marking (Art. 50(2)) as the default
+# starting point; the wizard must assess each integration. ◻
+- product_category_code: DEV_PLATFORM_API
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+
+# Sales Revenue Intelligence & Call Analytics
+# Call recording and AI analysis of sales conversations — no specific Annex III
+# trigger for external sales calls. However, if used to evaluate employee
+# performance/conduct -> HIGH RISK (EMP-MANAGE, Annex III(4)(b)). ◻
+# Primary: EMP-MANAGE as the conservative default for workforce monitoring use.
+- product_category_code: SALES_REVENUE_INTEL
+  eu_ai_act_subcategory_code: EMP-MANAGE
+  is_primary: true
+- product_category_code: SALES_REVENUE_INTEL
+  eu_ai_act_subcategory_code: TRANS-DIRECT-INTERACTION
+  is_primary: false
+
+# Sales Engagement & Sequencing
+# AI generating sales communications is synthetic content under Art. 50(2). ◻
+# No Annex III trigger in standard use.
+- product_category_code: SALES_ENGAGEMENT
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+
+# Marketing Content Generation
+# Synthetic text/image/audio for marketing -> Art. 50(2) marking obligations. ⬛
+- product_category_code: MKTG_CONTENT
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+
+# AI Media Image Generation
+# AI-generated images -> Art. 50(2) (machine-readable marking). ⬛
+# If depicting real people as fake/manipulated -> Art. 50(4) deepfake disclosure. ◻
+- product_category_code: MEDIA_IMAGE_GEN
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+- product_category_code: MEDIA_IMAGE_GEN
+  eu_ai_act_subcategory_code: TRANS-DEEPFAKE
+  is_primary: false
+
+# AI Video & Avatar Generation
+# Synthetic video -> Art. 50(2). ⬛
+# Synthetic video depicting real people -> Art. 50(4) deepfake disclosure. ⬛
+- product_category_code: MEDIA_VIDEO_SYNTH
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+- product_category_code: MEDIA_VIDEO_SYNTH
+  eu_ai_act_subcategory_code: TRANS-DEEPFAKE
+  is_primary: false
+
+# AI Voice Synthesis
+# Synthetic audio -> Art. 50(2) marking. ⬛
+# Voice cloning of real individuals -> Art. 50(4) deepfake disclosure when
+# used to impersonate or create false impressions. ◻
+- product_category_code: MEDIA_VOICE_SYNTH
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+- product_category_code: MEDIA_VOICE_SYNTH
+  eu_ai_act_subcategory_code: TRANS-DEEPFAKE
+  is_primary: false
+
+# Meeting Intelligence & Summaries
+# No specific Annex III trigger. AI-generated meeting summaries = synthetic
+# text under Art. 50(2). If used to evaluate employee performance -> EMP-MANAGE. ◻
+- product_category_code: COMMS_MEETING_AI
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+- product_category_code: COMMS_MEETING_AI
+  eu_ai_act_subcategory_code: EMP-MANAGE
+  is_primary: false
+
+# AI-augmented Messaging & Productivity
+# AI-generated text in business communications -> Art. 50(2). ◻
+- product_category_code: COMMS_PRODUCTIVITY
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+
+# Intelligent Document Processing (IDP)
+# Document extraction / classification — no Annex III trigger in most uses.
+# Exceptions: processing documents for credit, public benefits, or employment
+# decisions could elevate risk. The wizard must resolve deployment context.
+# No primary EU mapping — wizard is the appropriate path for most IDP uses.
+# ⚠️ NOTE: If IDP outputs feed into HIGH RISK decisions (credit, employment,
+# benefits) the downstream use case carries the Annex III obligation, not the
+# IDP tool itself in isolation.
+
+# Contract & Legal Document AI
+# Contract review assistance — no specific Annex III trigger.
+# If used by judicial authority in alternative dispute resolution ->
+# JUST-JUDICIAL-SUPPORT (HIGH RISK). Rare in enterprise SaaS deployments.
+# No primary mapping; wizard needed.
+
+# Legal Research AI
+# AI for legal research — if used by judicial authority -> JUST-JUDICIAL-SUPPORT. ◻
+# Most enterprise use (law firms, in-house legal) does not trigger Annex III.
+# Conservative: map to JUST-JUDICIAL-SUPPORT as non-primary for awareness.
+- product_category_code: LEGAL_RESEARCH
+  eu_ai_act_subcategory_code: JUST-JUDICIAL-SUPPORT
+  is_primary: false
+
+# AI-powered Business Intelligence
+# BI / analytics — no specific Annex III trigger unless:
+# (a) credit scoring / risk assessment -> SVC-CREDIT
+# (b) public benefit eligibility -> SVC-PUBLIC-BENEFITS
+# Map the awareness non-primary; wizard handles context.
+- product_category_code: DA_BI_ANALYTICS
+  eu_ai_act_subcategory_code: SVC-CREDIT
+  is_primary: false
+
+# ML & Data Science Platforms
+# Model training / data platforms — no direct Art. 50 or Annex III trigger
+# at the platform level. Risk depends on the downstream model/use case.
+# No primary mapping; wizard is the appropriate path.
+
+# AI Threat Detection & SOC
+# Threat detection AI — potential INFRA-SAFETY-COMPONENT (HIGH RISK, Annex III(2))
+# if deployed as a safety component in critical digital infrastructure. ◻
+# Conservative: map as non-primary for awareness.
+- product_category_code: SEC_THREAT_DETECT
+  eu_ai_act_subcategory_code: INFRA-SAFETY-COMPONENT
+  is_primary: false
+
+# Enterprise AI Search
+# Semantic search — no specific Annex III trigger.
+# Synthetic content obligations may apply to AI-generated summaries. ◻
+- product_category_code: SEARCH_ENTERPRISE
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+
+# AI Machine Translation
+# Translation — synthetic text output -> Art. 50(2) if marked as original
+# or published as content of public interest. ◻
+# For most business use (internal, known AI use) the wizard may confirm minimal.
+- product_category_code: TRANS_MACHINE
+  eu_ai_act_subcategory_code: TRANS-SYNTHETIC-CONTENT
+  is_primary: true
+
+# AI Marketing Personalisation
+# AI-driven personalisation / targeting — no specific Annex III trigger
+# in most marketing contexts. Potential PROHIB-SUBLIMINAL if exploiting
+# psychological vulnerabilities; wizard must assess. ◻
+# Map to transparency-direct-interaction if the personalisation involves
+# real-time AI interaction with individuals.
+- product_category_code: MKTG_PERSONALISATION
+  eu_ai_act_subcategory_code: TRANS-DIRECT-INTERACTION
+  is_primary: false

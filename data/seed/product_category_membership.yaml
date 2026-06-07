@@ -1,19 +1,458 @@
 # Seed data: product -> product-category membership (M:N).
 #
-# Links the catalogue products you already seeded to the user-facing categories,
-# so the wizard drill-down (category -> vendors -> products) has data to return.
+# Links catalogue products to user-facing categories so the wizard drill-down
+# (category -> vendors -> products) has data to return.
 # A product may belong to several categories.
 #
 # References by name (product) and code (category); loader resolves to ids.
-# Seed product_category and the catalogue first.
+# Seed product_category and catalogue first.
 
-# Firefly (Adobe) — image generation.
-- product_name: Firefly
-  product_category_code: PROD_IMAGE
+# ===========================================================================
+# FOUNDATION MODEL APIs & PLATFORMS
+# ===========================================================================
 
-# ChatGPT Enterprise (OpenAI) — a general assistant; sits in writing AND can be
-# a customer-facing chatbot, demonstrating multi-category membership.
+# OpenAI API — developer platform / foundation model API
+- product_name: OpenAI API
+  product_category_code: DEV_PLATFORM_API
+- product_name: OpenAI API
+  product_category_code: PROD_GENERAL_ASSISTANT
+
+# ChatGPT Enterprise — general assistant / writing / chatbot
+- product_name: ChatGPT Enterprise
+  product_category_code: PROD_GENERAL_ASSISTANT
 - product_name: ChatGPT Enterprise
   product_category_code: PROD_WRITING
 - product_name: ChatGPT Enterprise
   product_category_code: CE_CHATBOT
+
+# Azure OpenAI Service — developer platform
+- product_name: Azure OpenAI Service
+  product_category_code: DEV_PLATFORM_API
+- product_name: Azure OpenAI Service
+  product_category_code: DA_ML_PLATFORM
+
+# GitHub Copilot — code assistant
+- product_name: GitHub Copilot
+  product_category_code: DEV_CODE_ASSIST
+
+# Microsoft 365 Copilot — general assistant / writing / productivity
+- product_name: Microsoft 365 Copilot
+  product_category_code: PROD_GENERAL_ASSISTANT
+- product_name: Microsoft 365 Copilot
+  product_category_code: PROD_WRITING
+- product_name: Microsoft 365 Copilot
+  product_category_code: COMMS_PRODUCTIVITY
+
+# Copilot Studio — chatbot builder / enterprise automation
+- product_name: Copilot Studio
+  product_category_code: CE_CHATBOT
+- product_name: Copilot Studio
+  product_category_code: CE_EMPLOYEE_BOT
+
+# Claude API (Anthropic) — foundation model API / developer platform
+- product_name: Claude API
+  product_category_code: DEV_PLATFORM_API
+- product_name: Claude API
+  product_category_code: PROD_GENERAL_ASSISTANT
+
+# Gemini for Google Workspace — general assistant / writing
+- product_name: Gemini for Google Workspace
+  product_category_code: PROD_GENERAL_ASSISTANT
+- product_name: Gemini for Google Workspace
+  product_category_code: PROD_WRITING
+- product_name: Gemini for Google Workspace
+  product_category_code: COMMS_PRODUCTIVITY
+
+# Vertex AI — developer platform / ML platform
+- product_name: Vertex AI (Gemini API)
+  product_category_code: DEV_PLATFORM_API
+- product_name: Vertex AI (Gemini API)
+  product_category_code: DA_ML_PLATFORM
+
+# Amazon Bedrock — developer platform
+- product_name: Amazon Bedrock
+  product_category_code: DEV_PLATFORM_API
+- product_name: Amazon Bedrock
+  product_category_code: DA_ML_PLATFORM
+
+# Amazon Q Business — enterprise search / general assistant
+- product_name: Amazon Q Business
+  product_category_code: SEARCH_ENTERPRISE
+- product_name: Amazon Q Business
+  product_category_code: PROD_GENERAL_ASSISTANT
+
+# IBM watsonx.ai — ML platform / developer
+- product_name: IBM watsonx.ai
+  product_category_code: DEV_PLATFORM_API
+- product_name: IBM watsonx.ai
+  product_category_code: DA_ML_PLATFORM
+
+# IBM watsonx Assistant — chatbot / customer support
+- product_name: IBM watsonx Assistant
+  product_category_code: CE_CHATBOT
+- product_name: IBM watsonx Assistant
+  product_category_code: CE_EMPLOYEE_BOT
+
+# Cohere Platform — developer platform
+- product_name: Cohere Platform (Command R+)
+  product_category_code: DEV_PLATFORM_API
+- product_name: Cohere Platform (Command R+)
+  product_category_code: SEARCH_ENTERPRISE
+
+# Mistral API — developer platform / EU
+- product_name: Mistral API (le Chat Enterprise)
+  product_category_code: DEV_PLATFORM_API
+- product_name: Mistral API (le Chat Enterprise)
+  product_category_code: PROD_GENERAL_ASSISTANT
+
+# ===========================================================================
+# ENTERPRISE SOFTWARE WITH EMBEDDED AI
+# ===========================================================================
+
+# Agentforce (Salesforce) — CRM AI / sales / customer service
+- product_name: Agentforce (Einstein AI)
+  product_category_code: SALES_ENGAGEMENT
+- product_name: Agentforce (Einstein AI)
+  product_category_code: CE_CHATBOT
+- product_name: Agentforce (Einstein AI)
+  product_category_code: CE_EMPLOYEE_BOT
+
+# Tableau Pulse — BI analytics
+- product_name: Tableau Pulse
+  product_category_code: DA_BI_ANALYTICS
+
+# Now Assist (ServiceNow) — ITSM / employee self-service
+- product_name: Now Assist
+  product_category_code: CE_EMPLOYEE_BOT
+- product_name: Now Assist
+  product_category_code: PROD_GENERAL_ASSISTANT
+
+# Workday AI — HR / workforce
+- product_name: Workday AI (Illuminate)
+  product_category_code: HR_TALENT_INTEL
+- product_name: Workday AI (Illuminate)
+  product_category_code: HR_HIRING
+- product_name: Workday AI (Illuminate)
+  product_category_code: HR_PERFORMANCE
+
+# SAP Joule — enterprise AI assistant
+- product_name: SAP Joule
+  product_category_code: PROD_GENERAL_ASSISTANT
+- product_name: SAP Joule
+  product_category_code: CE_EMPLOYEE_BOT
+
+# HubSpot Breeze AI — CRM / marketing / sales
+- product_name: HubSpot Breeze AI
+  product_category_code: MKTG_CONTENT
+- product_name: HubSpot Breeze AI
+  product_category_code: SALES_ENGAGEMENT
+- product_name: HubSpot Breeze AI
+  product_category_code: CE_CHATBOT
+
+# Zendesk AI — customer support
+- product_name: Zendesk AI (Advanced AI)
+  product_category_code: CE_CHATBOT
+- product_name: Zendesk AI (Advanced AI)
+  product_category_code: CE_VOICE_BOT
+
+# Freddy AI (Freshworks) — customer support / CRM
+- product_name: Freddy AI
+  product_category_code: CE_CHATBOT
+- product_name: Freddy AI
+  product_category_code: CE_EMPLOYEE_BOT
+
+# Oracle AI Services — developer platform
+- product_name: Oracle AI Services
+  product_category_code: DEV_PLATFORM_API
+- product_name: Oracle AI Services
+  product_category_code: PROD_GENERAL_ASSISTANT
+
+# ===========================================================================
+# PRODUCTIVITY & CONTENT TOOLS
+# ===========================================================================
+
+# Adobe Firefly — image generation
+- product_name: Firefly
+  product_category_code: MEDIA_IMAGE_GEN
+- product_name: Firefly
+  product_category_code: MKTG_CONTENT
+
+# Adobe Acrobat AI Assistant — document analysis
+- product_name: Adobe Acrobat AI Assistant
+  product_category_code: DOC_IDP
+- product_name: Adobe Acrobat AI Assistant
+  product_category_code: PROD_WRITING
+
+# Notion AI — writing / knowledge
+- product_name: Notion AI
+  product_category_code: PROD_WRITING
+- product_name: Notion AI
+  product_category_code: SEARCH_ENTERPRISE
+
+# Grammarly Business — writing assistant
+- product_name: Grammarly Business
+  product_category_code: PROD_WRITING
+
+# Atlassian Intelligence — project mgmt / writing / dev
+- product_name: Atlassian Intelligence
+  product_category_code: PROD_WRITING
+- product_name: Atlassian Intelligence
+  product_category_code: DEV_CODE_ASSIST
+- product_name: Atlassian Intelligence
+  product_category_code: SEARCH_ENTERPRISE
+
+# Jasper AI — marketing content
+- product_name: Jasper AI
+  product_category_code: MKTG_CONTENT
+- product_name: Jasper AI
+  product_category_code: PROD_WRITING
+
+# Copy.ai — marketing content / sales
+- product_name: Copy.ai
+  product_category_code: MKTG_CONTENT
+- product_name: Copy.ai
+  product_category_code: SALES_ENGAGEMENT
+
+# Writer Enterprise — content / marketing
+- product_name: Writer Enterprise
+  product_category_code: PROD_WRITING
+- product_name: Writer Enterprise
+  product_category_code: MKTG_CONTENT
+
+# Perplexity Enterprise Pro — AI search / research
+- product_name: Perplexity Enterprise Pro
+  product_category_code: SEARCH_ENTERPRISE
+- product_name: Perplexity Enterprise Pro
+  product_category_code: PROD_GENERAL_ASSISTANT
+
+# ===========================================================================
+# COMMUNICATIONS & MEETINGS
+# ===========================================================================
+
+# Zoom AI Companion — meeting AI
+- product_name: Zoom AI Companion
+  product_category_code: COMMS_MEETING_AI
+- product_name: Zoom AI Companion
+  product_category_code: COMMS_PRODUCTIVITY
+
+# Otter Business — meeting transcription
+- product_name: Otter Business
+  product_category_code: COMMS_MEETING_AI
+
+# Fireflies Business — meeting AI
+- product_name: Fireflies Business
+  product_category_code: COMMS_MEETING_AI
+
+# Slack AI — messaging / knowledge
+- product_name: Slack AI
+  product_category_code: COMMS_PRODUCTIVITY
+- product_name: Slack AI
+  product_category_code: SEARCH_ENTERPRISE
+
+# ===========================================================================
+# SALES & REVENUE INTELLIGENCE
+# ===========================================================================
+
+# Gong Revenue Intelligence — call analytics / forecasting
+- product_name: Gong Revenue Intelligence
+  product_category_code: SALES_REVENUE_INTEL
+- product_name: Gong Revenue Intelligence
+  product_category_code: SALES_ENGAGEMENT
+
+# Outreach Sales AI — sales engagement
+- product_name: Outreach Sales Execution AI
+  product_category_code: SALES_ENGAGEMENT
+
+# Intercom Fin AI — customer support
+- product_name: Intercom Fin AI Agent
+  product_category_code: CE_CHATBOT
+- product_name: Intercom Fin AI Agent
+  product_category_code: CE_VOICE_BOT
+
+# ===========================================================================
+# HR & TALENT AI
+# ===========================================================================
+
+# Eightfold AI — talent intelligence / skills
+- product_name: Eightfold Talent Intelligence
+  product_category_code: HR_TALENT_INTEL
+- product_name: Eightfold Talent Intelligence
+  product_category_code: HR_HIRING
+
+# HireVue — video interviewing / hiring
+- product_name: HireVue Video Interviewing
+  product_category_code: HR_HIRING
+
+# Olivia (Paradox) — HR chatbot / recruiting
+- product_name: Olivia (Paradox AI)
+  product_category_code: HR_HIRING
+- product_name: Olivia (Paradox AI)
+  product_category_code: HR_CONVERSATIONAL
+
+# Phenom Talent AI — talent experience
+- product_name: Phenom Talent AI
+  product_category_code: HR_TALENT_INTEL
+- product_name: Phenom Talent AI
+  product_category_code: HR_HIRING
+
+# Textio — HR writing / job descriptions
+- product_name: Textio
+  product_category_code: PROD_WRITING
+- product_name: Textio
+  product_category_code: HR_HIRING
+
+# Leena AI — HR chatbot / employee self-service
+- product_name: Leena AI (WorkLM)
+  product_category_code: HR_CONVERSATIONAL
+- product_name: Leena AI (WorkLM)
+  product_category_code: CE_EMPLOYEE_BOT
+
+# ===========================================================================
+# MEDIA GENERATION
+# ===========================================================================
+
+# Midjourney — image generation
+- product_name: Midjourney
+  product_category_code: MEDIA_IMAGE_GEN
+- product_name: Midjourney
+  product_category_code: MKTG_CONTENT
+
+# Stable Diffusion API — image generation / developer
+- product_name: Stable Diffusion API
+  product_category_code: MEDIA_IMAGE_GEN
+- product_name: Stable Diffusion API
+  product_category_code: DEV_PLATFORM_API
+
+# Synthesia Enterprise — AI video / avatars
+- product_name: Synthesia Enterprise
+  product_category_code: MEDIA_VIDEO_SYNTH
+- product_name: Synthesia Enterprise
+  product_category_code: MKTG_CONTENT
+
+# Runway Gen-3 — AI video / image
+- product_name: Runway Gen-3 (Enterprise)
+  product_category_code: MEDIA_VIDEO_SYNTH
+- product_name: Runway Gen-3 (Enterprise)
+  product_category_code: MEDIA_IMAGE_GEN
+
+# ElevenLabs Business — voice synthesis
+- product_name: ElevenLabs Business
+  product_category_code: MEDIA_VOICE_SYNTH
+- product_name: ElevenLabs Business
+  product_category_code: CE_VOICE_BOT
+
+# ===========================================================================
+# DOCUMENT PROCESSING & LEGAL AI
+# ===========================================================================
+
+# ABBYY Vantage — IDP / document processing
+- product_name: ABBYY Vantage
+  product_category_code: DOC_IDP
+
+# UiPath Document Understanding — IDP / automation
+- product_name: UiPath Document Understanding
+  product_category_code: DOC_IDP
+
+# Harvey Legal AI — legal research / contract review
+- product_name: Harvey (Legal AI)
+  product_category_code: LEGAL_RESEARCH
+- product_name: Harvey (Legal AI)
+  product_category_code: DOC_CONTRACT_AI
+
+# Lexis+ AI — legal research
+- product_name: Lexis+ AI
+  product_category_code: LEGAL_RESEARCH
+
+# RelativityOne AI — legal / ediscovery / document review
+- product_name: RelativityOne AI
+  product_category_code: LEGAL_RESEARCH
+- product_name: RelativityOne AI
+  product_category_code: DOC_IDP
+
+# ===========================================================================
+# TRANSLATION
+# ===========================================================================
+
+# DeepL Pro — machine translation
+- product_name: DeepL Pro
+  product_category_code: TRANS_MACHINE
+
+# ===========================================================================
+# SEARCH & KNOWLEDGE
+# ===========================================================================
+
+# Glean Work AI — enterprise search
+- product_name: Glean Work AI
+  product_category_code: SEARCH_ENTERPRISE
+- product_name: Glean Work AI
+  product_category_code: CE_EMPLOYEE_BOT
+
+# Guru AI Knowledge — knowledge management
+- product_name: Guru AI Knowledge
+  product_category_code: SEARCH_ENTERPRISE
+
+# ===========================================================================
+# SECURITY AI
+# ===========================================================================
+
+# Darktrace AI — threat detection
+- product_name: Darktrace AI Platform
+  product_category_code: SEC_THREAT_DETECT
+
+# Charlotte AI (CrowdStrike) — SOC AI / endpoint
+- product_name: Charlotte AI (Falcon Platform)
+  product_category_code: SEC_THREAT_DETECT
+
+# ===========================================================================
+# DATA & ANALYTICS
+# ===========================================================================
+
+# ThoughtSpot — BI analytics
+- product_name: ThoughtSpot AI Analytics
+  product_category_code: DA_BI_ANALYTICS
+
+# Databricks — ML platform / data engineering
+- product_name: Databricks Assistant & DBRX
+  product_category_code: DA_ML_PLATFORM
+- product_name: Databricks Assistant & DBRX
+  product_category_code: DA_BI_ANALYTICS
+
+# Snowflake Cortex AI — ML platform / data analytics
+- product_name: Snowflake Cortex AI
+  product_category_code: DA_ML_PLATFORM
+- product_name: Snowflake Cortex AI
+  product_category_code: DA_BI_ANALYTICS
+
+# ===========================================================================
+# ADDITIONAL SPECIALIST TOOLS
+# ===========================================================================
+
+# Palantir AIP — enterprise AI / decision support
+- product_name: Palantir AIP (AI Platform)
+  product_category_code: DA_ML_PLATFORM
+- product_name: Palantir AIP (AI Platform)
+  product_category_code: PROD_GENERAL_ASSISTANT
+
+# Box AI — document analysis / knowledge management
+- product_name: Box AI
+  product_category_code: DOC_IDP
+- product_name: Box AI
+  product_category_code: SEARCH_ENTERPRISE
+
+# Moveworks AI — employee self-service / IT helpdesk
+- product_name: Moveworks AI Platform
+  product_category_code: CE_EMPLOYEE_BOT
+
+# Pendo AI — product analytics
+- product_name: Pendo AI
+  product_category_code: DA_BI_ANALYTICS
+
+# Checkr — background screening
+- product_name: Checkr AI Background Screening
+  product_category_code: HR_HIRING
+
+# Scale AI — ML / data platform
+- product_name: Scale Data Engine (Enterprise)
+  product_category_code: DA_ML_PLATFORM
+- product_name: Scale Data Engine (Enterprise)
+  product_category_code: DEV_PLATFORM_API

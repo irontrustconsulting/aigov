@@ -1,40 +1,408 @@
-# Seed data: Control library (representative sample).
-# Each control nests its framework mappings inline — one control can satisfy
-# several frameworks at once (that cross-walk is what lets one piece of
-# evidence cover multiple obligations).
+# Seed data: Control library — full coverage.
+#
+# Each control nests its framework mappings inline. One control can satisfy
+# several frameworks simultaneously — that cross-walk is what lets one piece
+# of evidence cover multiple obligations (ISO 42001, ISO 42005, EU AI Act).
+#
+# SOURCE GROUNDING: clause references are drawn from:
+#   - ISO/IEC 42001:2023 (AI Management Systems, Annex A controls)
+#   - ISO/IEC 42005:2024 (AI System Impact Assessment)
+#   - EU AI Act (Regulation (EU) 2024/1689) — Articles and Annexes
+#   - NIST AI RMF 1.0 (https://doi.org/10.6028/NIST.AI.100-1)
 #
 # framework enum values: iso_42001 | iso_42005 | eu_ai_act | nist_ai_rmf
+#
+# ⚠️  VERIFY clause references against the current standard texts.
+#     Standards evolve; these map to published texts as of 2024.
+
+# ===========================================================================
+# ACCESS AND SECURITY CONTROLS
+# ===========================================================================
 
 - code: AC-01
   title: Access Control Policy
   description: >
     Establish, document and maintain a policy governing who may access AI
     systems and the data they process, with least-privilege as the default.
+    Access rights must be assigned based on role and business need, reviewed
+    periodically, and revoked promptly when no longer required.
   frameworks:
     - framework: iso_42001
       clause_ref: "A.6.2.1"
-      notes: Management-system control for access governance.
+      notes: >
+        Management-system control for governing access to AI systems and
+        their associated data.
     - framework: eu_ai_act
       clause_ref: "Art. 15"
-      notes: Accuracy, robustness and cybersecurity expectations.
+      notes: >
+        Accuracy, robustness and cybersecurity — high-risk systems must
+        implement appropriate access controls as part of technical security
+        measures.
+    - framework: nist_ai_rmf
+      clause_ref: "GOVERN 1.1"
+      notes: Policies and procedures for AI system access governance.
+
+- code: RB-01
+  title: Robustness Testing and Adversarial Evaluation
+  description: >
+    Conduct systematic testing of the AI system against adversarial inputs,
+    edge cases, distribution shifts, and known attack vectors (prompt
+    injection, data poisoning, evasion attacks) before deployment and
+    on a regular cadence thereafter. Document test methodology, test sets,
+    observed failure modes, and remediation.
+  frameworks:
+    - framework: eu_ai_act
+      clause_ref: "Art. 15"
+      notes: >
+        High-risk AI systems must achieve appropriate levels of accuracy,
+        robustness and cybersecurity. Adversarial testing is a primary
+        mechanism for demonstrating robustness compliance.
+    - framework: iso_42001
+      clause_ref: "A.8.5"
+      notes: >
+        Testing and verification activities as part of the AI system
+        development lifecycle.
+    - framework: nist_ai_rmf
+      clause_ref: "MEASURE 2.6"
+      notes: >
+        Measuring AI system robustness and resilience against adversarial
+        conditions and distribution shift.
+
+# ===========================================================================
+# HUMAN OVERSIGHT AND GOVERNANCE
+# ===========================================================================
 
 - code: HO-01
   title: Human Oversight
   description: >
-    Ensure a qualified human can understand, monitor and intervene in the
-    AI system's operation, including the ability to halt or override it.
+    Ensure qualified humans can understand, monitor and intervene in the
+    AI system's operation at all times, including the ability to halt,
+    override, or correct the system's outputs. Human oversight must be
+    genuine and effective — not nominal — particularly in high-risk contexts.
+    Document oversight roles, escalation procedures, and intervention records.
   frameworks:
     - framework: eu_ai_act
       clause_ref: "Art. 14"
-      notes: Human oversight requirement for high-risk systems.
+      notes: >
+        High-risk AI systems must be designed and developed to allow effective
+        oversight by natural persons. Specific measures include ability to
+        understand and interpret outputs, detect malfunctions, and stop the
+        system.
     - framework: iso_42005
-      clause_ref: "Impact: oversight"
+      clause_ref: "§8.3 — Impact mitigation"
+      notes: >
+        Human oversight is a primary mitigation measure identified through
+        impact assessment.
+    - framework: iso_42001
+      clause_ref: "A.6.2.6"
+      notes: >
+        Human oversight and intervention capabilities as part of responsible
+        AI deployment.
+    - framework: nist_ai_rmf
+      clause_ref: "GOVERN 1.3 / GOVERN 6.2"
+      notes: >
+        Organisational practices to ensure meaningful human oversight and
+        control of AI decision-making.
+
+- code: AG-01
+  title: AI Governance and Accountability Framework
+  description: >
+    Define and document roles, responsibilities, decision rights, and
+    accountabilities for AI system development, deployment, monitoring, and
+    decommissioning. Establish a governance body or process for approving
+    high-risk AI deployments. Ensure the organisation can demonstrate
+    compliance with applicable AI obligations to regulators and auditors.
+  frameworks:
+    - framework: iso_42001
+      clause_ref: "§6.1 / A.6.1"
+      notes: >
+        Context, risks and objectives for the AI management system.
+        Leadership accountability and organisational roles.
+    - framework: eu_ai_act
+      clause_ref: "Arts. 25–26"
+      notes: >
+        Obligations of deployers; responsibilities of operators along the
+        AI value chain. Deployers must implement governance appropriate to
+        their role.
+    - framework: nist_ai_rmf
+      clause_ref: "GOVERN 1.1 / GOVERN 2.1"
+      notes: Organisational accountability structures for AI risk management.
+
+# ===========================================================================
+# OUTPUT AND TRANSPARENCY CONTROLS
+# ===========================================================================
 
 - code: OUT-01
   title: Output Validation
   description: >
     Validate, sanitise and encode AI system output before it is consumed by
-    downstream systems or presented to users.
+    downstream systems or presented to users. Implement content filtering,
+    output schema enforcement, and logging of anomalous or high-risk outputs.
+    Never pass raw AI output directly to interpreters, command processors,
+    or downstream APIs without validation.
   frameworks:
     - framework: iso_42001
       clause_ref: "A.8.3"
+      notes: >
+        Output verification as part of AI system operational controls.
+    - framework: eu_ai_act
+      clause_ref: "Art. 15"
+      notes: >
+        Technical security measures for high-risk systems include protection
+        against incorrect outputs that could cause harm.
+    - framework: nist_ai_rmf
+      clause_ref: "MEASURE 2.1"
+      notes: >
+        Measuring accuracy and reliability of AI outputs as part of ongoing
+        monitoring.
+
+- code: TP-01
+  title: Model Transparency and Explainability
+  description: >
+    Provide sufficient transparency about AI system capabilities, limitations,
+    decision logic, and uncertainty. For high-risk decisions, the system must
+    generate human-understandable explanations of its reasoning. Maintain
+    technical documentation that enables competent persons to interpret and
+    audit the system's behaviour. Disclose AI involvement to affected persons
+    where required by law.
+  frameworks:
+    - framework: eu_ai_act
+      clause_ref: "Art. 13"
+      notes: >
+        Transparency requirements for high-risk AI systems: instructions for
+        use, capabilities and limitations, human oversight measures, and
+        technical documentation.
+    - framework: iso_42001
+      clause_ref: "A.6.2.4"
+      notes: >
+        Transparency of AI systems as a responsible AI objective within the
+        management system.
+    - framework: nist_ai_rmf
+      clause_ref: "GOVERN 1.2 / MAP 3.5"
+      notes: >
+        Transparency and explainability as NIST AI RMF trustworthiness
+        characteristics.
+
+- code: AU-01
+  title: AI Audit Logging and Traceability
+  description: >
+    Maintain immutable, timestamped logs of AI system inputs, outputs, model
+    versions, human overrides, and significant operational events. Logs must
+    support post-hoc audit and incident investigation, demonstrate compliance
+    with obligations, and enable identification of system errors and their
+    downstream effects. Log retention period must be defined and appropriate
+    to the risk level.
+  frameworks:
+    - framework: eu_ai_act
+      clause_ref: "Art. 12"
+      notes: >
+        High-risk AI systems must have automatic logging capabilities to
+        enable post-market monitoring. Logs retained for periods appropriate
+        to intended purpose, minimum six months.
+    - framework: iso_42001
+      clause_ref: "A.7.4"
+      notes: >
+        Monitoring, measurement, and logging as part of AI management system
+        performance evaluation.
+    - framework: nist_ai_rmf
+      clause_ref: "MANAGE 2.4"
+      notes: >
+        Documenting AI system incidents, errors, and operational events to
+        support accountability.
+
+# ===========================================================================
+# FAIRNESS AND PRIVACY CONTROLS
+# ===========================================================================
+
+- code: BI-01
+  title: Bias Testing and Fairness Evaluation
+  description: >
+    Conduct systematic bias testing across protected characteristics before
+    deployment and on a periodic basis. Define measurable fairness criteria
+    appropriate to the use case and deployment context (e.g. statistical
+    parity, equalised odds). Document test methodology, disaggregated
+    performance metrics, identified disparities, and mitigation actions.
+    Engage affected communities or domain experts where feasible.
+  frameworks:
+    - framework: iso_42001
+      clause_ref: "A.6.2.5"
+      notes: >
+        Fairness as a responsible AI objective within the management system.
+        Assessment against human rights and societal impacts.
+    - framework: eu_ai_act
+      clause_ref: "Art. 10(5) / Art. 27"
+      notes: >
+        Training data must be relevant, representative, and free from errors.
+        Fundamental-rights impact assessment required for certain high-risk
+        systems (Art. 27).
+    - framework: nist_ai_rmf
+      clause_ref: "MAP 5.2 / MEASURE 2.5"
+      notes: >
+        Mapping and measuring bias and fairness risks as part of the AI RMF
+        trustworthiness characteristics.
+
+- code: DP-01
+  title: AI Data Privacy by Design
+  description: >
+    Implement privacy-protective measures throughout the AI system lifecycle:
+    minimise personal data in training sets; establish legal basis for any
+    personal data processing; implement technical safeguards against
+    memorisation and extraction attacks; conduct AI-specific data protection
+    impact assessments (DPIAs) before processing high-risk personal data;
+    and apply differential privacy or equivalent techniques where appropriate.
+  frameworks:
+    - framework: iso_42001
+      clause_ref: "A.8.4"
+      notes: >
+        Privacy by design as part of AI system data governance requirements.
+    - framework: eu_ai_act
+      clause_ref: "Arts. 10(5), 27"
+      notes: >
+        Data governance requirements and fundamental-rights impact assessment
+        for high-risk AI systems.
+    - framework: nist_ai_rmf
+      clause_ref: "MAP 5.1 / MEASURE 2.7"
+      notes: >
+        Privacy as an AI RMF trustworthiness characteristic — mapping and
+        measuring privacy risks in AI systems.
+
+# ===========================================================================
+# DATA AND SUPPLY CHAIN CONTROLS
+# ===========================================================================
+
+- code: DQ-01
+  title: Training and Input Data Governance
+  description: >
+    Establish and enforce data quality standards for AI training, fine-tuning,
+    and runtime input data. This includes: verifying data provenance and
+    licensing; testing for representativeness and distributional coverage;
+    detecting and removing mislabelled, poisoned, or corrupted entries;
+    maintaining lineage records; and ensuring training data characteristics
+    are documented in a technical datasheet or model card.
+  frameworks:
+    - framework: eu_ai_act
+      clause_ref: "Art. 10"
+      notes: >
+        Data and data governance requirements for high-risk AI systems:
+        training, validation and test data must be relevant, representative,
+        and free from errors to the extent possible.
+    - framework: iso_42001
+      clause_ref: "A.8.2"
+      notes: >
+        Data management and quality practices as part of AI system
+        development lifecycle controls.
+    - framework: nist_ai_rmf
+      clause_ref: "MAP 3.1"
+      notes: >
+        Identifying and assessing AI data quality risks as part of the
+        risk mapping process.
+
+- code: SC-01
+  title: AI Supply Chain Risk Management
+  description: >
+    Identify, assess, and manage risks arising from third-party components
+    across the AI value chain — including base model providers, training
+    dataset sources, plugin/tool integrations, and cloud infrastructure.
+    Conduct due diligence before adopting third-party AI components; review
+    providers' privacy policies, DPAs, and sub-processor lists; monitor for
+    upstream changes (model updates, policy changes, service discontinuation);
+    and maintain fallback provisions for critical dependencies.
+  frameworks:
+    - framework: iso_42001
+      clause_ref: "A.6.2.3"
+      notes: >
+        Responsible use of third-party AI tools and services as part of the
+        AI management system.
+    - framework: eu_ai_act
+      clause_ref: "Art. 25"
+      notes: >
+        Obligations of providers of general-purpose AI models used as
+        components; responsibilities of deployers using third-party AI.
+    - framework: nist_ai_rmf
+      clause_ref: "MAP 3.5"
+      notes: >
+        Assessing AI supply chain risks — provenance, trustworthiness, and
+        dependencies on third-party AI components.
+
+# ===========================================================================
+# OPERATIONAL AND LIFECYCLE CONTROLS
+# ===========================================================================
+
+- code: MC-01
+  title: AI System Monitoring and Continuous Assessment
+  description: >
+    Implement ongoing monitoring of deployed AI systems to detect performance
+    degradation, distributional drift, anomalous outputs, and emerging failure
+    modes. Define monitoring metrics aligned to the system's risk profile;
+    establish alert thresholds and incident response procedures; conduct
+    periodic post-deployment evaluations; and update risk assessments
+    when material changes are observed. For high-risk systems, post-market
+    monitoring is a legal obligation under the EU AI Act.
+  frameworks:
+    - framework: eu_ai_act
+      clause_ref: "Art. 72"
+      notes: >
+        Post-market monitoring obligations for providers of high-risk AI
+        systems. Serious incidents must be reported to market surveillance
+        authorities.
+    - framework: iso_42001
+      clause_ref: "A.7.4 / §10"
+      notes: >
+        Performance evaluation and continual improvement of the AI management
+        system. Monitoring and measurement of AI system performance.
+    - framework: nist_ai_rmf
+      clause_ref: "MANAGE 2.4 / MANAGE 4.1"
+      notes: >
+        Ongoing management of AI risks — monitoring, feedback loops, and
+        periodic re-evaluation.
+
+- code: PE-01
+  title: Purpose Limitation and Scope Control
+  description: >
+    Define and document the intended purpose and deployment context of the AI
+    system before deployment. Restrict use of the system to its defined
+    purpose; prevent repurposing or expansion of use without reassessment.
+    Implement technical controls (prompting guardrails, access restrictions,
+    output filtering) to enforce purpose boundaries. For high-risk systems,
+    document the intended purpose as required by the EU AI Act.
+  frameworks:
+    - framework: eu_ai_act
+      clause_ref: "Art. 9"
+      notes: >
+        Risk management system — risks must be identified for the intended
+        purpose and reasonably foreseeable misuse.
+    - framework: iso_42001
+      clause_ref: "A.6.2.7"
+      notes: >
+        Defining and constraining the intended purpose of AI systems as
+        part of responsible deployment.
+    - framework: nist_ai_rmf
+      clause_ref: "MAP 1.5"
+      notes: >
+        Mapping intended deployment context and foreseeable misuse scenarios
+        as part of AI risk identification.
+
+- code: IC-01
+  title: AI Incident Response
+  description: >
+    Establish and test procedures for detecting, classifying, escalating, and
+    responding to AI system incidents — including harmful outputs, bias
+    discovery, security breaches, unexpected behaviour, and third-party
+    failures. Define severity levels, response timelines, communication
+    obligations (including regulatory notification for serious incidents),
+    and post-incident review requirements. Maintain an incident register.
+  frameworks:
+    - framework: eu_ai_act
+      clause_ref: "Art. 73"
+      notes: >
+        Serious incidents involving high-risk AI systems must be reported to
+        national market surveillance authorities without undue delay.
+    - framework: iso_42001
+      clause_ref: "A.7.5"
+      notes: >
+        Incident management as part of operational AI governance controls.
+    - framework: nist_ai_rmf
+      clause_ref: "MANAGE 3.1 / MANAGE 3.2"
+      notes: >
+        Responding to and learning from AI incidents. Stakeholder
+        communication and remediation.
