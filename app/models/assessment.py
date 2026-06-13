@@ -65,6 +65,10 @@ class Classification(Base, TimestampMixin):
     proposed_tier: Mapped[EUAIActTier | None] = mapped_column(
         SAEnum(EUAIActTier, name="eu_ai_act_tier")
     )
+    # Basis stamped as VALUES at snapshot time so later reference-data edits
+    # cannot rewrite history. Null when tier is REQUIRES_CONTEXT.
+    basis_subcategory_code: Mapped[str | None] = mapped_column(String(80))
+    basis_legal_ref: Mapped[str | None] = mapped_column(String(120))
 
     use_case: Mapped["UseCase"] = relationship(back_populates="classifications")
 

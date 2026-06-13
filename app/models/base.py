@@ -83,6 +83,7 @@ class EUAIActTier(str, enum.Enum):
     LIMITED = "limited_risk"
     MINIMAL = "minimal_risk"
     UNCLASSIFIED = "unclassified"
+    REQUIRES_CONTEXT = "requires_context"
 
 
 class RiskLayer(str, enum.Enum):

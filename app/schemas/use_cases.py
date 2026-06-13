@@ -1,0 +1,67 @@
+"""Schemas for use-case registration and EU AI Act classification."""
+
+from __future__ import annotations
+
+import uuid
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.models.base import EUAIActTier, LifecycleState
+
+
+class UseCaseCreate(BaseModel):
+    system_id: uuid.UUID
+    title: str = Field(min_length=1, max_length=255)
+    purpose: str | None = None
+    context_blob: dict = Field(default_factory=dict)
+
+
+class UseCaseRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    tenant_id: uuid.UUID
+    system_id: uuid.UUID
+    title: str
+    purpose: str | None
+    state: LifecycleState
+    eu_tier: EUAIActTier
+
+
+class ClassificationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    use_case_id: uuid.UUID
+    tier: EUAIActTier
+    rationale: str
+    version: int
+    is_current: bool
+    overridden: bool
+    proposed_tier: EUAIActTier | None
+    basis_subcategory_code: str | None
+    basis_legal_ref: str | None
+    requires_context: bool = False
+
+    @classmethod
+    def from_orm_with_flag(cls, obj) -> ClassificationRead:
+        data = cls.model_validate(obj)
+        data.requires_context = obj.tier == EUAIActTier.REQUIRES_CONTEXT
+        return data
+
+
+class UseCaseWithClassification(BaseModel):
+    use_case: UseCaseRead
+    classification: ClassificationRead
+
+
+class OverrideRequest(BaseModel):
+    """Structured override — tier and subcategory must be explicit choices,
+    never free-typed strings, to preserve the §1.5 tracked-deviation contract."""
+    tier: EUAIActTier
+    subcategory_code: str = Field(
+        min_length=1,
+        max_length=80,
+        description="Must match an existing eu_ai_act_subcategory.code",
+    )
+    justification: str | None = None
