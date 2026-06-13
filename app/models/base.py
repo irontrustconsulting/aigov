@@ -157,9 +157,7 @@ class ProvenanceConfidence(str, enum.Enum):
 
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
-    REVIEWER = "reviewer"
-    CONTRIBUTOR = "contributor"
-    AUDITOR_READONLY = "auditor_readonly"
+    MEMBER = "member"
 
 class OperatorStatus(str, enum.Enum):
     ACTIVE = "active"

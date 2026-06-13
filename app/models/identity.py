@@ -6,8 +6,9 @@ Design notes
 * Cognito is the IDENTITY provider; this schema owns AUTHORIZATION.
   We store the Cognito `sub` claim on User and never store passwords.
 * A User belongs to one or more Tenants via Membership, and the *role*
-  lives on the Membership (a person can be an admin in one org and a
-  read-only auditor in another). Do NOT model roles as Cognito groups.
+  lives on the Membership (admin or member). Do NOT model roles as Cognito
+  groups. Governance roles (system_owner, reviewer, etc.) live separately
+  in governance_role_assignment — never on this field.
 * Multi-tenancy: pooled (shared DB) with tenant_id on every business
   table + Postgres RLS. Membership is the bridge that authorizes a
   Cognito-authenticated user into a given tenant.
@@ -73,7 +74,7 @@ class Membership(Base, TimestampMixin):
     )
     role: Mapped[UserRole] = mapped_column(
         SAEnum(UserRole, name="user_role"), nullable=False,
-        default=UserRole.CONTRIBUTOR,
+        default=UserRole.MEMBER,
     )
 
     user: Mapped["User"] = relationship(back_populates="memberships")

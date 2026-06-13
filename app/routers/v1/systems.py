@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.auth.context import TenantContext, get_tenant_context, get_tenant_db, require_role
+from app.auth.context import TenantContext, get_tenant_db, require_governance_role
 from app.models import System
 
 router = APIRouter(prefix="/systems", tags=["systems"])
@@ -39,20 +39,22 @@ class SystemRead(BaseModel):
 
 @router.get("", response_model=list[SystemRead])
 def list_systems(db: Session = Depends(get_tenant_db)) -> list[System]:
-    """List systems in the caller's tenant. RLS scopes this automatically —
-    no explicit WHERE tenant_id needed; the session is already tenant-bound."""
+    """List systems in the caller's tenant. RLS scopes this automatically.
+    Open to any authenticated tenant member — role-scoped read access is
+    deferred to the assessment sprint once the full object model is in place.
+    """
     return list(db.scalars(select(System).order_by(System.created_at)))
 
 
 @router.post("", response_model=SystemRead, status_code=status.HTTP_201_CREATED)
 def create_system(
     payload: SystemCreate,
-    ctx: TenantContext = Depends(require_role("admin", "contributor")),
+    ctx: TenantContext = Depends(require_governance_role("system_owner")),
     db: Session = Depends(get_tenant_db),
 ) -> System:
-    """Create a system in the caller's tenant. Guarded by require_role (admins
-    and contributors). tenant_id is set from the verified context, never from
-    client input."""
+    """Create a system. Gated by the system_owner governance role.
+    tenant_id is set from the verified context, never from client input.
+    """
     system = System(
         tenant_id=ctx.tenant_id,
         name=payload.name,
