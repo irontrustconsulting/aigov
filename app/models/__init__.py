@@ -43,3 +43,8 @@ from app.models.platform_rbac import (
 )
 
 from app.models.platform_audit import PlatformAuditEvent  # noqa: F401
+
+# Tenant governance roles (catalogue, SoD matrix, assignments)
+from app.models.governance import (  # noqa: F401
+    GovernanceRole, GovernanceRoleConflict, GovernanceRoleAssignment,
+)

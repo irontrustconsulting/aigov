@@ -2,21 +2,29 @@
 The authorization layer that sits between a verified token and a tenant-scoped
 database session.
 
-Three composable dependencies, each with one definition:
+Four composable dependencies, each with one definition:
 
-  get_tenant_context  - verified token -> resolve & AUTHORISE against the DB:
-                        the app_user must exist (by sub), the claimed tenant
-                        must exist, and a membership must link them. Returns a
-                        TenantContext (user, tenant_id, authoritative role).
-                        This answers "who is this and may they act in this
-                        tenant" — the question RLS cannot answer.
+  get_tenant_context         - verified token -> resolve & AUTHORISE against
+                               the DB: the app_user must exist (by sub), the
+                               claimed tenant must exist, and a membership must
+                               link them. Returns a TenantContext (user,
+                               membership_id, tenant_id, authoritative role).
+                               This answers "who is this and may they act in
+                               this tenant" — the question RLS cannot answer.
 
-  get_tenant_db       - depends on the context; sets app.current_tenant to the
-                        MEMBERSHIP-VERIFIED tenant and yields the RLS-scoped
-                        session. RLS then enforces isolation per query.
+  get_tenant_db              - depends on the context; sets app.current_tenant
+                               to the MEMBERSHIP-VERIFIED tenant and yields the
+                               RLS-scoped session.
 
-  require_role(*roles)- defined once; parameterised per endpoint. Gates an
-                        operation on the user's authoritative (DB) role.
+  require_role(*roles)       - Gates on membership.role (administrative axis):
+                               "admin" or "member". Used for managing the
+                               tenant itself (governance assignment, settings).
+
+  require_governance_role(*) - Gates on governance_role_assignment (governance
+                               axis): system_owner, contributor, reviewer,
+                               authoriser, auditor. Reads from the DB assignment
+                               table — never from token claims. Used for
+                               workflow actions (create system, approve, etc.).
 
 Failure modes are explicit:
   401  token missing/invalid (handled upstream in verify_cognito_token)
@@ -36,6 +44,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.db import ResolverSessionLocal, SessionLocal
 from app.models import User, Tenant, Membership
+from app.models.governance import GovernanceRole, GovernanceRoleAssignment
 from app.auth.cognito import verify_cognito_token, CognitoClaims
 
 
@@ -44,6 +53,7 @@ class TenantContext(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     user_id: uuid.UUID
+    membership_id: uuid.UUID   # the acting member's membership row id
     tenant_id: uuid.UUID
     role: str            # authoritative, read from the membership row
     email: str | None = None
@@ -101,6 +111,7 @@ def get_tenant_context(
 
         return TenantContext(
             user_id=user.id,
+            membership_id=membership.id,
             tenant_id=tenant.id,
             role=membership.role.value if hasattr(membership.role, "value") else str(membership.role),
             email=claims.email,
@@ -135,18 +146,49 @@ def get_tenant_db(
 
 def require_role(*allowed_roles: str):
     """Factory: returns a dependency that 403s unless the user's authoritative
-    role is in allowed_roles. Defined once; parameterised at each endpoint.
-
-        @router.post("/systems")
-        def create(ctx = Depends(require_role("org_admin", "contributor")),
-                   db = Depends(get_tenant_db)):
-            ...
+    membership.role is in allowed_roles. Gates the administrative axis
+    (admin / member). Defined once; parameterised at each endpoint.
     """
     def checker(ctx: TenantContext = Depends(get_tenant_context)) -> TenantContext:
         if ctx.role not in allowed_roles:
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN,
-                detail=f"Operation requires role in {allowed_roles}; you are '{ctx.role}'",
+                detail=f"Requires membership role in {allowed_roles}; you are '{ctx.role}'",
+            )
+        return ctx
+    return checker
+
+
+def require_governance_role(*required_keys: str):
+    """Factory: returns a dependency that 403s unless the member holds at
+    least one of the named governance roles in governance_role_assignment.
+
+    Gates the governance axis (system_owner, contributor, reviewer,
+    authoriser, auditor). Reads from the DB assignment table on the
+    RLS-scoped tenant session — never from token claims.
+
+    FastAPI caches get_tenant_db within a request, so this dependency
+    and the handler share the same session and the same RLS context.
+    """
+    def checker(
+        ctx: TenantContext = Depends(get_tenant_context),
+        db: Session = Depends(get_tenant_db),
+    ) -> TenantContext:
+        held_keys = set(db.scalars(
+            select(GovernanceRole.key)
+            .join(
+                GovernanceRoleAssignment,
+                GovernanceRole.id == GovernanceRoleAssignment.governance_role_id,
+            )
+            .where(GovernanceRoleAssignment.membership_id == ctx.membership_id)
+        ))
+        if not held_keys.intersection(required_keys):
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"Requires governance role in {required_keys}; "
+                    f"you hold {sorted(held_keys) or 'none'}"
+                ),
             )
         return ctx
     return checker

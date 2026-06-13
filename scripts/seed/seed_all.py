@@ -34,6 +34,7 @@ from scripts.seed import (
     seed_risk_control_map,
     seed_product_category_membership,
     seed_product_category_eu_mapping,
+    seed_governance_roles,
 )
 
 
@@ -51,6 +52,8 @@ def main() -> None:
         seed_risk_control_map.main(session)
         seed_product_category_membership.main(session)
         seed_product_category_eu_mapping.main(session)
+        # platform reference: governance role catalogue
+        seed_governance_roles.main(session)
         session.commit()
         print("Done.")
 

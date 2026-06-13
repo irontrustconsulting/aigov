@@ -1,0 +1,50 @@
+# Governance role catalogue — the five tenant governance roles.
+#
+# These are the roles a tenant admin assigns to members to enact separation
+# of duties (SoD) in the AI system impact assessment process (PRD §4.9.1).
+#
+# line_of_defence:
+#   1 = first line  (system_owner, contributor) — composable with each other only
+#   2 = second line (reviewer, authoriser)       — separated from each other
+#   3 = third line  (auditor)                    — conflicts with all other lines
+#
+# The SoD conflict matrix (governance_role_conflict) is seeded by the migration
+# (computed from role UUIDs) and is NOT expressed here.
+
+- key: system_owner
+  name: System Owner
+  description: >
+    Accountable for an AI system end-to-end. Initiates and steers the impact
+    assessment process. First line of defence. May be co-held with contributor.
+  line_of_defence: 1
+
+- key: contributor
+  name: Contributor
+  description: >
+    Active participant in assessment work: provides evidence, fills in impact
+    assessment items, drives remediation. First line of defence. May be
+    co-held with system_owner.
+  line_of_defence: 1
+
+- key: reviewer
+  name: Reviewer
+  description: >
+    Independent quality-gate reviewer for assessment outputs. Second line of
+    defence. Conflicts with authoriser (same line, separated) and with all
+    first- and third-line roles.
+  line_of_defence: 2
+
+- key: authoriser
+  name: Authoriser
+  description: >
+    Provides final sign-off / approval on assessed AI systems. Second line of
+    defence. Conflicts with reviewer (same line, separated) and with all
+    first- and third-line roles.
+  line_of_defence: 2
+
+- key: auditor
+  name: Auditor
+  description: >
+    Read-only independent oversight across all assessment artefacts. Third line
+    of defence. Conflicts with all first- and second-line roles.
+  line_of_defence: 3
