@@ -10,7 +10,7 @@
 
 **Owner:** [You]
 
-**Last updated:** May 2026
+**Last updated:** June 2026 *(v0.2 — tenant governance role model & separation-of-duties decisions incorporated; see §4.9)*
 
 **Frameworks in scope:** ISO/IEC 42001 + ISO/IEC 42005 + EU AI Act (cross-mapped); Risk Library seeded from OWASP Top 10 for LLMs + NIST AI RMF / ISO risk themes
 
@@ -64,12 +64,12 @@ This pattern is the spine of the product and applies everywhere the system asser
 
 | **Persona** | **Role in the product** | **What they need from the MVP** |
 | --- | --- | --- |
-| AI Governance / Compliance Lead (primary champion) | Owns the programme, runs and reviews assessments, prepares for audit | Speed, consistency, a defensible trail, less manual re-work |
-| Risk / Legal reviewer | Reviews and signs off high-risk classifications and FRIAs | Clear review queue, context, ability to comment and approve |
-| Product / ML owner (contributor) | Provides facts about the AI system being assessed | A simple guided intake; not drowning in compliance jargon |
+| AI Governance / Compliance Lead (primary champion) | Owns the programme, oversees reviews and holds the deployment-authorisation (ATO) decision; does not author the assessments they authorise (separation of duties) | Speed, consistency, a defensible trail, less manual re-work |
+| Risk / Legal reviewer | Reviews and signs off high-risk classifications, FRIAs and AIIAs; recommends — distinct from the authoriser, who accepts residual risk | Clear review queue, context, ability to comment and approve |
+| Product / ML owner (1st-line owner / contributor) | Registers the system/use case and provides and confirms the facts (1st line); does not review or authorise | A simple guided intake; not drowning in compliance jargon |
 | External auditor / certification body | Consumes evidence (read-only or via export) | A clean, complete, traceable evidence pack mapped to controls |
 
-*Note on independence: where the platform is sold to organisations the founder also audits, a clear separation of roles must be maintained. The auditor persona above is a consumer of output, not a buyer in those accounts.*
+*Note on independence: where the platform is sold to organisations the founder also audits, a clear separation of roles must be maintained. The auditor persona above is a consumer of output, not a buyer in those accounts. The role model enforces this separation in software — see §4.9.1.*
 
 # 3. Scope
 
@@ -93,7 +93,7 @@ This pattern is the spine of the product and applies everywhere the system asser
 
 - Evidence repository with immutable audit trail.
 
-- Review & approval workflow with roles and sign-off.
+- Review & approval workflow with separation-of-duties governance roles and sign-off — roles organised on three lines of defence, reviewer and authoriser separated, governance distinct from administration, self-assignment blocked (see 4.9.1).
 
 - Audit/export pack generation.
 
@@ -290,12 +290,35 @@ The missing knowledge layer for risk identification. A layered, source-attribute
 
 ## 4.9 Workflow, Review & Sign-off
 
+Governance roles are modelled on three lines of defence and are deliberately separated from account administration. Administration (managing members, assigning roles, configuring the org) carries no governance capability: governance is exercised only through explicitly granted governance roles, and those roles are constrained by separation of duties. This matters doubly for a product whose own subject is governance — a role model that let one person both perform and approve would undermine the discipline the product sells.
+
+### 4.9.1 Roles & separation of duties
+
+Two distinct axes:
+
+- **Administrative role** — account level only: manage members, assign governance roles, configure org settings. Admin is *not* a governance role and confers *no* governance power; being an admin grants no sign-off authority. Assigning governance roles is the only point at which administration touches governance, which is why self-assignment is closed (WKF-6).
+
+- **Governance roles** — the SoD-constrained functional roles, organised on three lines of defence:
+  - **1st line — own / provide.** *System/product owner* (registers the system/use case, provides and confirms the facts, owns the use case) and *Contributor* (supplies requested evidence/facts). Both are 1st-line "doing" roles and may be co-held.
+  - **2nd line — review / authorise.** *Reviewer* (reviews and signs off classification, FRIA and the AIIA; recommends) and *Authoriser* (accepts residual risk and grants deployment authorisation / ATO). These two are **separated**: the party that recommends cannot be the party that accepts the risk.
+  - **3rd line — assure.** *Auditor* (independent, read-only assurance that the process was followed).
+
+Separation of duties is enforced as a **conflict matrix at the point of role assignment**: a user cannot be granted a governance role that conflicts with one they already hold. Every cross-line pair conflicts (an owner/contributor cannot review, authorise or audit; a reviewer cannot audit; reviewer and authoriser cannot be co-held); within a line, only *owner + contributor* compose. Because that one composable pair exists, the rule is a matrix rather than a blanket "one governance role per person".
+
+Governance roles are **tenant-scoped** in the MVP — a user holds a role org-wide rather than per system, so they pick a lane across the tenant. Object-scoped assignment (different roles on different systems) is a deliberate later extension and is designed to be **additive, not a rewrite**: a nullable scope on the assignment (NULL = tenant-wide, preserving every existing grant) plus a scope-aware conflict check, leaving the role catalogue and conflict matrix unchanged.
+
+Because the interaction model captures context once and orchestrates gates in the background (4.1.3), roles define *who is eligible* to act at each gate; the state machine decides *when* an action is required and routes it to an eligible, non-conflicting holder. Filling the intake is a 1st-line act (providing context); the judgement acts the gates demand — review, authorisation, audit — remain with the separated 2nd/3rd-line roles. Capture-once and separation of duties therefore coexist: provision and judgement are different acts held by different roles.
+
 | **ID** | **Requirement** | **Priority** |
 | --- | --- | --- |
-| WKF-1 | Role-based access (admin, reviewer, contributor, read-only auditor). | M |
+| WKF-1 | Two role axes: an administrative role (account management only) and SoD-constrained governance roles (owner, contributor, reviewer, authoriser, auditor) organised on three lines of defence. Admin confers no governance capability. | M |
 | WKF-2 | Review queue; reviewers can comment, request changes, and formally approve with attribution. | M |
 | WKF-3 | Status lifecycle for assessments (draft → in review → approved → needs refresh). | M |
 | WKF-4 | Notifications for assignments, approvals and due dates. | S |
+| WKF-5 | Governance-role assignment enforces a separation-of-duties conflict matrix: a user cannot hold conflicting roles. Reviewer and authoriser are separated; an owner/contributor cannot review, authorise or audit the same tenant's work. | M |
+| WKF-6 | Self-assignment of governance roles is blocked: an admin cannot grant governance roles to themselves, closing the only administration→governance escalation path. (Reviewable later if a real need emerges.) | M |
+| WKF-7 | Governance roles are tenant-scoped in the MVP; the assignment model reserves room for later object-scoped (per-system) assignment without rework. | S |
+| WKF-8 | Every governance-role grant and revoke is written to the immutable audit trail with actor, subject, role and timestamp. | M |
 
 ## 4.10 Audit / Export Pack
 
@@ -362,7 +385,7 @@ A deliberate note, because the MVP's differentiator is automation but its center
 
 Order matters: build the spine (data model + control library), then the assessment flow on top of it, then evidence/export, then the automation layer.
 
-- Foundations: data model for systems, use cases, vendors and products with three inheriting approval scopes (vendor / vendor+product / vendor+product+use-case), controls, cross-maps, risks, evidence, audit log, and lifecycle states; auth & roles.
+- Foundations: data model for systems, use cases, vendors and products with three inheriting approval scopes (vendor / vendor+product / vendor+product+use-case), controls, cross-maps, risks, evidence, audit log, and lifecycle states; auth, plus the tenant governance role model and SoD enforcement (admin vs governance roles, conflict matrix, blocked self-assignment) — built before the assessment flow that consumes it, since the gates route work to eligible role-holders.
 
 - Control library + cross-mapping (ISO 42001 ↔ EU AI Act).
 
@@ -428,5 +451,6 @@ The questions below are therefore framed as reactions to the built product, not 
 | Risk Library curation is heavy, or AI enhancement invents unsourced risks. | Seed shallow but correct for MVP (OWASP LLM full + curated NIST/ISO layer); defer ATLAS. Keep the seed human-curated and source-attributed; AI only proposes relevance/drafts/freshness and is always human-confirmed (RSK-7). |
 | Over-fitting the product to one vocal design partner. | Triangulate across all partners; only build shared pain into the core. |
 | Automation perceived as undermining defensibility. | Keep human sign-off mandatory; mark all AI suggestions clearly. |
+| The product's own role model lets one person both perform and approve — undermining the separation of duties the product exists to enforce. | Governance roles are SoD-constrained by a conflict matrix enforced at assignment; reviewer and authoriser are separated; admin carries no governance power and cannot self-assign governance roles (see 4.9.1). |
 | Scope creep from exciting-but-later features (discovery, monitoring, agents). | Hold the line on Section 3.2; revisit only after GA. |
 | The backend orchestration / state machine is over-engineered into a general workflow engine. | MVP implements only the fixed, known set of states and transitions (determinate rules over captured context); configurability and a general event engine are explicitly out of scope (LFC-6, 3.2). |
