@@ -163,3 +163,10 @@ class UserRole(str, enum.Enum):
 class OperatorStatus(str, enum.Enum):
     ACTIVE = "active"
     DISABLED = "disabled"
+
+
+class SystemLifecycleStage(str, enum.Enum):
+    DEVELOPMENT = "development"
+    PILOT = "pilot"
+    PRODUCTION = "production"
+    RETIRED = "retired"

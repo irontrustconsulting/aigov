@@ -25,3 +25,6 @@ out/
 infra/.terraform/
 infra/terraform.tfstate
 infra/terraform.tfstate.backup
+
+# Local prompts / scratch
+prompts/

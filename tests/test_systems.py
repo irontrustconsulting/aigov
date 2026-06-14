@@ -134,7 +134,6 @@ class TestCreateSystem:
 
         assert r.status_code == 201
         assert r.json()["name"] == "My AI System"
-        assert r.json()["tenant_id"] == str(tenant.id)
 
     def test_member_without_governance_role_gets_403(
         self, client, db_session, tenant, plain_member

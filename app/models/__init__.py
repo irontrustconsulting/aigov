@@ -6,7 +6,7 @@ Alembic autogenerate and for `Base.metadata.create_all` in tests.
     target_metadata = Base.metadata   # in alembic/env.py
 """
 
-from .base import Base, UserRole # noqa: F401
+from .base import Base, UserRole, SystemLifecycleStage  # noqa: F401
 
 # Identity & tenancy
 from .identity import Tenant, User, Membership  # noqa: F401
@@ -47,4 +47,11 @@ from app.models.platform_audit import PlatformAuditEvent  # noqa: F401
 # Tenant governance roles (catalogue, SoD matrix, assignments)
 from app.models.governance import (  # noqa: F401
     GovernanceRole, GovernanceRoleConflict, GovernanceRoleAssignment,
+)
+
+# System Intake vocab and link tables
+from app.models.intake import (  # noqa: F401
+    EUOperatorRole, HostingModel, UsageContext, HumanOversightType,
+    DataCategory, AffectedParty,
+    SystemDataCategory, SystemAffectedParty,
 )

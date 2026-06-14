@@ -24,6 +24,8 @@ from app.models import (
 from app.schemas.reference import (
     ProductCategoryRead, VendorRead, ProductRead, EUAIActSubcategoryRead,
 )
+from app.schemas.system import ProductDetailOut
+from app.services.reference_service import get_product_detail
 
 router = APIRouter(prefix="/reference", tags=["reference"])
 
@@ -89,3 +91,12 @@ def products_in_category(
 def list_eu_subcategories(db: Session = Depends(get_db)) -> list[EUAIActSubcategory]:
     """The EU AI Act governance subcategories (each carries its tier)."""
     return list(db.scalars(select(EUAIActSubcategory).order_by(EUAIActSubcategory.code)))
+
+
+@router.get("/products/{product_id}", response_model=ProductDetailOut)
+def get_product_detail_endpoint(
+    product_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> ProductDetailOut:
+    """Product detail for the selection wizard: vendor, category tags, EU AI Act subcategories."""
+    return get_product_detail(product_id, db)

@@ -23,7 +23,10 @@ Key modelling decisions (from the PRD)
 from __future__ import annotations
 
 import uuid
-from typing import List
+from typing import TYPE_CHECKING, List
+
+if TYPE_CHECKING:
+    from .intake import SystemDataCategory, SystemAffectedParty
 
 from sqlalchemy import (
     String, Text, ForeignKey, Enum as SAEnum, UniqueConstraint, DateTime,
@@ -32,9 +35,12 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 
+from sqlalchemy import Boolean
+
 from .base import (
     Base, TimestampMixin, uuid_pk,
     ApprovalStatus, EUAIActTier, LifecycleState, ProvenanceConfidence,
+    SystemLifecycleStage,
 )
 
 
@@ -160,11 +166,39 @@ class System(Base, TimestampMixin):
         PGUUID(as_uuid=True), ForeignKey("catalogue_product.id", ondelete="SET NULL"),
         index=True,
     )
-    # Free metadata captured at intake (lifecycle stage, data used, etc.)
+    # Free metadata captured at intake (purpose goes here under key "purpose")
     metadata_blob: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+    # Structured intake metadata (System Intake sprint)
+    operator_role_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("eu_operator_role.id", ondelete="SET NULL"),
+        index=True,
+    )
+    hosting_model_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("hosting_model.id", ondelete="SET NULL"),
+        index=True,
+    )
+    usage_context_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("usage_context.id", ondelete="SET NULL"),
+        index=True,
+    )
+    human_oversight_type_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("human_oversight_type.id", ondelete="SET NULL"),
+        index=True,
+    )
+    lifecycle_stage: Mapped[SystemLifecycleStage | None] = mapped_column(
+        SAEnum(SystemLifecycleStage, name="system_lifecycle_stage"), nullable=True,
+    )
+    is_custom: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     use_cases: Mapped[List["UseCase"]] = relationship(
         back_populates="system", cascade="all, delete-orphan"
+    )
+    data_categories: Mapped[List["SystemDataCategory"]] = relationship(
+        cascade="all, delete-orphan",
+    )
+    affected_parties: Mapped[List["SystemAffectedParty"]] = relationship(
+        cascade="all, delete-orphan",
     )
 
 
