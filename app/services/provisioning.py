@@ -31,14 +31,13 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
-import boto3
 from botocore.exceptions import ClientError
 from sqlalchemy import select
 
-from app.config import settings
 from app.db.session import ProvisionerSessionLocal
 from app.models import Tenant, User, Membership, UserRole
 from app.services.audit import record_platform_event
+from app.services.cognito_helpers import create_cognito_user, delete_cognito_user
 
 if TYPE_CHECKING:
     from app.auth.operator_authz import CurrentOperator
@@ -50,57 +49,6 @@ class ProvisioningError(Exception):
 
 class AlreadyProvisioned(ProvisioningError):
     """A tenant with this slug, or a user with this email, already exists."""
-
-
-def _cognito():
-    return boto3.client("cognito-idp", region_name=settings.cognito_region)
-
-
-def _create_cognito_owner(
-    *, email: str, display_name: str, tenant_id: uuid.UUID
-) -> str:
-    """Create the owner in Cognito and return their `sub`.
-
-    AdminCreateUser sends an invitation email containing a temporary password;
-    the user sets their real password on first login. Neither this code nor the
-    backend ever handles a user password -- the property we wanted.
-
-    Pool prerequisites (configure once on the user pool):
-      * the custom attribute `custom:tenant_id` must exist and be IMMUTABLE
-        (your authz trusts this claim -- a user must not be able to change it);
-      * `Username=email` assumes the pool uses email as the username/alias.
-        If your pool keys users by a generated username, set Username to that
-        and add email as an attribute instead.
-    """
-    client = _cognito()
-    resp = client.admin_create_user(
-        UserPoolId=settings.cognito_user_pool_id,
-        Username=email,
-        UserAttributes=[
-            {"Name": "email", "Value": email},
-            # operator-vouched: receiving the invite email proves control.
-            # Set "false" instead if you want the user to verify separately.
-            {"Name": "email_verified", "Value": "true"},
-            {"Name": "name", "Value": display_name},
-            {"Name": "custom:tenant_id", "Value": str(tenant_id)},
-        ],
-        DesiredDeliveryMediums=["EMAIL"],
-    )
-    return next(
-        a["Value"] for a in resp["User"]["Attributes"] if a["Name"] == "sub"
-    )
-
-
-def _delete_cognito_owner(email: str) -> None:
-    """Best-effort compensating delete. Deliberately never raises: a failure
-    here just leaves a Cognito user for the reconciler to sweep, which is
-    acceptable -- whereas raising would mask the original commit error."""
-    try:
-        _cognito().admin_delete_user(
-            UserPoolId=settings.cognito_user_pool_id, Username=email
-        )
-    except Exception:
-        pass  # TODO: log for the reconciler to pick up
 
 
 def provision_tenant(
@@ -141,7 +89,7 @@ def provision_tenant(
 
         # 3. Cognito -- the external step. On failure, roll back: no orphan.
         try:
-            sub = _create_cognito_owner(
+            sub = create_cognito_user(
                 email=owner_email, display_name=owner_name, tenant_id=tenant_id
             )
         except ClientError as e:
@@ -177,7 +125,7 @@ def provision_tenant(
             session.commit()
         except Exception:
             session.rollback()
-            _delete_cognito_owner(owner_email)
+            delete_cognito_user(owner_email)
             raise
 
         return tenant_id, user.id

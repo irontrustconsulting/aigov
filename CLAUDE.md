@@ -20,7 +20,6 @@
 
 If a fact is *what the product is*, it belongs in the PRD; if it's *this task's detail* or *changing status*, it belongs in the sprint. This file holds only what's durable.
 
-**Current work:** `sprints/USE_CASE_CLASSIFICATION.md` — read it first; it is the source of truth for what to build now.
 
 **Naming:** repo `aigov`; DB/Cognito/role prefix `irontrustai`; company IronTrust.
 

@@ -34,7 +34,7 @@ _FAKE_OP_SUB = "fake-cognito-sub-op"
 
 def test_http_provision_writes_audit(client, active_operator, db_session):
     """POST /platform/provision -> one PlatformAuditEvent with correct fields."""
-    with patch("app.services.provisioning._create_cognito_owner", return_value=_FAKE_TENANT_SUB):
+    with patch("app.services.provisioning.create_cognito_user", return_value=_FAKE_TENANT_SUB):
         app.dependency_overrides[verify_operator_token] = token_override(active_operator.cognito_sub)
         try:
             r = client.post("/platform/provision", json={
@@ -77,7 +77,7 @@ def test_cli_provision_with_actor(db_session, _test_session_factory):
     )
     with (
         patch("app.services.provisioning.ProvisionerSessionLocal", _test_session_factory),
-        patch("app.services.provisioning._create_cognito_owner", return_value="fake-sub-cli"),
+        patch("app.services.provisioning.create_cognito_user", return_value="fake-sub-cli"),
     ):
         provision_tenant(
             org_name="CLI Org",
@@ -100,7 +100,7 @@ def test_cli_provision_genesis_actor_null(db_session, _test_session_factory):
     """provision_tenant with actor=None (genesis) -> audit row has null actor fields."""
     with (
         patch("app.services.provisioning.ProvisionerSessionLocal", _test_session_factory),
-        patch("app.services.provisioning._create_cognito_owner", return_value="fake-sub-genesis"),
+        patch("app.services.provisioning.create_cognito_user", return_value="fake-sub-genesis"),
     ):
         provision_tenant(
             org_name="Genesis Org",
@@ -158,7 +158,7 @@ def test_cli_create_operator_writes_audit(db_session, _test_session_factory):
 
 def test_audit_actor_matches_operator(client, active_operator, db_session):
     """actor_sub in the audit row matches the verified operator's cognito_sub."""
-    with patch("app.services.provisioning._create_cognito_owner", return_value=_FAKE_TENANT_SUB):
+    with patch("app.services.provisioning.create_cognito_user", return_value=_FAKE_TENANT_SUB):
         app.dependency_overrides[verify_operator_token] = token_override(
             active_operator.cognito_sub, email=active_operator.email
         )

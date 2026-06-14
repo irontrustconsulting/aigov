@@ -30,7 +30,7 @@ _FAKE_SUB = "cognito-fake-sub-tenant-001"
 @pytest.fixture
 def mock_cognito_owner():
     with patch(
-        "app.services.provisioning._create_cognito_owner",
+        "app.services.provisioning.create_cognito_user",
         return_value=_FAKE_SUB,
     ) as m:
         yield m
