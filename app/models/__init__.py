@@ -55,3 +55,8 @@ from app.models.intake import (  # noqa: F401
     DataCategory, AffectedParty,
     SystemDataCategory, SystemAffectedParty,
 )
+
+# Classification gate — decision tree reference tables (global, no RLS)
+from app.models.decision_tree import (  # noqa: F401
+    DecisionTree, DecisionTreeQuestion, DecisionTreeOption,
+)

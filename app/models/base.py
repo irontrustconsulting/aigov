@@ -156,6 +156,13 @@ class ProvenanceConfidence(str, enum.Enum):
     USER_AMENDED = "user_amended"
 
 
+class ClassificationStatus(str, enum.Enum):
+    PENDING_REVIEW = "pending_review"
+    APPROVED = "approved"
+    CHANGES_REQUESTED = "changes_requested"   # reserved for workflow track
+    NEEDS_REFRESH = "needs_refresh"            # reserved for workflow track
+
+
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
     MEMBER = "member"

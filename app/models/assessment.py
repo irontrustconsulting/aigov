@@ -34,7 +34,7 @@ from datetime import datetime
 from .base import (
     Base, TimestampMixin, uuid_pk,
     EUAIActTier, AssessmentType, AssessmentStatus, ProvenanceConfidence,
-    CoverageStatus,
+    CoverageStatus, ClassificationStatus,
 )
 
 
@@ -69,6 +69,13 @@ class Classification(Base, TimestampMixin):
     # cannot rewrite history. Null when tier is REQUIRES_CONTEXT.
     basis_subcategory_code: Mapped[str | None] = mapped_column(String(80))
     basis_legal_ref: Mapped[str | None] = mapped_column(String(120))
+    # Gate-2 status: PENDING_REVIEW on compute; APPROVED on Reviewer sign-off.
+    # CHANGES_REQUESTED / NEEDS_REFRESH reserved for the review workflow track.
+    status: Mapped[ClassificationStatus] = mapped_column(
+        SAEnum(ClassificationStatus, name="classification_status"),
+        default=ClassificationStatus.PENDING_REVIEW,
+        nullable=False,
+    )
 
     use_case: Mapped["UseCase"] = relationship(back_populates="classifications")
 

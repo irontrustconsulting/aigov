@@ -1,0 +1,327 @@
+# EU AI Act Classification Decision Tree — v1.0
+#
+# Version is the legal-review boundary: bump version for ANY content change.
+# The seed loader refuses to mutate a frozen version (fail loud, require bump).
+#
+# Structure:
+#   probes_rung: which tier rung this question probes (PROHIBITED|HIGH|LIMITED)
+#                null = general-purpose discriminator
+#   options[].asserts_rung: the rung asserted by a "yes" answer (null = no assertion)
+#   options[].asserts_subcategory_code: specific EUAIActSubcategory code for
+#              basis tracking; must match a code in eu_ai_act_subcategory table.
+#
+# Resolution: precedence ladder PROHIBITED > HIGH > LIMITED > MINIMAL.
+# MINIMAL is the affirmative result when all questions are answered and
+# no higher rung is asserted. Never a fallback for incomplete answers.
+
+version: "1.0"
+name: "EU AI Act Classification Tree v1.0"
+
+questions:
+
+  # ── Art. 5 Prohibited Practices ─────────────────────────────────────────
+  - code: "Q_ART5_BIOMETRIC_RTS"
+    text: >
+      Does the system perform real-time remote biometric identification of
+      natural persons in publicly accessible spaces for law enforcement
+      purposes?
+    probes_rung: "PROHIBITED"
+    legal_ref: "Art. 5(1)(h)"
+    order: 10
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "PROHIBITED"
+        asserts_subcategory_code: "ART5_BIOMETRIC_RTS"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ART5_SOCIAL_SCORING"
+    text: >
+      Does the system evaluate or classify natural persons based on their
+      social behaviour or personal characteristics to generate a social
+      score used by public authorities to grant or restrict access to
+      services or opportunities?
+    probes_rung: "PROHIBITED"
+    legal_ref: "Art. 5(1)(c)"
+    order: 20
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "PROHIBITED"
+        asserts_subcategory_code: "ART5_SOCIAL_SCORING"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ART5_SUBLIMINAL"
+    text: >
+      Does the system use subliminal, manipulative, or deceptive techniques
+      to influence a person's behaviour in a way that causes or is likely to
+      cause significant harm?
+    probes_rung: "PROHIBITED"
+    legal_ref: "Art. 5(1)(a)"
+    order: 30
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "PROHIBITED"
+        asserts_subcategory_code: "ART5_SUBLIMINAL"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ART5_VULNERABILITY"
+    text: >
+      Does the system exploit vulnerabilities of specific groups (children,
+      persons with disabilities) or persons in economically or socially
+      vulnerable situations in a way that distorts their behaviour and
+      causes or is likely to cause significant harm?
+    probes_rung: "PROHIBITED"
+    legal_ref: "Art. 5(1)(b)"
+    order: 40
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "PROHIBITED"
+        asserts_subcategory_code: "ART5_VULNERABILITY"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ART5_EMOTION_WORKPLACE"
+    text: >
+      Does the system infer emotions of natural persons in the context of
+      the workplace or educational institutions?
+    probes_rung: "PROHIBITED"
+    legal_ref: "Art. 5(1)(f)"
+    order: 50
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "PROHIBITED"
+        asserts_subcategory_code: "ART5_EMOTION_WORKPLACE"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ART5_FACIAL_SCRAPING"
+    text: >
+      Does the system create or expand facial recognition databases through
+      untargeted scraping of facial images from the internet or CCTV footage?
+    probes_rung: "PROHIBITED"
+    legal_ref: "Art. 5(1)(e)"
+    order: 60
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "PROHIBITED"
+        asserts_subcategory_code: "ART5_FACIAL_SCRAPING"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  # ── Annex III High-Risk Use Cases ───────────────────────────────────────
+  - code: "Q_ANNEX3_BIOMETRIC_ID"
+    text: >
+      Is the system used for biometric identification or categorisation of
+      natural persons (excluding systems explicitly listed under Art. 5)?
+    probes_rung: "HIGH"
+    legal_ref: "Annex III(1)"
+    order: 110
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "HIGH"
+        asserts_subcategory_code: "ANNEX3_BIOMETRIC_ID"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ANNEX3_CRITICAL_INFRA"
+    text: >
+      Is the system used as a safety component in the management or operation
+      of critical infrastructure (water, gas, electricity, road transport)?
+    probes_rung: "HIGH"
+    legal_ref: "Annex III(2)"
+    order: 120
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "HIGH"
+        asserts_subcategory_code: "ANNEX3_CRITICAL_INFRA"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ANNEX3_EDUCATION"
+    text: >
+      Is the system used to determine access or admission to educational or
+      vocational training institutions, or to evaluate learning outcomes
+      including student assessment?
+    probes_rung: "HIGH"
+    legal_ref: "Annex III(3)"
+    order: 130
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "HIGH"
+        asserts_subcategory_code: "ANNEX3_EDUCATION"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ANNEX3_EMPLOYMENT"
+    text: >
+      Is the system used for recruitment, selection, promotion, task
+      allocation, performance monitoring, or termination decisions
+      affecting employees or job applicants?
+    probes_rung: "HIGH"
+    legal_ref: "Annex III(4)"
+    order: 140
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "HIGH"
+        asserts_subcategory_code: "ANNEX3_EMPLOYMENT"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ANNEX3_ESSENTIAL_SERVICES"
+    text: >
+      Is the system used to evaluate the eligibility of natural persons to
+      access essential private or public services (credit, insurance, social
+      benefits, housing, healthcare)?
+    probes_rung: "HIGH"
+    legal_ref: "Annex III(5)"
+    order: 150
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "HIGH"
+        asserts_subcategory_code: "ANNEX3_ESSENTIAL_SERVICES"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ANNEX3_LAW_ENFORCEMENT"
+    text: >
+      Is the system used by law enforcement authorities for individual risk
+      assessment, polygraph-equivalent testing, evidence reliability
+      evaluation, crime prediction, or profiling?
+    probes_rung: "HIGH"
+    legal_ref: "Annex III(6)"
+    order: 160
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "HIGH"
+        asserts_subcategory_code: "ANNEX3_LAW_ENFORCEMENT"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ANNEX3_MIGRATION"
+    text: >
+      Is the system used by competent public authorities for migration,
+      asylum, or border control (risk assessment, document verification,
+      examination of applications)?
+    probes_rung: "HIGH"
+    legal_ref: "Annex III(7)"
+    order: 170
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "HIGH"
+        asserts_subcategory_code: "ANNEX3_MIGRATION"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ANNEX3_JUSTICE"
+    text: >
+      Is the system used by judicial or administrative authorities to assist
+      in interpreting facts or law, researching and interpreting law, or
+      applying law to a concrete set of facts?
+    probes_rung: "HIGH"
+    legal_ref: "Annex III(8)"
+    order: 180
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "HIGH"
+        asserts_subcategory_code: "ANNEX3_JUSTICE"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  # ── Art. 50 Transparency Obligations (Limited Risk) ─────────────────────
+  - code: "Q_ART50_CHATBOT"
+    text: >
+      Does the system interact with natural persons in a way that could lead
+      them to believe they are communicating with a human (chatbot, virtual
+      assistant, conversational AI)?
+    probes_rung: "LIMITED"
+    legal_ref: "Art. 50(1)"
+    order: 210
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "LIMITED"
+        asserts_subcategory_code: "ART50_CHATBOT"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ART50_DEEPFAKE"
+    text: >
+      Does the system generate or manipulate image, audio, or video content
+      that constitutes a deep fake (AI-generated content depicting real people
+      saying or doing things they did not say or do)?
+    probes_rung: "LIMITED"
+    legal_ref: "Art. 50(4)"
+    order: 220
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "LIMITED"
+        asserts_subcategory_code: "ART50_DEEPFAKE"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null
+
+  - code: "Q_ART50_SYNTHETIC_CONTENT"
+    text: >
+      Does the system generate text, images, audio, or video that could
+      appear to be authentic or true (excluding content that is clearly
+      artistic, creative, satirical, or fictional)?
+    probes_rung: "LIMITED"
+    legal_ref: "Art. 50(2)"
+    order: 230
+    options:
+      - code: "YES"
+        label: "Yes"
+        asserts_rung: "LIMITED"
+        asserts_subcategory_code: "ART50_SYNTHETIC_CONTENT"
+      - code: "NO"
+        label: "No"
+        asserts_rung: null
+        asserts_subcategory_code: null

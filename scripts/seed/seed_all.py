@@ -35,6 +35,7 @@ from scripts.seed import (
     seed_product_category_membership,
     seed_product_category_eu_mapping,
     seed_governance_roles,
+    seed_decision_tree,
 )
 
 
@@ -54,6 +55,8 @@ def main() -> None:
         seed_product_category_eu_mapping.main(session)
         # platform reference: governance role catalogue
         seed_governance_roles.main(session)
+        # classification gate: EU AI Act decision tree (version-aware)
+        seed_decision_tree.main(session)
         session.commit()
         print("Done.")
 
