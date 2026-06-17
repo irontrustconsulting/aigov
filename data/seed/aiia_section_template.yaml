@@ -1,0 +1,445 @@
+# AIIA + feeder section templates (sprints/SPRINT_AIIA.md WI-2).
+#
+# AIIA rows are seeded for the three tiers that ever reach AIIA creation
+# (high_risk, limited_risk, minimal_risk) — prohibited and requires_context
+# are blocked at the classification gate before an AIIA can exist.
+# risk_identification is required at every tier: it's the section
+# AI_SUGGESTED proposed-risk items attach to.
+#
+# Feeder rows (fria/dpia/model_risk) are seeded now even though feeder
+# creation is Phase B (docs/AIIA_DESIGN.md §10) — cheap to seed ahead.
+# aiia_target_section_key maps a feeder section into the AIIA section it
+# surfaces under; omitted/null means feeder-private (surfaces in no AIIA
+# section by design — the future export pack carries it instead).
+
+# ---------------------------------------------------------------- aiia / high_risk
+- type: aiia
+  tier: high_risk
+  section_key: system_overview
+  title: "System & Use Case Overview"
+  applicability: required
+  prompt: "Describe the AI system, its intended purpose, and the deployment context for this use case."
+  iso_42005_clause: "5.2"
+  sort_order: 10
+- type: aiia
+  tier: high_risk
+  section_key: stakeholders_affected_parties
+  title: "Affected Parties & Rights Impact"
+  applicability: required
+  prompt: "Identify who is affected by this system (incl. vulnerable groups) and the fundamental-rights impact on each."
+  iso_42005_clause: "5.4"
+  sort_order: 20
+- type: aiia
+  tier: high_risk
+  section_key: data_governance
+  title: "Data Sources, Categories & Quality"
+  applicability: required
+  prompt: "Describe the data processed, its categories (incl. special-category data), provenance, and quality/bias controls."
+  iso_42005_clause: "5.5"
+  sort_order: 30
+- type: aiia
+  tier: high_risk
+  section_key: technical_robustness
+  title: "Technical Robustness, Accuracy & Cybersecurity"
+  applicability: required
+  prompt: "Assess the system's accuracy, robustness to adversarial input, and cybersecurity posture."
+  iso_42005_clause: "5.6"
+  sort_order: 40
+- type: aiia
+  tier: high_risk
+  section_key: human_oversight
+  title: "Human Oversight Measures"
+  applicability: required
+  prompt: "Describe the human oversight measures in place (EU AI Act Art. 14) and their adequacy for this use case."
+  iso_42005_clause: "5.7"
+  sort_order: 50
+- type: aiia
+  tier: high_risk
+  section_key: transparency_disclosure
+  title: "Transparency & User Disclosure"
+  applicability: required
+  prompt: "Describe what is disclosed to affected individuals about this system's use, scope, and limitations (EU AI Act Art. 50)."
+  iso_42005_clause: "5.8"
+  sort_order: 60
+- type: aiia
+  tier: high_risk
+  section_key: risk_identification
+  title: "Identified Risks & Mitigations"
+  applicability: required
+  prompt: "The risks identified for this use case, their treatment, and residual exposure."
+  iso_42005_clause: "5.9"
+  sort_order: 70
+- type: aiia
+  tier: high_risk
+  section_key: residual_risk_monitoring
+  title: "Residual Risk & Post-Market Monitoring"
+  applicability: required
+  prompt: "Summarise residual risk after mitigation and the post-deployment monitoring plan."
+  iso_42005_clause: "5.10"
+  sort_order: 80
+- type: aiia
+  tier: high_risk
+  section_key: conformity_legal_basis
+  title: "Conformity & Legal Basis"
+  applicability: required
+  prompt: "Record the classification basis and the legal references that govern this use case."
+  iso_42005_clause: "5.3"
+  sort_order: 90
+
+# ------------------------------------------------------------- aiia / limited_risk
+- type: aiia
+  tier: limited_risk
+  section_key: system_overview
+  title: "System & Use Case Overview"
+  applicability: required
+  prompt: "Describe the AI system, its intended purpose, and the deployment context for this use case."
+  iso_42005_clause: "5.2"
+  sort_order: 10
+- type: aiia
+  tier: limited_risk
+  section_key: stakeholders_affected_parties
+  title: "Affected Parties & Rights Impact"
+  applicability: recommended
+  prompt: "Identify who is affected by this system and any notable impact on them."
+  iso_42005_clause: "5.4"
+  sort_order: 20
+- type: aiia
+  tier: limited_risk
+  section_key: data_governance
+  title: "Data Sources, Categories & Quality"
+  applicability: recommended
+  prompt: "Describe the data processed and its categories."
+  iso_42005_clause: "5.5"
+  sort_order: 30
+- type: aiia
+  tier: limited_risk
+  section_key: technical_robustness
+  title: "Technical Robustness, Accuracy & Cybersecurity"
+  applicability: recommended
+  prompt: "Assess the system's accuracy and robustness."
+  iso_42005_clause: "5.6"
+  sort_order: 40
+- type: aiia
+  tier: limited_risk
+  section_key: human_oversight
+  title: "Human Oversight Measures"
+  applicability: recommended
+  prompt: "Describe any human oversight measures in place."
+  iso_42005_clause: "5.7"
+  sort_order: 50
+- type: aiia
+  tier: limited_risk
+  section_key: transparency_disclosure
+  title: "Transparency & User Disclosure"
+  applicability: required
+  prompt: "Describe what is disclosed to affected individuals (EU AI Act Art. 50 transparency obligations apply to limited-risk systems)."
+  iso_42005_clause: "5.8"
+  sort_order: 60
+- type: aiia
+  tier: limited_risk
+  section_key: risk_identification
+  title: "Identified Risks & Mitigations"
+  applicability: required
+  prompt: "The risks identified for this use case, their treatment, and residual exposure."
+  iso_42005_clause: "5.9"
+  sort_order: 70
+- type: aiia
+  tier: limited_risk
+  section_key: residual_risk_monitoring
+  title: "Residual Risk & Post-Market Monitoring"
+  applicability: recommended
+  prompt: "Summarise residual risk after mitigation."
+  iso_42005_clause: "5.10"
+  sort_order: 80
+- type: aiia
+  tier: limited_risk
+  section_key: conformity_legal_basis
+  title: "Conformity & Legal Basis"
+  applicability: recommended
+  prompt: "Record the classification basis and legal references."
+  iso_42005_clause: "5.3"
+  sort_order: 90
+
+# -------------------------------------------------------------- aiia / minimal_risk
+- type: aiia
+  tier: minimal_risk
+  section_key: system_overview
+  title: "System & Use Case Overview"
+  applicability: required
+  prompt: "Describe the AI system, its intended purpose, and the deployment context for this use case."
+  iso_42005_clause: "5.2"
+  sort_order: 10
+- type: aiia
+  tier: minimal_risk
+  section_key: stakeholders_affected_parties
+  title: "Affected Parties & Rights Impact"
+  applicability: recommended
+  prompt: "Identify who is affected by this system, if relevant."
+  iso_42005_clause: "5.4"
+  sort_order: 20
+- type: aiia
+  tier: minimal_risk
+  section_key: data_governance
+  title: "Data Sources, Categories & Quality"
+  applicability: recommended
+  prompt: "Describe the data processed, if any."
+  iso_42005_clause: "5.5"
+  sort_order: 30
+- type: aiia
+  tier: minimal_risk
+  section_key: technical_robustness
+  title: "Technical Robustness, Accuracy & Cybersecurity"
+  applicability: recommended
+  prompt: "Note any robustness considerations relevant to this use case."
+  iso_42005_clause: "5.6"
+  sort_order: 40
+- type: aiia
+  tier: minimal_risk
+  section_key: human_oversight
+  title: "Human Oversight Measures"
+  applicability: recommended
+  prompt: "Describe any human oversight measures in place, if relevant."
+  iso_42005_clause: "5.7"
+  sort_order: 50
+- type: aiia
+  tier: minimal_risk
+  section_key: transparency_disclosure
+  title: "Transparency & User Disclosure"
+  applicability: recommended
+  prompt: "Describe what is disclosed to affected individuals, if relevant."
+  iso_42005_clause: "5.8"
+  sort_order: 60
+- type: aiia
+  tier: minimal_risk
+  section_key: risk_identification
+  title: "Identified Risks & Mitigations"
+  applicability: required
+  prompt: "The risks identified for this use case, their treatment, and residual exposure."
+  iso_42005_clause: "5.9"
+  sort_order: 70
+- type: aiia
+  tier: minimal_risk
+  section_key: residual_risk_monitoring
+  title: "Residual Risk & Post-Market Monitoring"
+  applicability: recommended
+  prompt: "Summarise residual risk after mitigation, if any."
+  iso_42005_clause: "5.10"
+  sort_order: 80
+- type: aiia
+  tier: minimal_risk
+  section_key: conformity_legal_basis
+  title: "Conformity & Legal Basis"
+  applicability: recommended
+  prompt: "Record the classification basis, for traceability."
+  iso_42005_clause: "5.3"
+  sort_order: 90
+
+# ------------------------------------------------------- fria feeder / high_risk
+# (Phase B consumes these — see sprints/SPRINT_AIIA_FEEDERS.md §5.1/§5.4.
+# FRIA's required/recommended trigger is tier-driven (HIGH only, §5.3), so
+# it is seeded at high_risk only.)
+- type: fria
+  tier: high_risk
+  section_key: fria_affected_persons
+  title: "Affected Persons & Groups"
+  applicability: required
+  prompt: "List the persons/groups affected by this system (pre-filled from the system's registered affected parties)."
+  iso_42005_clause: "5.4"
+  aiia_target_section_key: stakeholders_affected_parties
+  sort_order: 5
+- type: fria
+  tier: high_risk
+  section_key: fria_rights_impact
+  title: "Fundamental Rights Impact"
+  applicability: required
+  prompt: "Assess the impact on fundamental rights for affected individuals."
+  iso_42005_clause: "5.4"
+  aiia_target_section_key: stakeholders_affected_parties
+  sort_order: 10
+- type: fria
+  tier: high_risk
+  section_key: fria_vulnerable_groups
+  title: "Vulnerable Group Considerations"
+  applicability: required
+  prompt: "Assess specific risk to vulnerable groups (EU AI Act Art. 27)."
+  iso_42005_clause: "5.4"
+  aiia_target_section_key: stakeholders_affected_parties
+  sort_order: 20
+- type: fria
+  tier: high_risk
+  section_key: fria_internal_complaint_process
+  title: "Internal Complaint & Redress Process"
+  applicability: recommended
+  prompt: "Describe the internal process for individuals to raise concerns or seek redress."
+  iso_42005_clause: "5.4"
+  # No aiia_target_section_key — feeder-private (design doc §9.2).
+  sort_order: 30
+
+# ------------------------------------- dpia feeder / high_risk + limited_risk + minimal_risk
+# DPIA's trigger is data-driven, not tier-driven (§5.3), so it is seeded at
+# every tier; applicability still scales down by tier.
+- type: dpia
+  tier: high_risk
+  section_key: dpia_data_categories
+  title: "Personal Data Categories Processed"
+  applicability: required
+  prompt: "Describe the personal data categories processed, incl. special-category data."
+  iso_42005_clause: "5.5"
+  aiia_target_section_key: data_governance
+  sort_order: 10
+- type: dpia
+  tier: high_risk
+  section_key: dpia_necessity_proportionality
+  title: "Necessity & Proportionality"
+  applicability: required
+  prompt: "Assess whether the processing is necessary and proportionate to the stated purpose."
+  iso_42005_clause: "5.5"
+  sort_order: 20
+- type: dpia
+  tier: limited_risk
+  section_key: dpia_data_categories
+  title: "Personal Data Categories Processed"
+  applicability: recommended
+  prompt: "Describe the personal data categories processed."
+  iso_42005_clause: "5.5"
+  aiia_target_section_key: data_governance
+  sort_order: 10
+- type: dpia
+  tier: limited_risk
+  section_key: dpia_necessity_proportionality
+  title: "Necessity & Proportionality"
+  applicability: recommended
+  prompt: "Assess whether the processing is necessary and proportionate."
+  iso_42005_clause: "5.5"
+  sort_order: 20
+- type: dpia
+  tier: minimal_risk
+  section_key: dpia_data_categories
+  title: "Personal Data Categories Processed"
+  applicability: recommended
+  prompt: "Describe the personal data categories processed, if any."
+  iso_42005_clause: "5.5"
+  aiia_target_section_key: data_governance
+  sort_order: 10
+- type: dpia
+  tier: minimal_risk
+  section_key: dpia_necessity_proportionality
+  title: "Necessity & Proportionality"
+  applicability: recommended
+  prompt: "Assess whether the processing is necessary and proportionate, if relevant."
+  iso_42005_clause: "5.5"
+  sort_order: 20
+
+# ------------------------------- model_risk feeder / high_risk + limited_risk + minimal_risk
+# MODEL_RISK is "always recommended" regardless of tier (§5.3), so it is
+# seeded at every tier; model_risk_model_description (the §5.4 pre-fill
+# target) is required at every tier — every model feeder needs to say what
+# the model is, even when the deeper analysis sections are only recommended.
+- type: model_risk
+  tier: high_risk
+  section_key: model_risk_model_description
+  title: "Model Description"
+  applicability: required
+  prompt: "Describe the model: product, modality, and hosting (pre-filled from the system's registered facts)."
+  iso_42005_clause: "5.6"
+  aiia_target_section_key: technical_robustness
+  sort_order: 5
+- type: model_risk
+  tier: high_risk
+  section_key: model_risk_validation
+  title: "Model Validation"
+  applicability: required
+  prompt: "Describe the model's validation process and observed accuracy/robustness."
+  iso_42005_clause: "5.6"
+  aiia_target_section_key: technical_robustness
+  sort_order: 10
+- type: model_risk
+  tier: high_risk
+  section_key: model_risk_identified_risks
+  title: "Identified Technical Risks"
+  applicability: required
+  prompt: "Technical risks identified for this model (OWASP LLM Top 10) — populated from proposed risks."
+  iso_42005_clause: "5.9"
+  aiia_target_section_key: risk_identification
+  sort_order: 15
+- type: model_risk
+  tier: high_risk
+  section_key: model_risk_drift_monitoring
+  title: "Drift & Performance Monitoring"
+  applicability: required
+  prompt: "Describe the plan for monitoring model drift and performance degradation post-deployment."
+  iso_42005_clause: "5.10"
+  aiia_target_section_key: residual_risk_monitoring
+  sort_order: 20
+- type: model_risk
+  tier: limited_risk
+  section_key: model_risk_model_description
+  title: "Model Description"
+  applicability: required
+  prompt: "Describe the model: product, modality, and hosting (pre-filled from the system's registered facts)."
+  iso_42005_clause: "5.6"
+  aiia_target_section_key: technical_robustness
+  sort_order: 5
+- type: model_risk
+  tier: limited_risk
+  section_key: model_risk_validation
+  title: "Model Validation"
+  applicability: recommended
+  prompt: "Describe the model's validation process and observed accuracy/robustness."
+  iso_42005_clause: "5.6"
+  aiia_target_section_key: technical_robustness
+  sort_order: 10
+- type: model_risk
+  tier: limited_risk
+  section_key: model_risk_identified_risks
+  title: "Identified Technical Risks"
+  applicability: required
+  prompt: "Technical risks identified for this model (OWASP LLM Top 10) — populated from proposed risks."
+  iso_42005_clause: "5.9"
+  aiia_target_section_key: risk_identification
+  sort_order: 15
+- type: model_risk
+  tier: limited_risk
+  section_key: model_risk_drift_monitoring
+  title: "Drift & Performance Monitoring"
+  applicability: recommended
+  prompt: "Describe the plan for monitoring model drift and performance degradation post-deployment."
+  iso_42005_clause: "5.10"
+  aiia_target_section_key: residual_risk_monitoring
+  sort_order: 20
+- type: model_risk
+  tier: minimal_risk
+  section_key: model_risk_model_description
+  title: "Model Description"
+  applicability: required
+  prompt: "Describe the model: product, modality, and hosting (pre-filled from the system's registered facts)."
+  iso_42005_clause: "5.6"
+  aiia_target_section_key: technical_robustness
+  sort_order: 5
+- type: model_risk
+  tier: minimal_risk
+  section_key: model_risk_validation
+  title: "Model Validation"
+  applicability: recommended
+  prompt: "Describe the model's validation process and observed accuracy/robustness, if relevant."
+  iso_42005_clause: "5.6"
+  aiia_target_section_key: technical_robustness
+  sort_order: 10
+- type: model_risk
+  tier: minimal_risk
+  section_key: model_risk_identified_risks
+  title: "Identified Technical Risks"
+  applicability: required
+  prompt: "Technical risks identified for this model (OWASP LLM Top 10) — populated from proposed risks."
+  iso_42005_clause: "5.9"
+  aiia_target_section_key: risk_identification
+  sort_order: 15
+- type: model_risk
+  tier: minimal_risk
+  section_key: model_risk_drift_monitoring
+  title: "Drift & Performance Monitoring"
+  applicability: recommended
+  prompt: "Describe the plan for monitoring model drift, if relevant."
+  iso_42005_clause: "5.10"
+  aiia_target_section_key: residual_risk_monitoring
+  sort_order: 20

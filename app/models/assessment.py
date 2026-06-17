@@ -26,6 +26,7 @@ from typing import List
 
 from sqlalchemy import (
     String, Text, ForeignKey, Enum as SAEnum, Boolean, Integer, DateTime,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -34,7 +35,7 @@ from datetime import datetime
 from .base import (
     Base, TimestampMixin, uuid_pk,
     EUAIActTier, AssessmentType, AssessmentStatus, ProvenanceConfidence,
-    CoverageStatus, ClassificationStatus,
+    CoverageStatus, ClassificationStatus, SectionApplicability,
 )
 
 
@@ -84,6 +85,12 @@ class Assessment(Base, TimestampMixin):
     """An assessment record. type=AIIA is primary (one per use case);
     FRIA/DPIA/MODEL_RISK feed the AIIA via parent_aiia_id."""
     __tablename__ = "assessment"
+    __table_args__ = (
+        # At most one feeder of each type per AIIA (Phase B, design doc §5.2).
+        # NULL parent_aiia_id (every AIIA row) is never compared as equal to
+        # itself by a unique constraint, so this only constrains feeders.
+        UniqueConstraint("parent_aiia_id", "type", name="uq_feeder_type_per_aiia"),
+    )
 
     id: Mapped[uuid.UUID] = uuid_pk()
     tenant_id: Mapped[uuid.UUID] = mapped_column(
@@ -113,9 +120,28 @@ class Assessment(Base, TimestampMixin):
     )
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # The tier this assessment was scoped from, frozen at creation (point-in-
+    # time + drift detection). Feeders inherit the parent AIIA's values rather
+    # than re-resolving (design doc §8.5).
+    tier_snapshot: Mapped[EUAIActTier] = mapped_column(
+        SAEnum(EUAIActTier, name="eu_ai_act_tier"), nullable=False,
+    )
+    classification_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_current: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+    # Optimistic-concurrency token (If-Match) — distinct from the run-level `version`.
+    lock_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
+    )
+
     use_case: Mapped["UseCase"] = relationship(back_populates="assessments")
+    # passive_deletes=True: trust the FK's ON DELETE CASCADE rather than
+    # having the ORM null out children's parent_aiia_id on parent delete —
+    # without it, SQLAlchemy's default relationship handling would silently
+    # defeat the DB-level cascade whenever this collection is loaded
+    # in-session (design doc §5.7: parent-AIIA delete cascades to feeders).
     feeders: Mapped[List["Assessment"]] = relationship(
-        backref="parent_aiia", remote_side="Assessment.id",
+        backref="parent_aiia", remote_side="Assessment.id", passive_deletes=True,
     )
     items: Mapped[List["AssessmentItem"]] = relationship(
         back_populates="assessment", cascade="all, delete-orphan"
@@ -139,8 +165,10 @@ class AssessmentItem(Base, TimestampMixin):
         nullable=False, index=True,
     )
     # Optional link to a library risk being assessed/treated here.
+    # RESTRICT (not SET NULL): a still-AI_SUGGESTED item's only substance is
+    # this FK; deleting the library risk must not silently orphan it.
     risk_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("risk.id", ondelete="SET NULL"),
+        PGUUID(as_uuid=True), ForeignKey("risk.id", ondelete="RESTRICT"),
         index=True,
     )
     prompt: Mapped[str | None] = mapped_column(Text)     # the question/section
@@ -154,6 +182,22 @@ class AssessmentItem(Base, TimestampMixin):
         default=ProvenanceConfidence.USER_CONFIRMED,
     )
     ai_suggested_text: Mapped[str | None] = mapped_column(Text)  # kept for audit
+
+    # The section template key this item belongs to (load-bearing — keys the
+    # whole tier-scoped section model, GET /sections, and feeder propagation).
+    section_key: Mapped[str | None] = mapped_column(String(120), index=True)
+    # Per-item residual — nullable until a mitigation exists; never default
+    # to zero or to the inherent likelihood/severity.
+    residual_likelihood: Mapped[int | None] = mapped_column(Integer)
+    residual_severity: Mapped[int | None] = mapped_column(Integer)
+    # Shown reasoning for a proposed risk: why it was proposed for this use case.
+    selection_basis: Mapped[str | None] = mapped_column(Text)
+    # Origin pointer for snapshotted register facts (e.g. "system.purpose").
+    source_ref: Mapped[str | None] = mapped_column(String(255))
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
+    )
+    lock_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     assessment: Mapped["Assessment"] = relationship(back_populates="items")
     control_links: Mapped[List["AssessmentItemControl"]] = relationship(
@@ -169,14 +213,25 @@ class AssessmentItemControl(Base):
     control maps to multiple frameworks, one link here propagates coverage
     across ISO 42001 + EU AI Act simultaneously."""
     __tablename__ = "assessment_item_control"
+    __table_args__ = (
+        UniqueConstraint("item_id", "control_id", name="uq_assessment_item_control"),
+    )
 
     id: Mapped[uuid.UUID] = uuid_pk()
+    # RLS parity (design doc §13): backfilled from the parent item at
+    # migration time; item-first access remains the norm as defense-in-depth.
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("tenant.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
     item_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("assessment_item.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
+    # RESTRICT (not CASCADE): deleting a library control must not silently
+    # strip coverage records — that's a loss of audit evidence.
     control_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("control.id", ondelete="CASCADE"),
+        PGUUID(as_uuid=True), ForeignKey("control.id", ondelete="RESTRICT"),
         nullable=False, index=True,
     )
     coverage: Mapped[CoverageStatus] = mapped_column(
@@ -193,6 +248,11 @@ class AssessmentItemEvidence(Base):
     __tablename__ = "assessment_item_evidence"
 
     id: Mapped[uuid.UUID] = uuid_pk()
+    # RLS parity (design doc §13); backfilled from the parent item.
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("tenant.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
     item_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("assessment_item.id", ondelete="CASCADE"),
         nullable=False, index=True,
@@ -203,3 +263,34 @@ class AssessmentItemEvidence(Base):
     )
 
     item: Mapped["AssessmentItem"] = relationship(back_populates="evidence_links")
+
+
+class AssessmentSectionTemplate(Base, TimestampMixin):
+    """Seeded reference data (global, no RLS): the tier-scoped section
+    structure for AIIA and its feeders. AIIA creation instantiates required
+    sections from this; GET /sections surfaces recommended ones on demand.
+    Feeder rows carry aiia_target_section_key for read-time propagation
+    (Phase B) — feeder-private when NULL."""
+    __tablename__ = "assessment_section_template"
+    __table_args__ = (
+        UniqueConstraint("type", "tier", "section_key", name="uq_section_template"),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    type: Mapped[AssessmentType] = mapped_column(
+        SAEnum(AssessmentType, name="assessment_type"), nullable=False, index=True,
+    )
+    tier: Mapped[EUAIActTier] = mapped_column(
+        SAEnum(EUAIActTier, name="eu_ai_act_tier"), nullable=False, index=True,
+    )
+    section_key: Mapped[str] = mapped_column(String(120), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    applicability: Mapped[SectionApplicability] = mapped_column(
+        SAEnum(SectionApplicability, name="section_applicability"), nullable=False,
+    )
+    prompt: Mapped[str | None] = mapped_column(Text)
+    iso_42005_clause: Mapped[str | None] = mapped_column(String(120))
+    # Feeder rows only: the AIIA section this feeder section surfaces under.
+    # NULL = feeder-private (surfaces in no AIIA section; export includes it).
+    aiia_target_section_key: Mapped[str | None] = mapped_column(String(120))
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

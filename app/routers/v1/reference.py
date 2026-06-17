@@ -14,20 +14,36 @@ import uuid
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
+from app.auth.context import TenantContext, get_tenant_db, require_role
 from app.db import get_db
 from app.models import (
-    ProductCategory, ProductCategoryMembership,
-    CatalogueProduct, CatalogueVendor, EUAIActSubcategory,
+    CatalogueProduct,
+    CatalogueVendor,
+    EUAIActSubcategory,
+    ProductCategory,
+    ProductCategoryMembership,
 )
+from app.models.base import Framework, RiskLayer
+from app.models.knowledge import Control, ControlFrameworkMap, Risk
 from app.schemas.reference import (
-    ProductCategoryRead, VendorRead, ProductRead, EUAIActSubcategoryRead,
+    ControlRead,
+    EUAIActSubcategoryRead,
+    ProductCategoryRead,
+    ProductRead,
+    RiskRead,
+    VendorRead,
 )
 from app.schemas.system import ProductDetailOut
 from app.services.reference_service import get_product_detail
 
 router = APIRouter(prefix="/reference", tags=["reference"])
+
+# Risk/control library reads require tenant authentication (any member) —
+# unlike the wizard's product/category reads above, these back AIIA item
+# authoring and should not be anonymous (design doc §6).
+_ANY_MEMBER = ("admin", "member")
 
 
 @router.get("/product-categories", response_model=list[ProductCategoryRead])
@@ -100,3 +116,37 @@ def get_product_detail_endpoint(
 ) -> ProductDetailOut:
     """Product detail for the selection wizard: vendor, category tags, EU AI Act subcategories."""
     return get_product_detail(product_id, db)
+
+
+@router.get("/risks", response_model=list[RiskRead])
+def list_risks(
+    layer: RiskLayer | None = Query(default=None, description="Filter by risk layer."),
+    ctx: TenantContext = Depends(require_role(*_ANY_MEMBER)),
+    db: Session = Depends(get_tenant_db),
+) -> list[Risk]:
+    """Risk library reads, gated to any authenticated tenant member (AIIA
+    item authoring needs this; the wizard endpoints above do not)."""
+    stmt = select(Risk).order_by(Risk.code)
+    if layer is not None:
+        stmt = stmt.where(Risk.layer == layer)
+    return list(db.scalars(stmt))
+
+
+@router.get("/controls", response_model=list[ControlRead])
+def list_controls(
+    framework: Framework | None = Query(default=None, description="filter framework"),
+    ctx: TenantContext = Depends(require_role(*_ANY_MEMBER)),
+    db: Session = Depends(get_tenant_db),
+) -> list[Control]:
+    """Control library reads, gated to any authenticated tenant member."""
+    stmt = (
+        select(Control)
+        .options(selectinload(Control.framework_maps))
+        .order_by(Control.code)
+    )
+    if framework is not None:
+        stmt = (
+            stmt.join(ControlFrameworkMap, ControlFrameworkMap.control_id == Control.id)
+            .where(ControlFrameworkMap.framework == framework)
+        )
+    return list(db.scalars(stmt))

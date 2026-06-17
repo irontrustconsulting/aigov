@@ -25,7 +25,7 @@ from .knowledge import (  # noqa: F401
 # Assessment
 from .assessment import (  # noqa: F401
     Classification, Assessment, AssessmentItem,
-    AssessmentItemControl, AssessmentItemEvidence,
+    AssessmentItemControl, AssessmentItemEvidence, AssessmentSectionTemplate,
 )
 
 # Evidence, audit, lifecycle

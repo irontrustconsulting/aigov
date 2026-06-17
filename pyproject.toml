@@ -33,6 +33,14 @@ target-version = "py312"
 select = ["E", "F", "I", "UP", "B"]  # errors, pyflakes, isort, pyupgrade, bugbear
 ignore = ["B008"]  # FastAPI Depends() in function defaults is the canonical pattern
 
+[tool.ruff.lint.per-file-ignores]
+# Pytest fixtures imported by name from a shared helpers module (so two test
+# files can share one fixture set without copy-pasting) are then used as
+# same-named test-function parameters — the standard pytest pattern, but
+# ruff's pyflakes can't see fixture injection and flags it as a redefinition.
+"tests/test_aiia.py" = ["F811"]
+"tests/test_aiia_feeders.py" = ["F811"]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"

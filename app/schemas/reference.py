@@ -53,3 +53,36 @@ class EUAIActSubcategoryRead(BaseModel):
     description: str | None = None
     category_id: uuid.UUID
     tier: str   # serialized from the EUAIActTier enum
+
+
+class RiskRead(BaseModel):
+    """A risk-library entry (AIIA core sprint — gated reference read)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    code: str
+    title: str
+    description: str | None = None
+    layer: str
+    source: str
+    source_ref: str | None = None
+    reference_url: str | None = None
+
+
+class ControlFrameworkMapRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    framework: str
+    clause_ref: str
+
+
+class ControlRead(BaseModel):
+    """A control-library entry, with its framework cross-map (AIIA core sprint)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    code: str
+    title: str
+    description: str | None = None
+    version: int
+    frameworks: list[ControlFrameworkMapRead] = []

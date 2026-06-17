@@ -11,7 +11,10 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
-from app.routers.v1 import reference, systems, governance_roles, use_cases, members, classification_context
+from app.routers.v1 import (
+    reference, systems, governance_roles, use_cases, members,
+    classification_context, assessments,
+)
 
 from app.auth.cognito import verify_cognito_token, CognitoClaims
 from app.routers.platform import whoami as platform_whoami
@@ -35,6 +38,7 @@ app.include_router(governance_roles.router, prefix="/v1")
 app.include_router(use_cases.router, prefix="/v1")
 app.include_router(members.router, prefix="/v1")
 app.include_router(classification_context.router, prefix="/v1")
+app.include_router(assessments.router, prefix="/v1")
 app.include_router(platform_whoami.router, prefix="/platform")
 app.include_router(platform_tenants.router, prefix="/platform")
 

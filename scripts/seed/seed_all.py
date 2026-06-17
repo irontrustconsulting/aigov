@@ -24,19 +24,20 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from scripts.seed.common import make_engine
 from scripts.seed import (
-    seed_risks,
-    seed_controls,
-    seed_eu_ai_act,
-    seed_product_category,
+    seed_aiia_section_template,
     seed_catalogue,
-    seed_risk_control_map,
-    seed_product_category_membership,
-    seed_product_category_eu_mapping,
-    seed_governance_roles,
+    seed_controls,
     seed_decision_tree,
+    seed_eu_ai_act,
+    seed_governance_roles,
+    seed_product_category,
+    seed_product_category_eu_mapping,
+    seed_product_category_membership,
+    seed_risk_control_map,
+    seed_risks,
 )
+from scripts.seed.common import make_engine
 
 
 def main() -> None:
@@ -57,6 +58,8 @@ def main() -> None:
         seed_governance_roles.main(session)
         # classification gate: EU AI Act decision tree (version-aware)
         seed_decision_tree.main(session)
+        # AIIA core: tier-scoped section template (AIIA + feeders)
+        seed_aiia_section_template.main(session)
         session.commit()
         print("Done.")
 
