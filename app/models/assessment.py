@@ -246,6 +246,9 @@ class AssessmentItemEvidence(Base):
     """Link an assessment finding to a piece of evidence. Evidence is reusable
     across items/controls (PRD 4.8 EVD-1), hence the join table."""
     __tablename__ = "assessment_item_evidence"
+    __table_args__ = (
+        UniqueConstraint("item_id", "evidence_id", name="uq_assessment_item_evidence"),
+    )
 
     id: Mapped[uuid.UUID] = uuid_pk()
     # RLS parity (design doc §13); backfilled from the parent item.
@@ -253,10 +256,16 @@ class AssessmentItemEvidence(Base):
         PGUUID(as_uuid=True), ForeignKey("tenant.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
+    # No standalone index: the uq_assessment_item_evidence composite serves
+    # item_id as its leftmost prefix (evidence_link_migration.py drops the
+    # now-redundant single-column index).
     item_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("assessment_item.id", ondelete="CASCADE"),
-        nullable=False, index=True,
+        nullable=False,
     )
+    # Indexed standalone: backs the WI-4 pristine-delete guard's NOT EXISTS
+    # and the WI-3 link_count subquery, neither of which the composite (item_id-
+    # leading) index can serve.
     evidence_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("evidence.id", ondelete="CASCADE"),
         nullable=False, index=True,

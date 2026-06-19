@@ -9,16 +9,21 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.auth.cognito import CognitoClaims, verify_cognito_token
 from app.config import settings
 from app.db import get_db
-from app.routers.v1 import (
-    reference, systems, governance_roles, use_cases, members,
-    classification_context, assessments,
-)
-
-from app.auth.cognito import verify_cognito_token, CognitoClaims
-from app.routers.platform import whoami as platform_whoami
 from app.routers.platform import tenants as platform_tenants
+from app.routers.platform import whoami as platform_whoami
+from app.routers.v1 import (
+    assessments,
+    classification_context,
+    evidence,
+    governance_roles,
+    members,
+    reference,
+    systems,
+    use_cases,
+)
 
 app = FastAPI(
     title="AI Governance API",
@@ -39,6 +44,7 @@ app.include_router(use_cases.router, prefix="/v1")
 app.include_router(members.router, prefix="/v1")
 app.include_router(classification_context.router, prefix="/v1")
 app.include_router(assessments.router, prefix="/v1")
+app.include_router(evidence.router, prefix="/v1")
 app.include_router(platform_whoami.router, prefix="/platform")
 app.include_router(platform_tenants.router, prefix="/platform")
 

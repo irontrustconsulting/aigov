@@ -48,12 +48,30 @@ class Settings(BaseSettings):
     db_host: str = Field(default="localhost")
     db_port: int = Field(default=5432)
 
-    # --- Object storage (S3 in prod, MinIO in dev) ---
-    s3_endpoint_url: str | None = Field(default="http://localhost:9000")  # None => real AWS
-    s3_region: str = Field(default="eu-west-1")
-    s3_access_key: str = Field(default="minioadmin")
-    s3_secret_key: str = Field(default="minioadmin")
+    # --- Object storage (evidence artifacts) ---
+    # None => real AWS S3; set => S3-compatible endpoint (MinIO in dev)
+    s3_endpoint_url: str | None = Field(default="http://localhost:9000")
+    # Host that presigned URLs are signed against and that the browser
+    # actually fetches. In dev-Compose the API reaches MinIO at "minio:9000"
+    # but the browser can only reach "localhost:9000" — SigV4 signs the host,
+    # so a URL signed against the internal name 404s from outside the
+    # network. None => same as s3_endpoint_url (prod: both resolve to AWS).
+    s3_public_endpoint_url: str | None = Field(default="http://localhost:9000")
+    s3_region: str = Field(default="eu-west-2")
+    # Static creds are a DEV convenience only. Leave unset in prod so boto3
+    # resolves the instance/role chain (IRSA / ECS task role). Never ship long-lived keys.
+    s3_access_key: str | None = Field(default="minioadmin")
+    s3_secret_key: str | None = Field(default="minioadmin")
     s3_evidence_bucket: str = Field(default="aigov-evidence")
+    # Path-style for MinIO; virtual-host for real S3.
+    s3_use_path_style: bool = Field(default=True)
+    # Encryption at rest. dev MinIO: off; prod: "aws:kms" for key-level auditability.
+    s3_sse_mode: str | None = Field(default=None)         # "AES256" | "aws:kms" | None
+    s3_sse_kms_key_id: str | None = Field(default=None)   # required iff sse_mode == "aws:kms"
+    # Short-lived presigned GET for download.
+    s3_presigned_get_ttl: int = Field(default=300)
+    # Upload ceiling — must stay under the size_bytes INTEGER limit (~2.1 GB).
+    evidence_max_upload_bytes: int = Field(default=100 * 1024 * 1024)  # 100 MiB
 
     # --- Cognito (auth) — fill when you wire auth; unused for now ---
     cognito_region: str | None = Field(default=None)

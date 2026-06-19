@@ -29,6 +29,8 @@ from app.schemas.assessment import (
     AssessmentRead,
     ControlLinkCreate,
     ControlLinkRead,
+    EvidenceLinkCreate,
+    EvidenceLinkRead,
     FeederCreate,
     FeederRecommendationRead,
     SectionRead,
@@ -260,3 +262,38 @@ def delete_control_link(
 ) -> None:
     del assessment_id, item_id
     svc.delete_control_link(link_id, ctx, db)
+
+
+# ---------------------------------------------------------------------------
+# Evidence links
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/assessments/{assessment_id}/items/{item_id}/evidence-links",
+    response_model=EvidenceLinkRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_evidence_link(
+    assessment_id: uuid.UUID,
+    item_id: uuid.UUID,
+    payload: EvidenceLinkCreate,
+    ctx: TenantContext = Depends(require_governance_role(*_WRITE_ROLES)),
+    db: Session = Depends(get_tenant_db),
+):
+    del assessment_id
+    return svc.create_evidence_link(item_id, payload.evidence_id, ctx, db)
+
+
+@router.delete(
+    "/assessments/{assessment_id}/items/{item_id}/evidence-links/{evidence_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_evidence_link(
+    assessment_id: uuid.UUID,
+    item_id: uuid.UUID,
+    evidence_id: uuid.UUID,
+    ctx: TenantContext = Depends(require_governance_role(*_WRITE_ROLES)),
+    db: Session = Depends(get_tenant_db),
+) -> None:
+    del assessment_id
+    svc.delete_evidence_link(item_id, evidence_id, ctx, db)

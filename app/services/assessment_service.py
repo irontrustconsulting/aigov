@@ -27,6 +27,7 @@ from app.models.assessment import (
     Assessment,
     AssessmentItem,
     AssessmentItemControl,
+    AssessmentItemEvidence,
     AssessmentSectionTemplate,
     Classification,
 )
@@ -50,7 +51,7 @@ from app.models.intake import (
     UsageContext,
 )
 from app.models.knowledge import Control, Risk
-from app.models.lifecycle import AuditEvent
+from app.models.lifecycle import AuditEvent, Evidence
 from app.schemas.assessment import (
     AssessmentItemAmend,
     AssessmentItemRead,
@@ -944,6 +945,16 @@ def _is_pristine(assessment: Assessment, db: Session) -> bool:
     )
     if link is not None:
         return False
+    # An item carrying evidence is "worked" too (sprints/SPRINT_EVIDENCE_
+    # REPOSITORY.md WI-8) -- same shape as the control-link guard above.
+    evidence_link = db.scalar(
+        select(AssessmentItemEvidence.id)
+        .join(AssessmentItem, AssessmentItem.id == AssessmentItemEvidence.item_id)
+        .where(AssessmentItem.assessment_id == assessment.id)
+        .limit(1)
+    )
+    if evidence_link is not None:
+        return False
     feeder = db.scalar(
         select(Assessment.id).where(Assessment.parent_aiia_id == assessment.id).limit(1)
     )
@@ -1027,5 +1038,80 @@ def delete_control_link(link_id: uuid.UUID, ctx: TenantContext, db: Session) -> 
         action="control_link.deleted", entity_type="assessment_item_control",
         entity_id=link_id,
         detail={"item_id": str(link.item_id), "control_id": str(link.control_id)},
+    )
+    db.flush()
+
+
+# ---------------------------------------------------------------------------
+# Evidence links (sprints/SPRINT_EVIDENCE_REPOSITORY.md, Phase B, WI-7)
+# ---------------------------------------------------------------------------
+
+def create_evidence_link(
+    item_id: uuid.UUID, evidence_id: uuid.UUID, ctx: TenantContext, db: Session,
+) -> AssessmentItemEvidence:
+    item = _load_item(item_id, ctx, db)
+    # Disposition gate: deliberate asymmetry with control-links (design §5) --
+    # evidence is substantiation, so it belongs behind the same authoring
+    # gate as confirm/amend, not left open on a still-proposed item.
+    if item.provenance == ProvenanceConfidence.AI_SUGGESTED:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="Confirm or amend the proposed risk before linking evidence",
+        )
+
+    evidence = db.scalar(
+        select(Evidence).where(
+            Evidence.id == evidence_id, Evidence.tenant_id == ctx.tenant_id,
+        )
+    )
+    if evidence is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Evidence not found")
+
+    link = AssessmentItemEvidence(
+        id=uuid.uuid4(), tenant_id=ctx.tenant_id,
+        item_id=item.id, evidence_id=evidence_id,
+    )
+    db.add(link)
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="This evidence is already linked to this item",
+        ) from exc
+
+    _stage_audit(
+        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
+        action="evidence.linked", entity_type="assessment_item_evidence",
+        entity_id=link.id,
+        detail={"item_id": str(item_id), "evidence_id": str(evidence_id)},
+    )
+    db.flush()
+    return link
+
+
+def delete_evidence_link(
+    item_id: uuid.UUID, evidence_id: uuid.UUID, ctx: TenantContext, db: Session,
+) -> None:
+    """Idempotent: a no-op removal (link already absent) writes no
+    AuditEvent, mirroring the no-op-PATCH convention elsewhere in this
+    module -- only a real state change is audited."""
+    link = db.scalar(
+        select(AssessmentItemEvidence).where(
+            AssessmentItemEvidence.item_id == item_id,
+            AssessmentItemEvidence.evidence_id == evidence_id,
+            AssessmentItemEvidence.tenant_id == ctx.tenant_id,
+        )
+    )
+    if link is None:
+        return
+
+    db.delete(link)
+    _stage_audit(
+        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
+        action="evidence.unlinked", entity_type="assessment_item_evidence",
+        entity_id=link.id,
+        detail={"item_id": str(item_id), "evidence_id": str(evidence_id)},
     )
     db.flush()

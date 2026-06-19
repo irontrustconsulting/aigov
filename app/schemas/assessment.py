@@ -83,6 +83,18 @@ class ControlLinkCreate(BaseModel):
     coverage: CoverageStatus = CoverageStatus.PARTIAL
 
 
+class EvidenceLinkRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    item_id: uuid.UUID
+    evidence_id: uuid.UUID
+
+
+class EvidenceLinkCreate(BaseModel):
+    evidence_id: uuid.UUID
+
+
 class AssessmentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -14,7 +14,8 @@ dependencies = [
     "python-dotenv>=1.0",            # loads .env in dev
     "pyjwt[crypto]>=2.13",
     "boto3",
-    "typer"
+    "typer",
+    "python-multipart",               # FastAPI File/Form (evidence upload)
 ]
 
 [project.optional-dependencies]
