@@ -1,8 +1,13 @@
 # AI Governance MVP — Data Model & Architecture Notes
 
 Companion to the SQLAlchemy models in `models/`. This covers what the ORM
-classes alone can't express: the database-enforced guarantees, the auth flow,
-and a build order that gets you to a working end-to-end slice fast.
+classes alone can't express: the entity shape, the rationale behind the
+database-enforced guarantees, and the auth flow. **Not a schema mirror** —
+for the literal current DDL, read the model files and `alembic history`;
+this stays useful precisely by not trying to track every column. For *what's
+currently built* (the authoritative, frequently-updated answer), see
+`STATE.md` §3/§5 — this file's build-order section below is a roadmap, not
+a status report.
 
 ---
 
@@ -16,18 +21,40 @@ GLOBAL CATALOGUE (reference data, cross-tenant — the moat)
   CatalogueVendor ──< CatalogueProduct ──< CatalogueFact        (provenance per fact)
                                       └──< CatalogueProductRisk >── Risk
 
+GLOBAL CLASSIFICATION GATE 2 (reference data, cross-tenant)
+  DecisionTree ──< DecisionTreeQuestion ──< DecisionTreeOption
+    (versioned, content-hashed; frozen once seeded — a new version is a new row, never a mutation)
+
+GLOBAL ASSESSMENT SECTION TEMPLATE (reference data, cross-tenant)
+  AssessmentSectionTemplate, keyed (type, tier, section_key)
+    .aiia_target_section_key → another AssessmentSectionTemplate.section_key on a type=AIIA
+      row at the same tier (feeder section → the AIIA section it surfaces into; NULL = feeder-private)
+
 TENANT INVENTORY (tenant-scoped)
   System ──< UseCase                                   (system = entity, use case = unit)
     System.catalogue_vendor_id / catalogue_product_id  (link to catalogue if SaaS)
+    System ──< SystemDataCategory >── DataCategory       (multi-select; DPIA feeder pre-fill source)
+    System ──< SystemAffectedParty >── AffectedParty     (multi-select; FRIA feeder pre-fill source)
 
-  UseCase ──< Classification        (per use case, versioned, with rationale)
+  UseCase ──< Classification        (per use case, versioned, with rationale; two resolution
+                                      paths feed it — the catalogue bridge, and gate 2's
+                                      DecisionTree — see STATE.md §3)
   UseCase ──< Assessment            (type=AIIA is primary; FRIA/DPIA/MODEL_RISK feed it)
   UseCase ──< LifecycleTransition   (state machine history)
 
+  Assessment ──< Assessment          (self-referential: .parent_aiia_id; a feeder's parent is
+                                       always type=AIIA; UNIQUE(parent_aiia_id, type) — at
+                                       most one feeder of each type per AIIA)
   Assessment ──< AssessmentItem                       (a finding/answer)
-    AssessmentItem ── risk_id ─────────────────> Risk
-    AssessmentItem ──< AssessmentItemControl ──> Control
+    AssessmentItem ── risk_id ─────────────────> Risk                       (FK: RESTRICT)
+    AssessmentItem ──< AssessmentItemControl ──> Control                    (FK: RESTRICT)
     AssessmentItem ──< AssessmentItemEvidence ──> Evidence
+    -- AssessmentItemControl / AssessmentItemEvidence carry tenant_id + RLS,
+       same as every other tenant table (parity; item-first access is
+       defense-in-depth, not the sole isolation mechanism)
+    -- AssessmentItemEvidence: UNIQUE(item_id, evidence_id) (§2.9); no direct
+       Evidence ──> Control edge — framework satisfaction is transitive,
+       through whichever item the evidence is linked to
 
 THREE INHERITING APPROVAL SCOPES (tenant-scoped)
   VendorApproval   (tenant + catalogue_vendor)         outer gate
@@ -39,13 +66,22 @@ KNOWLEDGE CROSS-MAPS (global)
   Risk    ──< RiskControlMap ──> Control                       (risk → mitigating controls)
 
 EVIDENCE & AUDIT
-  Evidence  → S3 (bucket/key/version) + sha256 in Postgres
+  Evidence  → S3 (bucket/key/version) + sha256 in Postgres; upload, repository
+              reads, disposition-gated item-linking, and guarded delete are
+              all wired (STATE.md §3 "Evidence repository") — this used to
+              be schema-only, it no longer is
   AuditEvent → append-only compliance trail (insert only)
 ```
 
 The two many-to-many cross-maps (`ControlFrameworkMap`, `RiskControlMap`) are
 the technical heart: they're why one evidence item can satisfy ISO 42001 and
 the EU AI Act at once, and why naming a risk surfaces its treating controls.
+
+`Assessment`'s self-reference is the same shape twice: an AIIA's own items are
+native; a feeder's items surface into the AIIA only at *read* time (joined via
+`AssessmentSectionTemplate.aiia_target_section_key`), never copied or written
+back. See STATE.md's "Established patterns" for the read-time-reference
+pattern this produced.
 
 ---
 
@@ -77,14 +113,18 @@ CREATE TRIGGER audit_no_update BEFORE UPDATE OR DELETE ON audit_event
   FOR EACH ROW EXECUTE FUNCTION block_mutation();
 ```
 
-### 2.3 One AIIA per use case
-A use case may have many feeder assessments but exactly one of type `AIIA`.
-Enforce with a partial unique index (can't be done with a column constraint):
+### 2.3 One *current* AIIA per use case
+A use case may have many feeder assessments but exactly one *current* `AIIA`.
+Enforced with a partial unique index (can't be done with a column constraint;
+illustrative — confirm exact DDL against the migration, not this doc):
 ```sql
 CREATE UNIQUE INDEX uq_one_aiia_per_use_case
   ON assessment (use_case_id)
-  WHERE type = 'aiia';
+  WHERE type = 'AIIA' AND is_current;
 ```
+Note the enum value is the Postgres-native label (`'AIIA'`, matching the
+Python enum's *name*, not its lowercase `.value`) — SQLAlchemy's default
+`Enum(...)` binds by name unless `values_callable` overrides it.
 
 ### 2.4 One current classification per use case
 ```sql
@@ -93,25 +133,82 @@ CREATE UNIQUE INDEX uq_current_classification
   WHERE is_current = true;
 ```
 
-### 2.5 Native enums
+### 2.5 One primary EU AI Act mapping per product category
+```sql
+CREATE UNIQUE INDEX uq_one_primary_eu_mapping
+  ON product_category_eu_mapping (product_category_id)
+  WHERE is_primary = true;
+```
+These three (§2.3–§2.5) are the full set of hand-managed partial unique
+indexes — skipped by Alembic autogenerate (`alembic/env.py`'s
+`include_object`), so any migration touching these tables must add/preserve
+them by hand. See CLAUDE.md §3.2.
+
+### 2.6 Feeder cardinality
+At most one feeder of each type (`FRIA`/`DPIA`/`MODEL_RISK`) per AIIA — a
+plain, non-partial constraint, so (unlike §2.3–§2.5) Alembic autogenerate
+handles it natively:
+```sql
+ALTER TABLE assessment
+  ADD CONSTRAINT uq_feeder_type_per_aiia UNIQUE (parent_aiia_id, type);
+```
+`parent_aiia_id` is `NULL` on every AIIA row itself; Postgres never treats two
+`NULL`s as equal under a unique constraint, so this only ever constrains
+feeders.
+
+### 2.7 Reference-data FK hardening
+`AssessmentItem.risk_id` and `AssessmentItemControl.control_id` are
+`ON DELETE RESTRICT`, not `CASCADE`/`SET NULL` — deleting a referenced
+library `Risk`/`Control` is blocked rather than silently orphaning an
+assessment item or stripping a coverage record. Deprecate library entries via
+a soft-flag instead of deleting them.
+
+### 2.8 Native enums
 The models use SQLAlchemy `Enum(..., name=...)`, which creates Postgres native
 enum types. Adding a value later needs `ALTER TYPE ... ADD VALUE` (Alembic
-won't autogenerate that — write it by hand). This is why `Framework` and
+won't autogenerate that — write it by hand, and don't use the new value in
+the same migration/transaction that adds it). This is why `Framework` and
 `RiskSource` already include reserved post-MVP values (NIST, ATLAS): adding the
 *rows* later needs no migration, only the *enum* would.
+
+One live footgun from doing this by hand: `eu_ai_act_tier`'s `REQUIRES_CONTEXT`
+value was added as lowercase `'requires_context'` (mismatched against every
+other label, which is the enum member's uppercase *name*). Any code path that
+filters a query by `EUAIActTier.REQUIRES_CONTEXT` will fail at the DB with an
+"invalid input value" error — known, not yet fixed, work around it by not
+querying on that specific member rather than reading it as a model worth
+copying for the next manually-added enum value.
+
+### 2.9 Evidence-link uniqueness
+One evidence item links to a given assessment item at most once — a plain,
+non-partial constraint (like §2.6, Alembic autogenerate handles it natively):
+```sql
+ALTER TABLE assessment_item_evidence
+  ADD CONSTRAINT uq_assessment_item_evidence UNIQUE (item_id, evidence_id);
+```
+Added by `evidence_link_migration.py`, which also **drops** the single-column
+`ix_assessment_item_evidence_item_id` index — the new composite index already
+serves `item_id` as its leftmost prefix, so the standalone index became
+redundant. `ix_assessment_item_evidence_evidence_id` is kept (it backs the
+pristine-delete guard's `NOT EXISTS` and the repository's `link_count`
+subquery, neither of which the item_id-leading composite can serve).
 
 ---
 
 ## 3. Cognito ↔ app boundary
 
-* Cognito owns authentication. On first login, look up `User` by `cognito_sub`;
-  create the `User` row if absent (JIT provisioning).
+* Cognito owns authentication. `User` rows are provisioned explicitly (member
+  invite / tenant provisioning), not created lazily on first login.
 * The JWT from Cognito gives you `sub` and `email`. It does NOT decide
-  authorization — your `Membership.role` does. Resolve the active tenant from
-  the membership (and, if a user has several, from an explicit tenant switch).
-* Keep roles in `Membership`, never in Cognito groups, so multi-tenant role
-  differences and your four roles (admin/reviewer/contributor/auditor_readonly)
-  stay under your control.
+  authorization — the DB does, on two separate axes (see CLAUDE.md §2.3 /
+  STATE.md §2): `Membership.role` (administrative: admin/member, zero
+  governance power) and `governance_role_assignment` (five SoD-constrained
+  roles: system_owner, contributor, reviewer, authoriser, auditor). Don't
+  re-derive the role list here — it has already changed shape once; point at
+  CLAUDE.md/STATE.md instead of hard-coding it in a second place.
+* Keep roles in the DB, never in Cognito groups or token claims, so
+  multi-tenant role differences and the SoD conflict matrix stay under your
+  control.
 * Set `app.current_tenant` (for RLS) from the resolved membership at the start
   of each request's DB session.
 
@@ -129,28 +226,47 @@ rewrite.
 
 ---
 
-## 5. Suggested build order (thin end-to-end first, then deepen)
+## 5. Build order (thin end-to-end first, then deepen)
 
-1. **Foundations**: base, identity, tenancy + RLS, Cognito login, audit_event
-   + the immutability trigger. Get one authenticated user into one tenant.
-2. **Knowledge seed (data, not much code)**: load Control + ControlFrameworkMap
-   (ISO 42001 ↔ EU AI Act) and Risk + RiskControlMap (OWASP LLM + NIST/ISO).
-   This is your expertise as rows; do it against your real 45-product engagement.
-3. **System + UseCase** with intake context capture.
-4. **Classification** (per use case) with rationale + the prohibited hard stop.
-5. **Assessment/AIIA** (one per use case) + AssessmentItem linking risks,
-   controls, evidence; the cross-map coverage view.
-6. **Lifecycle state machine + cascading gates** (vendor → product → intake →
-   assessment → treatment → authorisation) and the status surface.
-7. **Catalogue** (vendor/product/fact/risk) + product-driven prefill, narrow
-   seed; guided fallback when absent.
-8. **Evidence → S3** (versioned + hashed) and the export/ATO pack.
-9. **Approvals rollup** (VendorApproval/ProductApproval) + inheritance.
-10. **AI-assist** (suggest relevance, draft, freshness) — last, on top of a
-    working base, always human-confirmed.
+Original sequencing, with status. **Status here is a snapshot — STATE.md §3/§5
+is the authoritative, currently-maintained answer to "what's built"; this
+list exists for the *order and rationale*, not as a live tracker.**
 
-Reaching a thin version of steps 1–6 gives you the first demoable spine; 7–10
-deepen it to full MVP scope.
+1. ✅ **Foundations**: base, identity, tenancy + RLS, Cognito auth, audit_event
+   + the immutability trigger.
+2. ✅ **Knowledge seed**: Control + ControlFrameworkMap (ISO 42001 ↔ EU AI Act),
+   Risk + RiskControlMap (OWASP LLM technical layer + NIST/ISO governance layer).
+3. ✅ **System + UseCase** with full structured intake context capture.
+4. ✅ **Classification** — two gates now: the catalogue-bridge auto-resolve, and
+   (for what the bridge can't resolve) a versioned decision-tree
+   context-question gate with Reviewer sign-off as the act of record. The
+   `PROHIBITED` hard stop is a first-class outcome (`PROHIBITED_HALT`) on the
+   gate-2 resolver.
+5. ✅ **Assessment/AIIA** (one per use case) + AssessmentItem linking risks,
+   controls, and now evidence (see 8 below); tier-scoped section templates;
+   FRIA/DPIA/MODEL_RISK feeders that pre-fill from the register and surface
+   into the AIIA by read-time reference, not copy.
+6. ⬜ **Lifecycle state machine + cascading gates** (vendor → product → intake
+   → assessment → treatment → authorisation) and the status surface. Models
+   exist (`LifecycleState`, `LifecycleTransition`); no transition logic yet.
+7. ✅ **Catalogue** (vendor/product/fact/risk) + product-driven prefill
+   (display-only; tenant confirm/amend not yet wired).
+8. ✅ **Evidence → S3** (versioned + hashed): proxied upload (hash-then-put
+   outside any DB transaction, S3-compensated on commit failure), paginated
+   repository with presigned hardened download, disposition-gated item
+   linking, single-statement guarded delete. EVD-3/EVD-4 (assignment/
+   reminders, freshness notifications), AV scanning, and supersession/
+   versioning chains remain unbuilt — see STATE.md §5.
+9. ⬜ **Export / audit pack (EXP-1)**. Not started; the evidence presigned-
+   download primitive is its eventual consumer (and the feeder design
+   reserves the seam for feeder-private sections).
+10. ⬜ **Approvals rollup** (VendorApproval/ProductApproval) + inheritance.
+    Models exist; no service/router code.
+11. ⬜ **AI-assist** (suggest relevance, draft, freshness) — still last, on top
+    of the now-working base, always human-confirmed. `AssessmentItem
+    .ai_suggested_text` is the reserved seam; today's `AI_SUGGESTED` items
+    (proposed risks) are deterministic catalogue/library lookups, not
+    LLM-generated — that distinction matters, don't blur it when this lands.
 
 ---
 
