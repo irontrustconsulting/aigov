@@ -57,15 +57,17 @@ from app.schemas.assessment import (
     AssessmentItemRead,
     FeederRecommendationRead,
 )
+from app.services.lifecycle_gates import classification_readiness
+from app.services.lifecycle_service import advance_use_case
 
 # Section keys items attach to (must match the seeded template's
 # section_key — see data/seed/aiia_section_template.yaml). The risk
 # sections get no curated framing item of their own (see
 # _instantiate_required_sections) — they're populated entirely by
 # AI_SUGGESTED proposed risk items.
-RISK_SECTION_KEY = "risk_identification"                        # AIIA
-MODEL_RISK_RISK_SECTION_KEY = "model_risk_identified_risks"      # MODEL_RISK feeder
-OVERVIEW_SECTION_KEY = "system_overview"                         # AIIA
+RISK_SECTION_KEY = "risk_identification"  # AIIA
+MODEL_RISK_RISK_SECTION_KEY = "model_risk_identified_risks"  # MODEL_RISK feeder
+OVERVIEW_SECTION_KEY = "system_overview"  # AIIA
 FRIA_AFFECTED_PERSONS_SECTION_KEY = "fria_affected_persons"
 DPIA_DATA_CATEGORIES_SECTION_KEY = "dpia_data_categories"
 MODEL_RISK_DESCRIPTION_SECTION_KEY = "model_risk_model_description"
@@ -81,14 +83,23 @@ FEEDER_TYPES = (AssessmentType.FRIA, AssessmentType.DPIA, AssessmentType.MODEL_R
 # Authoring fields a PATCH may touch. Disposition-before-authoring blocks
 # these on a still-AI_SUGGESTED item (design doc §4).
 _AUTHORING_FIELDS = (
-    "response", "likelihood", "severity",
-    "residual_likelihood", "residual_severity", "mitigation_plan",
+    "response",
+    "likelihood",
+    "severity",
+    "residual_likelihood",
+    "residual_severity",
+    "mitigation_plan",
 )
+# Treatment fields (Sprint 5 WI-10) — same disposition gate, but written
+# provenance-neutral: never enters the CATALOGUE_CURATED -> USER_PROVIDED
+# flip _AUTHORING_FIELDS changes do (design doc §5.4, #5).
+_TREATMENT_FIELDS = ("treatment_decision", "treatment_rationale")
 
 
 @dataclass
 class ProposedRisk:
     """Identity + shown reasoning only — never scores (design doc §4)."""
+
     risk_id: uuid.UUID
     selection_basis: str
 
@@ -97,10 +108,12 @@ class ProposedRisk:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _load_use_case(use_case_id: uuid.UUID, ctx: TenantContext, db: Session) -> UseCase:
     use_case = db.scalar(
         select(UseCase).where(
-            UseCase.id == use_case_id, UseCase.tenant_id == ctx.tenant_id,
+            UseCase.id == use_case_id,
+            UseCase.tenant_id == ctx.tenant_id,
         )
     )
     if use_case is None:
@@ -109,7 +122,8 @@ def _load_use_case(use_case_id: uuid.UUID, ctx: TenantContext, db: Session) -> U
 
 
 def _load_current_classification(
-    use_case_id: uuid.UUID, db: Session,
+    use_case_id: uuid.UUID,
+    db: Session,
 ) -> Classification | None:
     return db.scalar(
         select(Classification).where(
@@ -120,11 +134,14 @@ def _load_current_classification(
 
 
 def load_assessment(
-    assessment_id: uuid.UUID, ctx: TenantContext, db: Session,
+    assessment_id: uuid.UUID,
+    ctx: TenantContext,
+    db: Session,
 ) -> Assessment:
     assessment = db.scalar(
         select(Assessment).where(
-            Assessment.id == assessment_id, Assessment.tenant_id == ctx.tenant_id,
+            Assessment.id == assessment_id,
+            Assessment.tenant_id == ctx.tenant_id,
         )
     )
     if assessment is None:
@@ -135,12 +152,14 @@ def load_assessment(
 def _load_item(item_id: uuid.UUID, ctx: TenantContext, db: Session) -> AssessmentItem:
     item = db.scalar(
         select(AssessmentItem).where(
-            AssessmentItem.id == item_id, AssessmentItem.tenant_id == ctx.tenant_id,
+            AssessmentItem.id == item_id,
+            AssessmentItem.tenant_id == ctx.tenant_id,
         )
     )
     if item is None:
         raise HTTPException(
-            status.HTTP_404_NOT_FOUND, detail="Assessment item not found",
+            status.HTTP_404_NOT_FOUND,
+            detail="Assessment item not found",
         )
     return item
 
@@ -153,31 +172,61 @@ def _resolve_label(db: Session, model, id_: uuid.UUID | None) -> str | None:
 
 
 def _stage_audit(
-    db: Session, *, tenant_id: uuid.UUID, actor_user_id: uuid.UUID,
-    action: str, entity_type: str, entity_id: uuid.UUID, detail: dict,
+    db: Session,
+    *,
+    tenant_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+    action: str,
+    entity_type: str,
+    entity_id: uuid.UUID,
+    detail: dict,
 ) -> None:
-    db.add(AuditEvent(
-        id=uuid.uuid4(), tenant_id=tenant_id, actor_user_id=actor_user_id,
-        action=action, entity_type=entity_type, entity_id=entity_id, detail=detail,
-    ))
+    db.add(
+        AuditEvent(
+            id=uuid.uuid4(),
+            tenant_id=tenant_id,
+            actor_user_id=actor_user_id,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            detail=detail,
+        )
+    )
 
 
 def _add_snapshot_item(
-    db: Session, ctx: TenantContext, assessment: Assessment, *,
-    section_key: str, prompt: str, response: str, source_ref: str,
+    db: Session,
+    ctx: TenantContext,
+    assessment: Assessment,
+    *,
+    section_key: str,
+    prompt: str,
+    response: str,
+    source_ref: str,
 ) -> None:
     """USER_PROVIDED, point-in-time snapshot of a register fact — the
     resolved label is frozen, never the bare FK id (design doc §5/§5.4)."""
-    db.add(AssessmentItem(
-        id=uuid.uuid4(), tenant_id=ctx.tenant_id, assessment_id=assessment.id,
-        section_key=section_key, prompt=prompt, response=response,
-        provenance=ProvenanceConfidence.USER_PROVIDED, source_ref=source_ref,
-    ))
+    db.add(
+        AssessmentItem(
+            id=uuid.uuid4(),
+            tenant_id=ctx.tenant_id,
+            assessment_id=assessment.id,
+            section_key=section_key,
+            prompt=prompt,
+            response=response,
+            provenance=ProvenanceConfidence.USER_PROVIDED,
+            source_ref=source_ref,
+        )
+    )
 
 
 def _instantiate_required_sections(
-    db: Session, ctx: TenantContext, assessment: Assessment,
-    template_rows: list[AssessmentSectionTemplate], *, skip_section_key: str | None,
+    db: Session,
+    ctx: TenantContext,
+    assessment: Assessment,
+    template_rows: list[AssessmentSectionTemplate],
+    *,
+    skip_section_key: str | None,
 ) -> int:
     """CATALOGUE_CURATED, blank response, one per required template row.
     skip_section_key excludes the type's risk section — that one is
@@ -188,31 +237,45 @@ def _instantiate_required_sections(
             continue
         if tmpl.section_key == skip_section_key:
             continue
-        db.add(AssessmentItem(
-            id=uuid.uuid4(), tenant_id=ctx.tenant_id, assessment_id=assessment.id,
-            section_key=tmpl.section_key, prompt=tmpl.prompt,
-            provenance=ProvenanceConfidence.CATALOGUE_CURATED,
-        ))
+        db.add(
+            AssessmentItem(
+                id=uuid.uuid4(),
+                tenant_id=ctx.tenant_id,
+                assessment_id=assessment.id,
+                section_key=tmpl.section_key,
+                prompt=tmpl.prompt,
+                provenance=ProvenanceConfidence.CATALOGUE_CURATED,
+            )
+        )
         count += 1
     return count
 
 
 def _add_proposed_risk_items(
-    db: Session, ctx: TenantContext, assessment: Assessment,
-    proposed: list[ProposedRisk], section_key: str,
+    db: Session,
+    ctx: TenantContext,
+    assessment: Assessment,
+    proposed: list[ProposedRisk],
+    section_key: str,
 ) -> None:
     for p in proposed:
-        db.add(AssessmentItem(
-            id=uuid.uuid4(), tenant_id=ctx.tenant_id, assessment_id=assessment.id,
-            section_key=section_key, risk_id=p.risk_id,
-            provenance=ProvenanceConfidence.AI_SUGGESTED,
-            selection_basis=p.selection_basis,
-        ))
+        db.add(
+            AssessmentItem(
+                id=uuid.uuid4(),
+                tenant_id=ctx.tenant_id,
+                assessment_id=assessment.id,
+                section_key=section_key,
+                risk_id=p.risk_id,
+                provenance=ProvenanceConfidence.AI_SUGGESTED,
+                selection_basis=p.selection_basis,
+            )
+        )
 
 
 # ---------------------------------------------------------------------------
 # Risk proposal (pure read composition)
 # ---------------------------------------------------------------------------
+
 
 def propose_risk_set(
     assessment_type: AssessmentType,
@@ -242,10 +305,14 @@ def propose_risk_set(
             select(Risk.id).where(Risk.layer == RiskLayer.GOVERNANCE_RIGHTS)
         ):
             seen_risk_ids.add(risk_id)
-            proposed.append(ProposedRisk(
-                risk_id=risk_id,
-                selection_basis=f"Governance-layer risk (NIST/ISO), tier {tier.value}",
-            ))
+            proposed.append(
+                ProposedRisk(
+                    risk_id=risk_id,
+                    selection_basis=(
+                        f"Governance-layer risk (NIST/ISO), tier {tier.value}"
+                    ),
+                )
+            )
         if catalogue_product_id is not None:
             for row in db.scalars(
                 select(CatalogueProductRisk).where(
@@ -264,10 +331,12 @@ def propose_risk_set(
         for risk_id in db.scalars(
             select(Risk.id).where(Risk.layer == RiskLayer.TECHNICAL_SECURITY)
         ):
-            proposed.append(ProposedRisk(
-                risk_id=risk_id,
-                selection_basis="Technical-layer risk (OWASP LLM Top 10)",
-            ))
+            proposed.append(
+                ProposedRisk(
+                    risk_id=risk_id,
+                    selection_basis="Technical-layer risk (OWASP LLM Top 10)",
+                )
+            )
 
     # FRIA / DPIA: no auto-proposal — fall through with an empty list.
     return proposed
@@ -277,40 +346,52 @@ def propose_risk_set(
 # AIIA creation (Phase A's demoable vertical slice)
 # ---------------------------------------------------------------------------
 
+
 def create_aiia(use_case_id: uuid.UUID, ctx: TenantContext, db: Session) -> Assessment:
     use_case = _load_use_case(use_case_id, ctx, db)
     system = db.get(System, use_case.system_id)
 
-    classification = _load_current_classification(use_case_id, db)
-    if classification is None:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            detail="Use case has no current classification snapshot",
-        )
-    if classification.tier == EUAIActTier.PROHIBITED:
+    # Readiness is the shared classification_readiness primitive (Sprint 5
+    # WI-4, design doc §5.2/#1) — assessable-tier off use_case.eu_tier (only
+    # ratified at sign-off on the context path), prohibition off the current
+    # snapshot's tier. Behaviour change vs the prior direct snapshot.tier
+    # check: an unsigned context classification (eu_tier still
+    # REQUIRES_CONTEXT, even though the current PENDING_REVIEW snapshot
+    # already carries a concrete tier) now 409s here, closing the
+    # assess-off-an-unsigned-classification gap (STATE_MACHINE.md Appendix A
+    # #1). create_aiia and the intake gate must never diverge on this check.
+    gate = classification_readiness(use_case, db)
+    if gate.verdict == "halt":
         raise HTTPException(
             status.HTTP_409_CONFLICT,
             detail="Use case is classified PROHIBITED; no assessment may be created",
         )
-    if classification.tier == EUAIActTier.REQUIRES_CONTEXT:
+    if gate.verdict == "park":
+        if gate.reason_code == "no_classification_snapshot":
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                detail="Use case has no current classification snapshot",
+            )
         raise HTTPException(
             status.HTTP_409_CONFLICT,
             detail="Use case requires classification context before scoping an AIIA",
         )
 
-    tier_snapshot = classification.tier
-    classification_version = classification.version
+    tier_snapshot = use_case.eu_tier
+    classification_version = _load_current_classification(use_case_id, db).version
 
     # App-level pre-check, belt-and-suspenders with the DB-level partial
     # unique index (uq_one_aiia_per_use_case — hand-written in the
     # migration, so it doesn't exist in a Base.metadata.create_all test DB).
     # The IntegrityError catch below still covers a genuine creation race.
     existing_current = db.scalar(
-        select(Assessment.id).where(
+        select(Assessment.id)
+        .where(
             Assessment.use_case_id == use_case_id,
             Assessment.type == AssessmentType.AIIA,
             Assessment.is_current.is_(True),
-        ).limit(1)
+        )
+        .limit(1)
     )
     if existing_current is not None:
         raise HTTPException(
@@ -318,12 +399,16 @@ def create_aiia(use_case_id: uuid.UUID, ctx: TenantContext, db: Session) -> Asse
             detail="A current AIIA already exists for this use case",
         )
 
-    template_rows = list(db.scalars(
-        select(AssessmentSectionTemplate).where(
-            AssessmentSectionTemplate.type == AssessmentType.AIIA,
-            AssessmentSectionTemplate.tier == tier_snapshot,
-        ).order_by(AssessmentSectionTemplate.sort_order)
-    ))
+    template_rows = list(
+        db.scalars(
+            select(AssessmentSectionTemplate)
+            .where(
+                AssessmentSectionTemplate.type == AssessmentType.AIIA,
+                AssessmentSectionTemplate.tier == tier_snapshot,
+            )
+            .order_by(AssessmentSectionTemplate.sort_order)
+        )
+    )
     if not template_rows:
         # Seeding bug, not a client error — fail loudly rather than create
         # an empty shell (design doc §5/§8.12).
@@ -356,7 +441,11 @@ def create_aiia(use_case_id: uuid.UUID, ctx: TenantContext, db: Session) -> Asse
     # 3) — it gets no curated framing item of its own, or every AIIA would
     # carry a permanently-blank "answer this" item sitting next to its risks.
     required_count = _instantiate_required_sections(
-        db, ctx, assessment, template_rows, skip_section_key=RISK_SECTION_KEY,
+        db,
+        ctx,
+        assessment,
+        template_rows,
+        skip_section_key=RISK_SECTION_KEY,
     )
 
     # --- Pre-fill 2: snapshot inherited register facts (USER_PROVIDED) ------
@@ -366,19 +455,38 @@ def create_aiia(use_case_id: uuid.UUID, ctx: TenantContext, db: Session) -> Asse
             (f"System name: {system.name}", system.name, "system.name"),
         ]
         if use_case.purpose:
-            snapshot_facts.append((
-                f"Use case purpose: {use_case.purpose}",
-                use_case.purpose, "use_case.purpose",
-            ))
+            snapshot_facts.append(
+                (
+                    f"Use case purpose: {use_case.purpose}",
+                    use_case.purpose,
+                    "use_case.purpose",
+                )
+            )
         _fk_dimensions = (
-            ("Operator role", EUOperatorRole,
-             system.operator_role_id, "system.operator_role_id"),
-            ("Hosting model", HostingModel,
-             system.hosting_model_id, "system.hosting_model_id"),
-            ("Usage context", UsageContext,
-             system.usage_context_id, "system.usage_context_id"),
-            ("Human oversight type", HumanOversightType,
-             system.human_oversight_type_id, "system.human_oversight_type_id"),
+            (
+                "Operator role",
+                EUOperatorRole,
+                system.operator_role_id,
+                "system.operator_role_id",
+            ),
+            (
+                "Hosting model",
+                HostingModel,
+                system.hosting_model_id,
+                "system.hosting_model_id",
+            ),
+            (
+                "Usage context",
+                UsageContext,
+                system.usage_context_id,
+                "system.usage_context_id",
+            ),
+            (
+                "Human oversight type",
+                HumanOversightType,
+                system.human_oversight_type_id,
+                "system.human_oversight_type_id",
+            ),
         )
         for label_prefix, model, fk_id, ref in _fk_dimensions:
             label = _resolve_label(db, model, fk_id)
@@ -389,22 +497,33 @@ def create_aiia(use_case_id: uuid.UUID, ctx: TenantContext, db: Session) -> Asse
 
         for prompt, response, source_ref in snapshot_facts:
             _add_snapshot_item(
-                db, ctx, assessment, section_key=OVERVIEW_SECTION_KEY,
-                prompt=prompt, response=response, source_ref=source_ref,
+                db,
+                ctx,
+                assessment,
+                section_key=OVERVIEW_SECTION_KEY,
+                prompt=prompt,
+                response=response,
+                source_ref=source_ref,
             )
             snapshot_count += 1
 
     # --- Pre-fill 3: identity-only proposed risks (AI_SUGGESTED) ------------
     proposed = propose_risk_set(
-        AssessmentType.AIIA, tier_snapshot, [],
+        AssessmentType.AIIA,
+        tier_snapshot,
+        [],
         system.catalogue_product_id if system else None,
         db,
     )
     _add_proposed_risk_items(db, ctx, assessment, proposed, RISK_SECTION_KEY)
 
     _stage_audit(
-        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
-        action="assessment.created", entity_type="assessment", entity_id=assessment.id,
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_user_id=ctx.user_id,
+        action="assessment.created",
+        entity_type="assessment",
+        entity_id=assessment.id,
         detail={
             "tier_snapshot": tier_snapshot.value,
             "classification_version": classification_version,
@@ -421,9 +540,12 @@ def create_aiia(use_case_id: uuid.UUID, ctx: TenantContext, db: Session) -> Asse
 # Feeder creation (Phase B — sprints/SPRINT_AIIA_FEEDERS.md)
 # ---------------------------------------------------------------------------
 
+
 def create_feeder(
-    parent_aiia_id: uuid.UUID, feeder_type: AssessmentType,
-    ctx: TenantContext, db: Session,
+    parent_aiia_id: uuid.UUID,
+    feeder_type: AssessmentType,
+    ctx: TenantContext,
+    db: Session,
 ) -> Assessment:
     """A feeder is an `assessment` row — reuses every Phase-A item/control/
     provenance/concurrency/audit mechanism unchanged. Scope (tier_snapshot,
@@ -448,10 +570,12 @@ def create_feeder(
     # unlike uq_one_aiia_per_use_case). The IntegrityError catch below still
     # covers a genuine creation race.
     existing = db.scalar(
-        select(Assessment.id).where(
+        select(Assessment.id)
+        .where(
             Assessment.parent_aiia_id == parent.id,
             Assessment.type == feeder_type,
-        ).limit(1)
+        )
+        .limit(1)
     )
     if existing is not None:
         raise HTTPException(
@@ -459,12 +583,16 @@ def create_feeder(
             detail=f"A {feeder_type.value} feeder already exists for this AIIA",
         )
 
-    template_rows = list(db.scalars(
-        select(AssessmentSectionTemplate).where(
-            AssessmentSectionTemplate.type == feeder_type,
-            AssessmentSectionTemplate.tier == parent.tier_snapshot,
-        ).order_by(AssessmentSectionTemplate.sort_order)
-    ))
+    template_rows = list(
+        db.scalars(
+            select(AssessmentSectionTemplate)
+            .where(
+                AssessmentSectionTemplate.type == feeder_type,
+                AssessmentSectionTemplate.tier == parent.tier_snapshot,
+            )
+            .order_by(AssessmentSectionTemplate.sort_order)
+        )
+    )
     if not template_rows:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -496,7 +624,11 @@ def create_feeder(
 
     risk_section_key = _RISK_SECTION_BY_TYPE.get(feeder_type)
     required_count = _instantiate_required_sections(
-        db, ctx, feeder, template_rows, skip_section_key=risk_section_key,
+        db,
+        ctx,
+        feeder,
+        template_rows,
+        skip_section_key=risk_section_key,
     )
 
     use_case = db.get(UseCase, parent.use_case_id)
@@ -506,15 +638,20 @@ def create_feeder(
 
     if system is not None and feeder_type == AssessmentType.FRIA:
         for link in db.scalars(
-            select(SystemAffectedParty)
-            .where(SystemAffectedParty.system_id == system.id)
+            select(SystemAffectedParty).where(
+                SystemAffectedParty.system_id == system.id
+            )
         ):
             label = _resolve_label(db, AffectedParty, link.affected_party_id)
             if label is None:
                 continue
             _add_snapshot_item(
-                db, ctx, feeder, section_key=FRIA_AFFECTED_PERSONS_SECTION_KEY,
-                prompt=f"Affected party: {label}", response=label,
+                db,
+                ctx,
+                feeder,
+                section_key=FRIA_AFFECTED_PERSONS_SECTION_KEY,
+                prompt=f"Affected party: {label}",
+                response=label,
                 source_ref=f"system_affected_party:{link.affected_party_id}",
             )
             snapshot_count += 1
@@ -527,8 +664,12 @@ def create_feeder(
             if label is None:
                 continue
             _add_snapshot_item(
-                db, ctx, feeder, section_key=DPIA_DATA_CATEGORIES_SECTION_KEY,
-                prompt=f"Data category: {label}", response=label,
+                db,
+                ctx,
+                feeder,
+                section_key=DPIA_DATA_CATEGORIES_SECTION_KEY,
+                prompt=f"Data category: {label}",
+                response=label,
                 source_ref=f"system_data_category:{link.data_category_id}",
             )
             snapshot_count += 1
@@ -538,33 +679,49 @@ def create_feeder(
         if system.catalogue_product_id is not None:
             product = db.get(CatalogueProduct, system.catalogue_product_id)
             if product is not None:
-                model_facts.append((
-                    "Catalogue product", product.name,
-                    f"system.catalogue_product_id:{product.id}",
-                ))
+                model_facts.append(
+                    (
+                        "Catalogue product",
+                        product.name,
+                        f"system.catalogue_product_id:{product.id}",
+                    )
+                )
         hosting_label = _resolve_label(db, HostingModel, system.hosting_model_id)
         if hosting_label is not None:
-            model_facts.append((
-                "Hosting model", hosting_label,
-                f"system.hosting_model_id:{system.hosting_model_id}",
-            ))
+            model_facts.append(
+                (
+                    "Hosting model",
+                    hosting_label,
+                    f"system.hosting_model_id:{system.hosting_model_id}",
+                )
+            )
         for label_prefix, value, source_ref in model_facts:
             _add_snapshot_item(
-                db, ctx, feeder, section_key=MODEL_RISK_DESCRIPTION_SECTION_KEY,
-                prompt=f"{label_prefix}: {value}", response=value,
+                db,
+                ctx,
+                feeder,
+                section_key=MODEL_RISK_DESCRIPTION_SECTION_KEY,
+                prompt=f"{label_prefix}: {value}",
+                response=value,
                 source_ref=source_ref,
             )
             snapshot_count += 1
 
         proposed = propose_risk_set(
-            AssessmentType.MODEL_RISK, parent.tier_snapshot, [],
-            system.catalogue_product_id, db,
+            AssessmentType.MODEL_RISK,
+            parent.tier_snapshot,
+            [],
+            system.catalogue_product_id,
+            db,
         )
         _add_proposed_risk_items(db, ctx, feeder, proposed, MODEL_RISK_RISK_SECTION_KEY)
 
     _stage_audit(
-        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
-        action="assessment.feeder_created", entity_type="assessment",
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_user_id=ctx.user_id,
+        action="assessment.feeder_created",
+        entity_type="assessment",
         entity_id=feeder.id,
         detail={
             "parent_aiia_id": str(parent.id),
@@ -582,6 +739,7 @@ def create_feeder(
 # AIIA detail propagation (Phase B — read-time reference, never copy)
 # ---------------------------------------------------------------------------
 
+
 def assemble_aiia_items(aiia: Assessment, db: Session) -> list[AssessmentItemRead]:
     """Native items pass through unchanged. Feeder items whose
     (feeder.type, feeder.tier_snapshot, item.section_key) resolves via
@@ -591,38 +749,45 @@ def assemble_aiia_items(aiia: Assessment, db: Session) -> list[AssessmentItemRea
     they surface only in that feeder's own GET /assessments/{feeder_id}.
     Read-time only: nothing here is written back; provenance, created_by,
     and control links all travel with the item by id, untouched."""
-    native_items = list(db.scalars(
-        select(AssessmentItem).where(AssessmentItem.assessment_id == aiia.id)
-        .order_by(AssessmentItem.created_at)
-    ))
+    native_items = list(
+        db.scalars(
+            select(AssessmentItem)
+            .where(AssessmentItem.assessment_id == aiia.id)
+            .order_by(AssessmentItem.created_at)
+        )
+    )
     result = [AssessmentItemRead.model_validate(i) for i in native_items]
 
     if aiia.type != AssessmentType.AIIA:
         return result  # feeders surface nothing of their own — own view only
 
-    feeders = list(db.scalars(
-        select(Assessment).where(Assessment.parent_aiia_id == aiia.id)
-    ))
+    feeders = list(
+        db.scalars(select(Assessment).where(Assessment.parent_aiia_id == aiia.id))
+    )
     for feeder in feeders:
-        target_by_section_key = dict(db.execute(
-            select(
-                AssessmentSectionTemplate.section_key,
-                AssessmentSectionTemplate.aiia_target_section_key,
-            ).where(
-                AssessmentSectionTemplate.type == feeder.type,
-                AssessmentSectionTemplate.tier == feeder.tier_snapshot,
-                AssessmentSectionTemplate.aiia_target_section_key.is_not(None),
-            )
-        ).all())
+        target_by_section_key = dict(
+            db.execute(
+                select(
+                    AssessmentSectionTemplate.section_key,
+                    AssessmentSectionTemplate.aiia_target_section_key,
+                ).where(
+                    AssessmentSectionTemplate.type == feeder.type,
+                    AssessmentSectionTemplate.tier == feeder.tier_snapshot,
+                    AssessmentSectionTemplate.aiia_target_section_key.is_not(None),
+                )
+            ).all()
+        )
         if not target_by_section_key:
             continue
 
-        feeder_items = list(db.scalars(
-            select(AssessmentItem).where(
-                AssessmentItem.assessment_id == feeder.id,
-                AssessmentItem.section_key.in_(target_by_section_key.keys()),
+        feeder_items = list(
+            db.scalars(
+                select(AssessmentItem).where(
+                    AssessmentItem.assessment_id == feeder.id,
+                    AssessmentItem.section_key.in_(target_by_section_key.keys()),
+                )
             )
-        ))
+        )
         for item in feeder_items:
             data = AssessmentItemRead.model_validate(item).model_dump()
             data["section_key"] = target_by_section_key[item.section_key]
@@ -638,8 +803,11 @@ def assemble_aiia_items(aiia: Assessment, db: Session) -> list[AssessmentItemRea
 # reasoning; the user confirms by creating, the platform never auto-creates.
 # ---------------------------------------------------------------------------
 
+
 def get_feeder_recommendations(
-    aiia_id: uuid.UUID, ctx: TenantContext, db: Session,
+    aiia_id: uuid.UUID,
+    ctx: TenantContext,
+    db: Session,
 ) -> list[FeederRecommendationRead]:
     aiia = load_assessment(aiia_id, ctx, db)
     if aiia.type != AssessmentType.AIIA:
@@ -647,14 +815,25 @@ def get_feeder_recommendations(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Feeder recommendations apply to an AIIA, not a feeder",
         )
+    return feeder_recommendations_for(aiia, db)
 
+
+def feeder_recommendations_for(
+    aiia: Assessment,
+    db: Session,
+) -> list[FeederRecommendationRead]:
+    """tenant/ctx-independent core of get_feeder_recommendations — reused by
+    the lifecycle assessment_gate (sprints/SPRINT_LIFECYCLE.md WI-3), which
+    has no acting-user TenantContext to construct (it's a pure read driven
+    by the engine, not a request). Caller is responsible for loading `aiia`
+    tenant-scoped."""
     use_case = db.get(UseCase, aiia.use_case_id)
     system = db.get(System, use_case.system_id) if use_case else None
     is_high = aiia.tier_snapshot == EUAIActTier.HIGH
 
-    existing_types = set(db.scalars(
-        select(Assessment.type).where(Assessment.parent_aiia_id == aiia.id)
-    ))
+    existing_types = set(
+        db.scalars(select(Assessment.type).where(Assessment.parent_aiia_id == aiia.id))
+    )
 
     is_deployer = False
     if system is not None and system.operator_role_id is not None:
@@ -674,14 +853,16 @@ def get_feeder_recommendations(
     has_data_category = False
     has_special_category = False
     if system is not None:
-        categories = list(db.scalars(
-            select(DataCategory)
-            .join(
-                SystemDataCategory,
-                SystemDataCategory.data_category_id == DataCategory.id,
+        categories = list(
+            db.scalars(
+                select(DataCategory)
+                .join(
+                    SystemDataCategory,
+                    SystemDataCategory.data_category_id == DataCategory.id,
+                )
+                .where(SystemDataCategory.system_id == system.id)
             )
-            .where(SystemDataCategory.system_id == system.id)
-        ))
+        )
         has_data_category = len(categories) > 0
         has_special_category = any(c.is_special_category for c in categories)
 
@@ -697,11 +878,15 @@ def get_feeder_recommendations(
 
     return [
         FeederRecommendationRead(
-            type=AssessmentType.FRIA, applicability=fria_app, basis=fria_basis,
+            type=AssessmentType.FRIA,
+            applicability=fria_app,
+            basis=fria_basis,
             exists=AssessmentType.FRIA in existing_types,
         ),
         FeederRecommendationRead(
-            type=AssessmentType.DPIA, applicability=dpia_app, basis=dpia_basis,
+            type=AssessmentType.DPIA,
+            applicability=dpia_app,
+            basis=dpia_basis,
             exists=AssessmentType.DPIA in existing_types,
         ),
         FeederRecommendationRead(
@@ -717,19 +902,28 @@ def get_feeder_recommendations(
 # Sections
 # ---------------------------------------------------------------------------
 
+
 def list_sections(
-    assessment_id: uuid.UUID, ctx: TenantContext, db: Session,
+    assessment_id: uuid.UUID,
+    ctx: TenantContext,
+    db: Session,
 ) -> list[dict]:
     assessment = load_assessment(assessment_id, ctx, db)
-    template_rows = list(db.scalars(
-        select(AssessmentSectionTemplate).where(
-            AssessmentSectionTemplate.type == assessment.type,
-            AssessmentSectionTemplate.tier == assessment.tier_snapshot,
-        ).order_by(AssessmentSectionTemplate.sort_order)
-    ))
-    existing_items = list(db.scalars(
-        select(AssessmentItem).where(AssessmentItem.assessment_id == assessment.id)
-    ))
+    template_rows = list(
+        db.scalars(
+            select(AssessmentSectionTemplate)
+            .where(
+                AssessmentSectionTemplate.type == assessment.type,
+                AssessmentSectionTemplate.tier == assessment.tier_snapshot,
+            )
+            .order_by(AssessmentSectionTemplate.sort_order)
+        )
+    )
+    existing_items = list(
+        db.scalars(
+            select(AssessmentItem).where(AssessmentItem.assessment_id == assessment.id)
+        )
+    )
     first_item_by_section: dict[str, uuid.UUID] = {}
     for item in existing_items:
         if item.section_key and item.section_key not in first_item_by_section:
@@ -750,8 +944,11 @@ def list_sections(
 
 
 def create_item_from_section(
-    assessment_id: uuid.UUID, section_key: str, response: str | None,
-    ctx: TenantContext, db: Session,
+    assessment_id: uuid.UUID,
+    section_key: str,
+    response: str | None,
+    ctx: TenantContext,
+    db: Session,
 ) -> AssessmentItem:
     assessment = load_assessment(assessment_id, ctx, db)
     tmpl = db.scalar(
@@ -768,19 +965,28 @@ def create_item_from_section(
         )
 
     item = AssessmentItem(
-        id=uuid.uuid4(), tenant_id=ctx.tenant_id, assessment_id=assessment.id,
-        section_key=section_key, prompt=tmpl.prompt, response=response,
+        id=uuid.uuid4(),
+        tenant_id=ctx.tenant_id,
+        assessment_id=assessment.id,
+        section_key=section_key,
+        prompt=tmpl.prompt,
+        response=response,
         provenance=(
-            ProvenanceConfidence.USER_PROVIDED if response is not None
+            ProvenanceConfidence.USER_PROVIDED
+            if response is not None
             else ProvenanceConfidence.CATALOGUE_CURATED
         ),
         created_by=ctx.user_id,
     )
     db.add(item)
     _stage_audit(
-        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
-        action="assessment_item.created", entity_type="assessment_item",
-        entity_id=item.id, detail={"section_key": section_key},
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_user_id=ctx.user_id,
+        action="assessment_item.created",
+        entity_type="assessment_item",
+        entity_id=item.id,
+        detail={"section_key": section_key},
     )
     db.flush()
     return item
@@ -790,9 +996,13 @@ def create_item_from_section(
 # Item mutation: amend, confirm, delete
 # ---------------------------------------------------------------------------
 
+
 def amend_item(
-    item_id: uuid.UUID, patch: AssessmentItemAmend, expected_lock_version: int,
-    ctx: TenantContext, db: Session,
+    item_id: uuid.UUID,
+    patch: AssessmentItemAmend,
+    expected_lock_version: int,
+    ctx: TenantContext,
+    db: Session,
 ) -> AssessmentItem:
     item = _load_item(item_id, ctx, db)
 
@@ -805,7 +1015,20 @@ def amend_item(
         if new_value != old_value:
             changes[field] = (old_value, new_value)
 
-    if not changes:
+    # Treatment fields (Sprint 5 WI-10) are tracked separately: they must
+    # never enter the provenance-flip branch below — treatment is orthogonal
+    # to the risk-identity confirm/amend axis the override-rate metric reads
+    # (design doc §5.4, #5).
+    treatment_changes: dict[str, tuple[object, object]] = {}
+    for field in _TREATMENT_FIELDS:
+        new_value = getattr(patch, field)
+        if new_value is None:
+            continue
+        old_value = getattr(item, field)
+        if new_value != old_value:
+            treatment_changes[field] = (old_value, new_value)
+
+    if not changes and not treatment_changes:
         return item  # content-less PATCH: no-op, no event, no provenance change
 
     if item.provenance == ProvenanceConfidence.AI_SUGGESTED:
@@ -814,15 +1037,19 @@ def amend_item(
             detail="Confirm or amend the proposed risk before authoring this item",
         )
 
-    new_provenance = (
-        ProvenanceConfidence.USER_PROVIDED
-        if item.provenance == ProvenanceConfidence.CATALOGUE_CURATED
-        else item.provenance
-    )
-
-    values = {field: new for field, (_old, new) in changes.items()}
-    values["provenance"] = new_provenance
+    values: dict[str, object] = {
+        field: new for field, (_old, new) in {**changes, **treatment_changes}.items()
+    }
     values["lock_version"] = AssessmentItem.lock_version + 1
+
+    new_provenance = item.provenance
+    if changes:
+        new_provenance = (
+            ProvenanceConfidence.USER_PROVIDED
+            if item.provenance == ProvenanceConfidence.CATALOGUE_CURATED
+            else item.provenance
+        )
+        values["provenance"] = new_provenance
 
     result = db.execute(
         update(AssessmentItem)
@@ -841,23 +1068,44 @@ def amend_item(
 
     field_detail = {
         field: {"before": old, "after": new}
-        for field, (old, new) in changes.items()
+        for field, (old, new) in {**changes, **treatment_changes}.items()
     }
-    field_detail["provenance"] = {
-        "before": item.provenance.value, "after": new_provenance.value,
-    }
+    if changes:
+        field_detail["provenance"] = {
+            "before": item.provenance.value,
+            "after": new_provenance.value,
+        }
+    action = (
+        "assessment_item.treatment_set"
+        if treatment_changes
+        else "assessment_item.amended"
+    )
     _stage_audit(
-        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
-        action="assessment_item.amended", entity_type="assessment_item",
-        entity_id=item_id, detail=field_detail,
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_user_id=ctx.user_id,
+        action=action,
+        entity_type="assessment_item",
+        entity_id=item_id,
+        detail=field_detail,
     )
     db.flush()
     db.refresh(item)
+
+    if treatment_changes:
+        # Sprint 5 WI-10: a treatment decision can satisfy the treatment gate.
+        assessment = db.get(Assessment, item.assessment_id)
+        use_case = db.get(UseCase, assessment.use_case_id)
+        advance_use_case(db, use_case, ctx.user_id)
+
     return item
 
 
 def confirm_item(
-    item_id: uuid.UUID, expected_lock_version: int, ctx: TenantContext, db: Session,
+    item_id: uuid.UUID,
+    expected_lock_version: int,
+    ctx: TenantContext,
+    db: Session,
 ) -> AssessmentItem:
     item = _load_item(item_id, ctx, db)
 
@@ -883,29 +1131,45 @@ def confirm_item(
         )
 
     _stage_audit(
-        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
-        action="assessment_item.confirmed", entity_type="assessment_item",
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_user_id=ctx.user_id,
+        action="assessment_item.confirmed",
+        entity_type="assessment_item",
         entity_id=item_id,
         detail={"risk_id": str(item.risk_id) if item.risk_id else None},
     )
     db.flush()
     db.refresh(item)
+
+    # Sprint 5 WI-5: a disposed proposed risk can satisfy the assessment
+    # gate's "no still-AI_SUGGESTED items" check — drive the lifecycle off it.
+    assessment = db.get(Assessment, item.assessment_id)
+    use_case = db.get(UseCase, assessment.use_case_id)
+    advance_use_case(db, use_case, ctx.user_id)
+
     return item
 
 
 def delete_item(item_id: uuid.UUID, ctx: TenantContext, db: Session) -> None:
     item = _load_item(item_id, ctx, db)
     control_link_ids = [
-        str(link_id) for link_id in db.scalars(
-            select(AssessmentItemControl.id)
-            .where(AssessmentItemControl.item_id == item.id)
+        str(link_id)
+        for link_id in db.scalars(
+            select(AssessmentItemControl.id).where(
+                AssessmentItemControl.item_id == item.id
+            )
         )
     ]
     db.delete(item)
     _stage_audit(
-        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
-        action="assessment_item.deleted", entity_type="assessment_item",
-        entity_id=item_id, detail={"cascaded_control_link_ids": control_link_ids},
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_user_id=ctx.user_id,
+        action="assessment_item.deleted",
+        entity_type="assessment_item",
+        entity_id=item_id,
+        detail={"cascaded_control_link_ids": control_link_ids},
     )
     db.flush()
 
@@ -914,6 +1178,7 @@ def delete_item(item_id: uuid.UUID, ctx: TenantContext, db: Session) -> None:
 # Assessment delete (pristine only)
 # ---------------------------------------------------------------------------
 
+
 def _is_pristine(assessment: Assessment, db: Session) -> bool:
     # "Worked" = a human acted on the item: confirmed/amended a proposed
     # risk, or answered a curated section prompt. System-snapshotted
@@ -921,19 +1186,23 @@ def _is_pristine(assessment: Assessment, db: Session) -> bool:
     # present from the moment of creation — they must not block the
     # create/delete/re-create path, so they're excluded here.
     worked_item = db.scalar(
-        select(AssessmentItem.id).where(
+        select(AssessmentItem.id)
+        .where(
             AssessmentItem.assessment_id == assessment.id,
             or_(
-                AssessmentItem.provenance.in_([
-                    ProvenanceConfidence.USER_CONFIRMED,
-                    ProvenanceConfidence.USER_AMENDED,
-                ]),
+                AssessmentItem.provenance.in_(
+                    [
+                        ProvenanceConfidence.USER_CONFIRMED,
+                        ProvenanceConfidence.USER_AMENDED,
+                    ]
+                ),
                 and_(
                     AssessmentItem.provenance == ProvenanceConfidence.USER_PROVIDED,
                     AssessmentItem.source_ref.is_(None),
                 ),
             ),
-        ).limit(1)
+        )
+        .limit(1)
     )
     if worked_item is not None:
         return False
@@ -962,7 +1231,9 @@ def _is_pristine(assessment: Assessment, db: Session) -> bool:
 
 
 def delete_assessment(
-    assessment_id: uuid.UUID, ctx: TenantContext, db: Session,
+    assessment_id: uuid.UUID,
+    ctx: TenantContext,
+    db: Session,
 ) -> None:
     assessment = load_assessment(assessment_id, ctx, db)
     if not _is_pristine(assessment, db):
@@ -972,8 +1243,12 @@ def delete_assessment(
         )
     db.delete(assessment)
     _stage_audit(
-        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
-        action="assessment.deleted", entity_type="assessment", entity_id=assessment_id,
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_user_id=ctx.user_id,
+        action="assessment.deleted",
+        entity_type="assessment",
+        entity_id=assessment_id,
         detail={},
     )
     db.flush()
@@ -983,9 +1258,13 @@ def delete_assessment(
 # Control links
 # ---------------------------------------------------------------------------
 
+
 def create_control_link(
-    item_id: uuid.UUID, control_id: uuid.UUID, coverage: CoverageStatus,
-    ctx: TenantContext, db: Session,
+    item_id: uuid.UUID,
+    control_id: uuid.UUID,
+    coverage: CoverageStatus,
+    ctx: TenantContext,
+    db: Session,
 ) -> AssessmentItemControl:
     item = _load_item(item_id, ctx, db)
     control = db.get(Control, control_id)
@@ -996,8 +1275,11 @@ def create_control_link(
         )
 
     link = AssessmentItemControl(
-        id=uuid.uuid4(), tenant_id=ctx.tenant_id, item_id=item.id,
-        control_id=control_id, coverage=coverage,
+        id=uuid.uuid4(),
+        tenant_id=ctx.tenant_id,
+        item_id=item.id,
+        control_id=control_id,
+        coverage=coverage,
     )
     db.add(link)
     try:
@@ -1010,11 +1292,15 @@ def create_control_link(
         ) from exc
 
     _stage_audit(
-        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
-        action="control_link.created", entity_type="assessment_item_control",
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_user_id=ctx.user_id,
+        action="control_link.created",
+        entity_type="assessment_item_control",
         entity_id=link.id,
         detail={
-            "item_id": str(item_id), "control_id": str(control_id),
+            "item_id": str(item_id),
+            "control_id": str(control_id),
             "coverage": coverage.value,
         },
     )
@@ -1034,8 +1320,11 @@ def delete_control_link(link_id: uuid.UUID, ctx: TenantContext, db: Session) -> 
 
     db.delete(link)
     _stage_audit(
-        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
-        action="control_link.deleted", entity_type="assessment_item_control",
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_user_id=ctx.user_id,
+        action="control_link.deleted",
+        entity_type="assessment_item_control",
         entity_id=link_id,
         detail={"item_id": str(link.item_id), "control_id": str(link.control_id)},
     )
@@ -1046,8 +1335,12 @@ def delete_control_link(link_id: uuid.UUID, ctx: TenantContext, db: Session) -> 
 # Evidence links (sprints/SPRINT_EVIDENCE_REPOSITORY.md, Phase B, WI-7)
 # ---------------------------------------------------------------------------
 
+
 def create_evidence_link(
-    item_id: uuid.UUID, evidence_id: uuid.UUID, ctx: TenantContext, db: Session,
+    item_id: uuid.UUID,
+    evidence_id: uuid.UUID,
+    ctx: TenantContext,
+    db: Session,
 ) -> AssessmentItemEvidence:
     item = _load_item(item_id, ctx, db)
     # Disposition gate: deliberate asymmetry with control-links (design §5) --
@@ -1061,15 +1354,18 @@ def create_evidence_link(
 
     evidence = db.scalar(
         select(Evidence).where(
-            Evidence.id == evidence_id, Evidence.tenant_id == ctx.tenant_id,
+            Evidence.id == evidence_id,
+            Evidence.tenant_id == ctx.tenant_id,
         )
     )
     if evidence is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Evidence not found")
 
     link = AssessmentItemEvidence(
-        id=uuid.uuid4(), tenant_id=ctx.tenant_id,
-        item_id=item.id, evidence_id=evidence_id,
+        id=uuid.uuid4(),
+        tenant_id=ctx.tenant_id,
+        item_id=item.id,
+        evidence_id=evidence_id,
     )
     db.add(link)
     try:
@@ -1082,8 +1378,11 @@ def create_evidence_link(
         ) from exc
 
     _stage_audit(
-        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
-        action="evidence.linked", entity_type="assessment_item_evidence",
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_user_id=ctx.user_id,
+        action="evidence.linked",
+        entity_type="assessment_item_evidence",
         entity_id=link.id,
         detail={"item_id": str(item_id), "evidence_id": str(evidence_id)},
     )
@@ -1092,7 +1391,10 @@ def create_evidence_link(
 
 
 def delete_evidence_link(
-    item_id: uuid.UUID, evidence_id: uuid.UUID, ctx: TenantContext, db: Session,
+    item_id: uuid.UUID,
+    evidence_id: uuid.UUID,
+    ctx: TenantContext,
+    db: Session,
 ) -> None:
     """Idempotent: a no-op removal (link already absent) writes no
     AuditEvent, mirroring the no-op-PATCH convention elsewhere in this
@@ -1109,8 +1411,11 @@ def delete_evidence_link(
 
     db.delete(link)
     _stage_audit(
-        db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
-        action="evidence.unlinked", entity_type="assessment_item_evidence",
+        db,
+        tenant_id=ctx.tenant_id,
+        actor_user_id=ctx.user_id,
+        action="evidence.unlinked",
+        entity_type="assessment_item_evidence",
         entity_id=link.id,
         detail={"item_id": str(item_id), "evidence_id": str(evidence_id)},
     )

@@ -35,7 +35,7 @@ from datetime import datetime
 from .base import (
     Base, TimestampMixin, uuid_pk,
     EUAIActTier, AssessmentType, AssessmentStatus, ProvenanceConfidence,
-    CoverageStatus, ClassificationStatus, SectionApplicability,
+    CoverageStatus, ClassificationStatus, SectionApplicability, TreatmentDecision,
 )
 
 
@@ -198,6 +198,15 @@ class AssessmentItem(Base, TimestampMixin):
         PGUUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
     )
     lock_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # Treatment decision for a dispositioned risk (Sprint 5 WI-9/10).
+    # Provenance-neutral: writing these never alters `provenance`. Distinct
+    # from `mitigation_plan` (the *how*) — this is the *why* for ACCEPT, and
+    # any narrative for MITIGATE (design doc §3, #8).
+    treatment_decision: Mapped[TreatmentDecision | None] = mapped_column(
+        SAEnum(TreatmentDecision, name="treatment_decision"),
+    )
+    treatment_rationale: Mapped[str | None] = mapped_column(Text)
 
     assessment: Mapped["Assessment"] = relationship(back_populates="items")
     control_links: Mapped[List["AssessmentItemControl"]] = relationship(

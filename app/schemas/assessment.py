@@ -19,6 +19,7 @@ from app.models.base import (
     EUAIActTier,
     ProvenanceConfidence,
     SectionApplicability,
+    TreatmentDecision,
 )
 
 
@@ -36,6 +37,8 @@ class AssessmentItemRead(BaseModel):
     residual_likelihood: int | None
     residual_severity: int | None
     mitigation_plan: str | None
+    treatment_decision: TreatmentDecision | None
+    treatment_rationale: str | None
     provenance: ProvenanceConfidence
     selection_basis: str | None
     source_ref: str | None
@@ -59,14 +62,19 @@ class AssessmentItemCreate(BaseModel):
 
 
 class AssessmentItemAmend(BaseModel):
-    """PATCH body — authoring fields only. A request with every field None
-    is a content-less no-op (no event, no provenance change, design doc §4)."""
+    """PATCH body — authoring fields plus treatment fields (Sprint 5 WI-10).
+    A request with every field None is a content-less no-op (no event, no
+    provenance change, design doc §4). treatment_decision/treatment_rationale
+    are written provenance-neutral — they never trigger the
+    CATALOGUE_CURATED -> USER_PROVIDED flip the other authoring fields do."""
     response: str | None = None
     likelihood: int | None = None
     severity: int | None = None
     residual_likelihood: int | None = None
     residual_severity: int | None = None
     mitigation_plan: str | None = None
+    treatment_decision: TreatmentDecision | None = None
+    treatment_rationale: str | None = None
 
 
 class ControlLinkRead(BaseModel):

@@ -173,6 +173,16 @@ class ClassificationStatus(str, enum.Enum):
     NEEDS_REFRESH = "needs_refresh"            # reserved for workflow track
 
 
+class TreatmentDecision(str, enum.Enum):
+    """A dispositioned risk's treatment (Sprint 5 WI-9/10, PRD 4.1).
+    Provenance-neutral — writing this never alters ProvenanceConfidence."""
+    MITIGATE = "mitigate"
+    ACCEPT = "accept"
+    # Reserved for post-MVP without schema change:
+    TRANSFER = "transfer"
+    AVOID = "avoid"
+
+
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
     MEMBER = "member"

@@ -252,6 +252,14 @@ class UseCase(Base, TimestampMixin):
     nullable=True, index=True,
 )
 
+    # HELD regression hint (Sprint 5). Set/cleared only by apply_transition;
+    # NOT the restore target — un-hold re-runs the full gate vector and rests
+    # at the earliest still-unsatisfied gate (docs/STATE_MACHINE.md §4.4).
+    held_from_state: Mapped[LifecycleState | None] = mapped_column(
+        SAEnum(LifecycleState, name="lifecycle_state"), nullable=True,
+    )
+    held_reason: Mapped[str | None] = mapped_column(Text)
+
 
 # ---------------------------------------------------------------------------
 # THREE INHERITING APPROVAL SCOPES (PRD 4.1.4)
@@ -282,6 +290,14 @@ class VendorApproval(Base, TimestampMixin):
     # Thin vendor-level diligence record (APR-5). Full workflow deferred.
     diligence_blob: Mapped[dict] = mapped_column(JSONB, default=dict)
 
+    # Decision metadata (Sprint 5, APR-5). Set by set_vendor_approval.
+    decided_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    note: Mapped[str | None] = mapped_column(Text)
+
 
 class ProductApproval(Base, TimestampMixin):
     """Tenant's clearance of a product. Inherits vendor clearance (APR-2).
@@ -308,3 +324,11 @@ class ProductApproval(Base, TimestampMixin):
     )
     valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     diligence_blob: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+    # Decision metadata (Sprint 5, APR-5). Set by set_product_approval.
+    decided_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    note: Mapped[str | None] = mapped_column(Text)

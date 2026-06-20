@@ -57,6 +57,7 @@ from app.models.decision_tree import (
 )
 from app.models.domain import UseCase
 from app.models.lifecycle import AuditEvent
+from app.services.lifecycle_service import advance_use_case
 
 # ── Precedence ladder ───────────────────────────────────────────────────────
 
@@ -500,6 +501,14 @@ def compute_and_record_classification(
 
     # NOTE: use_case.eu_tier is NOT stamped here. That happens at sign-off (WI-7).
 
+    # Sprint 5 WI-5: drives the prohibited halt off this snapshot becoming
+    # current — load-bearing here specifically, since the context path never
+    # stamps eu_tier=PROHIBITED; advance_use_case's step 0 reads the
+    # snapshot's tier, not eu_tier, so a PROHIBITED_HALT outcome halts the
+    # use case atomically with this write even though eu_tier is untouched
+    # (design doc §5.5, the v1 hole #1 this rule exists to close).
+    advance_use_case(db, use_case, actor_user_id)
+
     return outcome, snapshot
 
 
@@ -575,5 +584,8 @@ def sign_off_classification(
             ),
         },
     ))
+
+    # Sprint 5 WI-5: eu_tier just became ratified — drives the intake gate.
+    advance_use_case(db, use_case, reviewer_user_id)
 
     return snapshot

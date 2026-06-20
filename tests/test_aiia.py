@@ -16,8 +16,13 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.models.assessment import Assessment, AssessmentItem, AssessmentItemControl
-from app.models.base import EUAIActTier, ProvenanceConfidence
+from app.models.assessment import (
+    Assessment,
+    AssessmentItem,
+    AssessmentItemControl,
+    Classification,
+)
+from app.models.base import ClassificationStatus, EUAIActTier, ProvenanceConfidence
 from app.models.governance import GovernanceRole
 from app.models.identity import Tenant
 from app.models.lifecycle import AuditEvent
@@ -123,6 +128,34 @@ class TestCreateAIIA:
         with _ApiCtx(ctx, db_session):
             r = client.post(f"/v1/use-cases/{use_case.id}/assessments")
         assert r.status_code == 409
+
+    def test_unsigned_context_classification_blocked(
+        self, db_session, tenant, member, gov_roles, client,
+    ):
+        """Sprint 5 WI-4 / STATE_MACHINE.md Appendix A #1: the context gate
+        computes a concrete tier into a PENDING_REVIEW snapshot but does not
+        stamp use_case.eu_tier (that's sign-off's job). create_aiia must read
+        eu_tier, not the snapshot's own tier — so this case 409s even though
+        the current snapshot already carries a concrete (HIGH) tier."""
+        user, m = member
+        _grant(db_session, tenant, m, gov_roles["system_owner"])
+        system = _make_system(db_session, tenant)
+        use_case = _make_use_case(db_session, tenant, system)
+        use_case.eu_tier = EUAIActTier.REQUIRES_CONTEXT
+        db_session.add(Classification(
+            id=uuid.uuid4(), tenant_id=tenant.id, use_case_id=use_case.id,
+            tier=EUAIActTier.HIGH, rationale="context-computed, unsigned",
+            version=1, is_current=True, status=ClassificationStatus.PENDING_REVIEW,
+        ))
+        db_session.flush()
+
+        ctx = _make_ctx(user, m, tenant)
+        with _ApiCtx(ctx, db_session):
+            r = client.post(f"/v1/use-cases/{use_case.id}/assessments")
+        assert r.status_code == 409
+        assert db_session.scalar(
+            select(Assessment).where(Assessment.use_case_id == use_case.id)
+        ) is None
 
     def test_no_current_classification_blocked(self, db_session, tenant, member, gov_roles, client):
         user, m = member

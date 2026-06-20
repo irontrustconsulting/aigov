@@ -40,7 +40,11 @@ TENANT INVENTORY (tenant-scoped)
                                       paths feed it — the catalogue bridge, and gate 2's
                                       DecisionTree — see STATE.md §3)
   UseCase ──< Assessment            (type=AIIA is primary; FRIA/DPIA/MODEL_RISK feed it)
-  UseCase ──< LifecycleTransition   (state machine history)
+  UseCase ──< LifecycleTransition   (state machine history — apply_transition's sole writer
+                                      stages one per hop; STATE.md "Product lifecycle" §3)
+  UseCase.held_from_state / .held_reason   (regression hint only, set/cleared by
+                                             apply_transition — never the un-hold restore
+                                             target; that's the full gate vector's job)
 
   Assessment ──< Assessment          (self-referential: .parent_aiia_id; a feeder's parent is
                                        always type=AIIA; UNIQUE(parent_aiia_id, type) — at
@@ -55,11 +59,20 @@ TENANT INVENTORY (tenant-scoped)
     -- AssessmentItemEvidence: UNIQUE(item_id, evidence_id) (§2.9); no direct
        Evidence ──> Control edge — framework satisfaction is transitive,
        through whichever item the evidence is linked to
+    -- AssessmentItem.treatment_decision (MITIGATE/ACCEPT, TRANSFER/AVOID
+       reserved) + .treatment_rationale: the treatment_gate's input, written
+       provenance-neutral through amend_item (never flips provenance the way
+       the other authoring fields do — STATE.md inv re: override-rate metric)
 
 THREE INHERITING APPROVAL SCOPES (tenant-scoped)
-  VendorApproval   (tenant + catalogue_vendor)         outer gate
-  ProductApproval  (tenant + catalogue_product)         inherits vendor; mostly a rollup
-  UseCase.state == AUTHORISED                            inherits product
+  VendorApproval   (tenant + catalogue_vendor)         outer gate; vendor_gate reads it
+  ProductApproval  (tenant + catalogue_product)         inherits vendor; product_gate reads it
+  UseCase.state reaching pending_authorisation           inherits product (the lifecycle's
+                                                           forward ceiling this sprint;
+                                                           AUTHORISED is Sprint 6)
+  Both approval models also carry decided_by_user_id / decided_at / note
+  (who cleared it and why) — set by set_vendor_approval/set_product_approval,
+  which fan out to every affected use case (STATE.md §3)
 
 KNOWLEDGE CROSS-MAPS (global)
   Control ──< ControlFrameworkMap ── framework + clause_ref   (one control → many frameworks)
@@ -171,13 +184,23 @@ the same migration/transaction that adds it). This is why `Framework` and
 `RiskSource` already include reserved post-MVP values (NIST, ATLAS): adding the
 *rows* later needs no migration, only the *enum* would.
 
-One live footgun from doing this by hand: `eu_ai_act_tier`'s `REQUIRES_CONTEXT`
-value was added as lowercase `'requires_context'` (mismatched against every
-other label, which is the enum member's uppercase *name*). Any code path that
-filters a query by `EUAIActTier.REQUIRES_CONTEXT` will fail at the DB with an
-"invalid input value" error — known, not yet fixed, work around it by not
-querying on that specific member rather than reading it as a model worth
-copying for the next manually-added enum value.
+**This by-name convention is easy to break by hand, and was** — `eu_ai_act_tier`'s
+`REQUIRES_CONTEXT` was added as lowercase `'requires_context'` (mismatched
+against its four uppercase siblings), and `classification_status` was created
+with **all four** labels lowercase. Both made the affected value un-writable
+from the ORM (any INSERT/UPDATE setting that member raised "invalid input
+value" at the DB) — `classification_status` being broken meant every
+`snapshot_classification`/`compute_and_record_classification` call failed
+outright, since the column's default is `ClassificationStatus.PENDING_REVIEW`.
+Caught only by live-testing against the real migrated dev DB — the test suite
+is built via `Base.metadata.create_all()`, which regenerates these enum types
+fresh from the ORM and is therefore always self-consistent, so it can never
+catch this class of drift between the ORM's assumption and a hand-written
+migration's actual DDL. Fixed (Sprint 5,
+`alembic/versions/3a5b36bdd37a_fix_enum_label_case.py`, non-destructive
+`ALTER TYPE … RENAME VALUE`) along with the same bug on the (unused)
+`system_lifecycle_stage` type. **Before adding the next hand-written enum
+value, verify its label case against `pg_enum` directly — don't assume.**
 
 ### 2.9 Evidence-link uniqueness
 One evidence item links to a given assessment item at most once — a plain,
@@ -217,12 +240,19 @@ subquery, neither of which the item_id-leading composite can serve).
 ## 4. Async seam (don't build now, don't paint yourself in)
 
 The lifecycle state machine should be callable by a background worker, not only
-inline in a request. Keep each transition a discrete function
-`apply_transition(use_case, event) -> new_state` with no inline side-effects
-beyond writing `LifecycleTransition` + `AuditEvent`. For the MVP you can call it
-synchronously; later, an SQS-driven worker calls the same function. This keeps
-IXN-2/IXN-5 (background orchestration, async sub-flows) a small change, not a
-rewrite.
+inline in a request. Built (Sprint 5) as `apply_transition(db, use_case, event,
+to_state, actor_user_id, reason, *, held_reason=None)` — a discrete function
+with no side-effects beyond writing `LifecycleTransition` + `AuditEvent`,
+exactly as planned here. The approval fan-out (`set_vendor_approval`/
+`set_product_approval` → `fan_out_vendor_approval`/`fan_out_product_approval`)
+is the seam's first real exercise: each affected use case is re-evaluated in
+its **own** short-lived session (opened, RLS tenant-context set, committed,
+closed — `app/services/lifecycle_service.py::_fan_out`), inline-looped today.
+Swapping the loop for an SQS-driven worker later is a small change, not a
+rewrite, because the per-use-case unit of work is already isolated exactly
+that way. One gotcha the inline version had to learn the hard way: a session
+that commits mid-request loses its `SET LOCAL app.current_tenant` — re-set it
+after every such commit, fan-out included (STATE.md inv 27).
 
 ---
 
@@ -246,9 +276,12 @@ list exists for the *order and rationale*, not as a live tracker.**
    controls, and now evidence (see 8 below); tier-scoped section templates;
    FRIA/DPIA/MODEL_RISK feeders that pre-fill from the register and surface
    into the AIIA by read-time reference, not copy.
-6. ⬜ **Lifecycle state machine + cascading gates** (vendor → product → intake
-   → assessment → treatment → authorisation) and the status surface. Models
-   exist (`LifecycleState`, `LifecycleTransition`); no transition logic yet.
+6. ✅ **Lifecycle state machine + cascading gates** (vendor → product → intake
+   → assessment → treatment, ceiling at `pending_authorisation`) and the
+   status/rollup surface. `apply_transition`/`advance_use_case`/`full_vector`/
+   `re_evaluate`, five gate predicates, the manual re-evaluate lever, system/
+   portfolio rollup. The authorisation gate itself (`pending_authorisation →
+   authorised`) is Sprint 6.
 7. ✅ **Catalogue** (vendor/product/fact/risk) + product-driven prefill
    (display-only; tenant confirm/amend not yet wired).
 8. ✅ **Evidence → S3** (versioned + hashed): proxied upload (hash-then-put
@@ -260,8 +293,10 @@ list exists for the *order and rationale*, not as a live tracker.**
 9. ⬜ **Export / audit pack (EXP-1)**. Not started; the evidence presigned-
    download primitive is its eventual consumer (and the feeder design
    reserves the seam for feeder-private sections).
-10. ⬜ **Approvals rollup** (VendorApproval/ProductApproval) + inheritance.
-    Models exist; no service/router code.
+10. ✅ **Approvals + inheritance** (VendorApproval/ProductApproval). Set/update
+    endpoints (`authoriser`-gated), gate reads (auto-pass with no catalogue
+    link — that *is* inheritance, no separate code), and the per-use-case
+    fan-out on every approval change.
 11. ⬜ **AI-assist** (suggest relevance, draft, freshness) — still last, on top
     of the now-working base, always human-confirmed. `AssessmentItem
     .ai_suggested_text` is the reserved seam; today's `AI_SUGGESTED` items

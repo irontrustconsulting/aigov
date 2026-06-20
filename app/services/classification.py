@@ -44,6 +44,7 @@ from app.models.taxonomy import (
     ProductCategoryEUMapping,
     ProductCategoryMembership,
 )
+from app.services.lifecycle_service import advance_use_case
 
 # Ordered from highest to lowest — used when multiple primary mappings resolve.
 _TIER_ORDER: list[EUAIActTier] = [
@@ -246,5 +247,10 @@ def snapshot_classification(
         entity_id=classification.id,
         detail=detail,
     ))
+
+    # Sprint 5 WI-5: drives intake + the prohibited halt off this snapshot
+    # becoming current. In-session, pre-commit — atomic with this write
+    # (design doc §4.3, STATE_MACHINE.md inv 4).
+    advance_use_case(db, use_case, actor_user_id)
 
     return classification

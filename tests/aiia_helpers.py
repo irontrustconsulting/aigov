@@ -20,6 +20,7 @@ from app.main import app
 from app.models.assessment import AssessmentSectionTemplate, Classification
 from app.models.base import (
     AssessmentType,
+    ClassificationStatus,
     EUAIActTier,
     RiskLayer,
     RiskSource,
@@ -142,11 +143,19 @@ def _make_classification(
     db: Session, tenant: Tenant, use_case: UseCase, tier: EUAIActTier,
     version: int = 1,
 ) -> Classification:
+    """Ratified classification: stamps use_case.eu_tier the same way
+    snapshot_classification/sign_off_classification do in production
+    (Sprint 5 WI-4 — create_aiia/classification_readiness read eu_tier, not
+    the snapshot's tier, for assessable-readiness). Tests specifically
+    simulating an *unsigned* context classification should stamp the
+    Classification row directly instead of going through this helper."""
     c = Classification(
         id=uuid.uuid4(), tenant_id=tenant.id, use_case_id=use_case.id,
         tier=tier, rationale="test rationale", version=version, is_current=True,
+        status=ClassificationStatus.APPROVED,
     )
     db.add(c)
+    use_case.eu_tier = tier
     db.flush()
     return c
 

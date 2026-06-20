@@ -19,6 +19,7 @@ from app.routers.v1 import (
     classification_context,
     evidence,
     governance_roles,
+    lifecycle,
     members,
     reference,
     systems,
@@ -45,6 +46,9 @@ app.include_router(members.router, prefix="/v1")
 app.include_router(classification_context.router, prefix="/v1")
 app.include_router(assessments.router, prefix="/v1")
 app.include_router(evidence.router, prefix="/v1")
+app.include_router(lifecycle.router, prefix="/v1")
+app.include_router(lifecycle.approvals_router, prefix="/v1")
+app.include_router(lifecycle.rollup_router, prefix="/v1")
 app.include_router(platform_whoami.router, prefix="/platform")
 app.include_router(platform_tenants.router, prefix="/platform")
 

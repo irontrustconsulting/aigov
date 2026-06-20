@@ -41,6 +41,13 @@ ignore = ["B008"]  # FastAPI Depends() in function defaults is the canonical pat
 # ruff's pyflakes can't see fixture injection and flags it as a redefinition.
 "tests/test_aiia.py" = ["F811"]
 "tests/test_aiia_feeders.py" = ["F811"]
+"tests/test_lifecycle_service.py" = ["F811"]
+"tests/test_lifecycle_gates.py" = ["F811"]
+"tests/test_lifecycle_advance.py" = ["F811"]
+"tests/test_lifecycle_endpoints.py" = ["F811"]
+"tests/test_lifecycle_approvals.py" = ["F811"]
+"tests/test_lifecycle_rollup.py" = ["F811"]
+"tests/test_lifecycle_treatment.py" = ["F811"]
 
 [build-system]
 requires = ["setuptools>=68"]
