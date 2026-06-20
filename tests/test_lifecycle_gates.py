@@ -11,22 +11,28 @@ from sqlalchemy.orm import Session
 
 from app.models.base import (
     ApprovalStatus,
+    AssessmentStatus,
     AssessmentType,
     ClassificationStatus,
     EUAIActTier,
     ProvenanceConfidence,
 )
 from app.services.lifecycle_gates import (
+    assessment_approved,
     assessment_gate,
+    authorisation_gate,
     classification_readiness,
     product_gate,
+    structural_assessment_readiness,
     vendor_gate,
 )
 from tests.lifecycle_helpers import (  # noqa: F401
     _make_aiia,
+    _make_ato,
     _make_classification,
     _make_feeder,
     _make_item,
+    _make_member,
     _make_operator_role,
     _make_product,
     _make_product_approval,
@@ -248,11 +254,14 @@ class TestClassificationReadiness:
         assert result.reason_code == "tier_ratified"
 
 
-class TestAssessmentGate:
+class TestStructuralAssessmentReadiness:
+    """The structural-only term (Sprint 6a WI-2 extraction) — exactly the
+    behaviour assessment_gate had before the reviewer-approval AND-term."""
+
     def test_no_aiia_parks(self, db_session: Session, tenant):
         system = _make_system(db_session, tenant)
         use_case = _make_use_case(db_session, tenant, system)
-        result = assessment_gate(use_case, db_session)
+        result = structural_assessment_readiness(use_case, db_session)
         assert result.verdict == "park"
         assert result.reason_code == "no_aiia"
 
@@ -261,7 +270,7 @@ class TestAssessmentGate:
         system = _make_system(db_session, tenant, operator_role_id=deployer.id)
         use_case = _make_use_case(db_session, tenant, system)
         _make_aiia(db_session, tenant, use_case, EUAIActTier.HIGH)
-        result = assessment_gate(use_case, db_session)
+        result = structural_assessment_readiness(use_case, db_session)
         assert result.verdict == "park"
         assert result.reason_code == "required_feeder_missing"
         assert "fria" in result.reason.lower()
@@ -280,7 +289,7 @@ class TestAssessmentGate:
             aiia,
             provenance=ProvenanceConfidence.AI_SUGGESTED,
         )
-        result = assessment_gate(use_case, db_session)
+        result = structural_assessment_readiness(use_case, db_session)
         assert result.verdict == "park"
         assert result.reason_code == "undispositioned_proposed_risk"
 
@@ -298,7 +307,7 @@ class TestAssessmentGate:
             aiia,
             provenance=ProvenanceConfidence.USER_CONFIRMED,
         )
-        result = assessment_gate(use_case, db_session)
+        result = structural_assessment_readiness(use_case, db_session)
         assert result.verdict == "advance"
         assert result.reason_code == "assessment_structurally_complete"
 
@@ -308,5 +317,119 @@ class TestAssessmentGate:
         use_case = _make_use_case(db_session, tenant, system)
         aiia = _make_aiia(db_session, tenant, use_case, EUAIActTier.HIGH)
         _make_feeder(db_session, tenant, aiia, AssessmentType.FRIA)
+        result = structural_assessment_readiness(use_case, db_session)
+        assert result.verdict == "advance"
+
+
+class TestAssessmentApproved:
+    def test_aiia_draft_parks(self, db_session: Session, tenant):
+        system = _make_system(db_session, tenant)
+        use_case = _make_use_case(db_session, tenant, system)
+        _make_aiia(db_session, tenant, use_case, EUAIActTier.LIMITED)
+        result = assessment_approved(use_case, db_session)
+        assert result.verdict == "park"
+        assert result.reason_code == "assessment_not_approved"
+        assert result.responsible_party == "reviewer"
+
+    def test_aiia_approved_advances(self, db_session: Session, tenant):
+        system = _make_system(db_session, tenant)
+        use_case = _make_use_case(db_session, tenant, system)
+        aiia = _make_aiia(db_session, tenant, use_case, EUAIActTier.LIMITED)
+        aiia.status = AssessmentStatus.APPROVED
+        db_session.flush()
+        result = assessment_approved(use_case, db_session)
+        assert result.verdict == "advance"
+        assert result.reason_code == "assessment_approved"
+
+
+class TestAssessmentGate:
+    """assessment_gate = structural_assessment_readiness() AND
+    assessment_approved() (Sprint 6a, design doc §6.1, D5)."""
+
+    def test_no_aiia_parks(self, db_session: Session, tenant):
+        system = _make_system(db_session, tenant)
+        use_case = _make_use_case(db_session, tenant, system)
+        result = assessment_gate(use_case, db_session)
+        assert result.verdict == "park"
+        assert result.reason_code == "no_aiia"
+
+    def test_structurally_complete_but_not_approved_blocks(
+        self, db_session: Session, tenant
+    ):
+        system = _make_system(db_session, tenant)
+        use_case = _make_use_case(db_session, tenant, system)
+        aiia = _make_aiia(db_session, tenant, use_case, EUAIActTier.LIMITED)
+        _make_item(
+            db_session,
+            tenant,
+            aiia,
+            provenance=ProvenanceConfidence.USER_CONFIRMED,
+        )
+        result = assessment_gate(use_case, db_session)
+        assert result.verdict == "park"
+        assert result.reason_code == "assessment_not_approved"
+
+    def test_structurally_complete_and_approved_advances(
+        self, db_session: Session, tenant
+    ):
+        deployer = _make_operator_role(db_session, "deployer")
+        system = _make_system(db_session, tenant, operator_role_id=deployer.id)
+        use_case = _make_use_case(db_session, tenant, system)
+        aiia = _make_aiia(db_session, tenant, use_case, EUAIActTier.HIGH)
+        _make_feeder(db_session, tenant, aiia, AssessmentType.FRIA)
+        aiia.status = AssessmentStatus.APPROVED
+        db_session.flush()
         result = assessment_gate(use_case, db_session)
         assert result.verdict == "advance"
+
+
+class TestAuthorisationGate:
+    """assessment_approved() AND a cycle-matched DeploymentAuthorisation
+    (Sprint 6b, design doc §6.1, D11) — existence alone is not sufficient."""
+
+    def test_not_approved_parks(self, db_session: Session, tenant):
+        system = _make_system(db_session, tenant)
+        use_case = _make_use_case(db_session, tenant, system)
+        _make_aiia(db_session, tenant, use_case, EUAIActTier.LIMITED)
+        result = authorisation_gate(use_case, db_session)
+        assert result.verdict == "park"
+        assert result.reason_code == "assessment_not_approved"
+
+    def test_approved_no_ato_parks(self, db_session: Session, tenant):
+        system = _make_system(db_session, tenant)
+        use_case = _make_use_case(db_session, tenant, system)
+        aiia = _make_aiia(db_session, tenant, use_case, EUAIActTier.LIMITED)
+        aiia.status = AssessmentStatus.APPROVED
+        db_session.flush()
+        result = authorisation_gate(use_case, db_session)
+        assert result.verdict == "park"
+        assert result.reason_code == "no_current_authorisation"
+
+    def test_round_mismatched_ato_parks(self, db_session: Session, tenant):
+        system = _make_system(db_session, tenant)
+        use_case = _make_use_case(db_session, tenant, system)
+        aiia = _make_aiia(db_session, tenant, use_case, EUAIActTier.LIMITED)
+        aiia.status = AssessmentStatus.APPROVED
+        aiia.submission_round = 2
+        db_session.flush()
+        authoriser, _m = _make_member(db_session, tenant)
+        # Stale ATO from a prior cycle — existence alone must not pass.
+        _make_ato(db_session, tenant, use_case, aiia, authoriser, submission_round=1)
+
+        result = authorisation_gate(use_case, db_session)
+        assert result.verdict == "park"
+        assert result.reason_code == "no_current_authorisation"
+
+    def test_round_matched_ato_advances(self, db_session: Session, tenant):
+        system = _make_system(db_session, tenant)
+        use_case = _make_use_case(db_session, tenant, system)
+        aiia = _make_aiia(db_session, tenant, use_case, EUAIActTier.LIMITED)
+        aiia.status = AssessmentStatus.APPROVED
+        aiia.submission_round = 2
+        db_session.flush()
+        authoriser, _m = _make_member(db_session, tenant)
+        _make_ato(db_session, tenant, use_case, aiia, authoriser, submission_round=2)
+
+        result = authorisation_gate(use_case, db_session)
+        assert result.verdict == "advance"
+        assert result.reason_code == "authorised_for_current_cycle"

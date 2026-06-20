@@ -26,7 +26,7 @@ from typing import List
 
 from sqlalchemy import (
     String, Text, ForeignKey, Enum as SAEnum, Boolean, Integer, DateTime,
-    UniqueConstraint,
+    UniqueConstraint, func,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -35,7 +35,8 @@ from datetime import datetime
 from .base import (
     Base, TimestampMixin, uuid_pk,
     EUAIActTier, AssessmentType, AssessmentStatus, ProvenanceConfidence,
-    CoverageStatus, ClassificationStatus, SectionApplicability, TreatmentDecision,
+    CoverageStatus, ClassificationStatus, ReviewDecision, SectionApplicability,
+    TreatmentDecision,
 )
 
 
@@ -134,6 +135,15 @@ class Assessment(Base, TimestampMixin):
         PGUUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
     )
 
+    # Review/sign-off workflow (Sprint 6a, design doc §3.1). submission_round
+    # is load-bearing: it's the cycle key the authorisation gate matches
+    # against (Sprint 6b, design doc §6.1/D11) — increments on each submit.
+    submitted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("app_user.id", ondelete="RESTRICT")
+    )
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    submission_round: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
     use_case: Mapped["UseCase"] = relationship(back_populates="assessments")
     # passive_deletes=True: trust the FK's ON DELETE CASCADE rather than
     # having the ORM null out children's parent_aiia_id on parent delete —
@@ -145,6 +155,39 @@ class Assessment(Base, TimestampMixin):
     )
     items: Mapped[List["AssessmentItem"]] = relationship(
         back_populates="assessment", cascade="all, delete-orphan"
+    )
+
+
+class AssessmentReview(Base):
+    """A reviewer's decision on a submitted AIIA (Sprint 6a, design doc §3.2).
+    Plain Base, not TimestampMixin: rows are never mutated after insert
+    (review thread is first-class export evidence, D2) — only created_at is
+    meaningful, mirroring AuditEvent's append-only shape. The CHECK enforcing
+    a non-null note on CHANGES_REQUESTED is hand-written in the migration."""
+    __tablename__ = "assessment_review"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("tenant.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    # RESTRICT: the D12 pristine guard prevents deleting an assessment that
+    # has review rows, so this FK never fires from a legitimate path.
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("assessment.id", ondelete="RESTRICT"),
+        nullable=False, index=True,
+    )
+    reviewer_user_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("app_user.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    decision: Mapped[ReviewDecision] = mapped_column(
+        SAEnum(ReviewDecision, name="review_decision"), nullable=False,
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    submission_round: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False,
     )
 
 

@@ -1,4 +1,5 @@
-"""Schemas for the lifecycle status/re-evaluate surface (Sprint 5, WI-6)."""
+"""Schemas for the lifecycle status/re-evaluate surface (Sprint 5, WI-6) and
+the deployment authorisation / ATO surface (Sprint 6b)."""
 
 from __future__ import annotations
 
@@ -81,3 +82,26 @@ class SystemRollupRead(BaseModel):
     use_case_count: int
     highest_tier: EUAIActTier | None
     use_cases: list[UseCaseRollupEntry]
+
+
+class AuthoriseRequest(BaseModel):
+    residual_risk_statement: str
+
+
+class DeploymentAuthorisationRead(BaseModel):
+    """The ATO plus a computed live_state (design doc §5/NB4, inv 32) — the
+    row is a point-in-time fact; deployment authority is the live vector.
+    "An ATO exists" must never be read as "currently authorised"."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    use_case_id: uuid.UUID
+    assessment_id: uuid.UUID
+    submission_round: int
+    tier: str
+    assessment_version: int
+    authorised_by_name: str | None
+    authorised_by_email: str | None
+    authorised_at: datetime
+    residual_risk_statement: str
+    live_state: str

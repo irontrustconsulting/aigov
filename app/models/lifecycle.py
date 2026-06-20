@@ -121,3 +121,53 @@ class LifecycleTransition(Base):
     # If a background worker drove it (IXN-2/5) vs a user action.
     triggered_by: Mapped[str | None] = mapped_column(String(60))
     use_case: Mapped["UseCase"] = relationship(back_populates="transitions")
+
+
+class DeploymentAuthorisation(Base):
+    """The ATO — the authoriser's residual-risk acceptance + grant of
+    deployment authorisation (Sprint 6b, design doc §3.3). Point-in-time
+    record of record: never mutated/deleted; re-authorisation writes a new
+    row. Multiple rows may exist per use case (one per authorised cycle);
+    `authorisation_gate` keys off the current-cycle match via
+    `submission_round` (D11), not existence alone."""
+    __tablename__ = "deployment_authorisation"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("tenant.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    use_case_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("use_case.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    # RESTRICT: the pristine-delete guard (WI-5) prevents deleting an
+    # assessment that has an ATO row, so this FK never fires from a
+    # legitimate path — same shape as AssessmentReview (6a).
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("assessment.id", ondelete="RESTRICT"),
+        nullable=False, index=True,
+    )
+    # The cycle key (D11): = the assessment's submission_round at authorise
+    # time. authorisation_gate requires ATO.submission_round ==
+    # Assessment.submission_round — existence alone is not sufficient.
+    submission_round: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Snapshot-as-text, not the EUAIActTier enum FK (CLAUDE §6 snapshot
+    # convention) — decouples the historical record from the live enum type.
+    tier: Mapped[str] = mapped_column(String(40), nullable=False)
+    # Point-in-time record only — not the cycle key (versioning deferred;
+    # Assessment.version doesn't move on re-approval in MVP).
+    assessment_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    authorised_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("app_user.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    # Durable attribution (D13) — survives later anonymisation of the user,
+    # since the ATO is export-grade.
+    authorised_by_name: Mapped[str | None] = mapped_column(String(255))
+    authorised_by_email: Mapped[str | None] = mapped_column(String(320))
+    authorised_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False,
+    )
+    # The authoriser's residual-risk acceptance (D3) — never the reviewer's.
+    residual_risk_statement: Mapped[str] = mapped_column(Text, nullable=False)

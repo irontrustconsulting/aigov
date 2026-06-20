@@ -26,7 +26,10 @@ from sqlalchemy.orm import Session
 
 from app.auth.context import TenantContext, get_tenant_db, require_governance_role
 from app.models.domain import CatalogueProduct, CatalogueVendor, System, UseCase
+from app.models.lifecycle import DeploymentAuthorisation
 from app.schemas.lifecycle import (
+    AuthoriseRequest,
+    DeploymentAuthorisationRead,
     GateResultRead,
     ProductApprovalCreate,
     ProductApprovalRead,
@@ -35,6 +38,7 @@ from app.schemas.lifecycle import (
     VendorApprovalCreate,
     VendorApprovalRead,
 )
+from app.services.authorisation_service import authorise_use_case
 from app.services.lifecycle_service import (
     fan_out_product_approval,
     fan_out_vendor_approval,
@@ -121,6 +125,68 @@ def post_re_evaluate(
     use_case = _get_use_case(use_case_id, ctx, db)
     re_evaluate(db, use_case, ctx.user_id)
     return _lifecycle_read(use_case, db)
+
+
+def _authorisation_read(
+    ato: DeploymentAuthorisation, use_case: UseCase,
+) -> DeploymentAuthorisationRead:
+    return DeploymentAuthorisationRead(
+        id=ato.id,
+        use_case_id=ato.use_case_id,
+        assessment_id=ato.assessment_id,
+        submission_round=ato.submission_round,
+        tier=ato.tier,
+        assessment_version=ato.assessment_version,
+        authorised_by_name=ato.authorised_by_name,
+        authorised_by_email=ato.authorised_by_email,
+        authorised_at=ato.authorised_at,
+        residual_risk_statement=ato.residual_risk_statement,
+        live_state=use_case.state.value,
+    )
+
+
+@router.post("/{use_case_id}/authorise", response_model=DeploymentAuthorisationRead)
+def post_authorise(
+    use_case_id: uuid.UUID,
+    payload: AuthoriseRequest,
+    ctx: TenantContext = Depends(require_governance_role("authoriser")),
+    db: Session = Depends(get_tenant_db),
+) -> DeploymentAuthorisationRead:
+    """The authoriser's act (design doc §4.2): recomputes the vector,
+    act-SoD against the AIIA's approver/submitter, writes a cycle-stamped
+    ATO, and transitions the use case into authorised."""
+    ato = authorise_use_case(
+        use_case_id, payload.residual_risk_statement, ctx, db,
+    )
+    use_case = _get_use_case(use_case_id, ctx, db)
+    return _authorisation_read(ato, use_case)
+
+
+@router.get("/{use_case_id}/authorisation", response_model=DeploymentAuthorisationRead)
+def get_authorisation(
+    use_case_id: uuid.UUID,
+    ctx: TenantContext = Depends(require_governance_role(*_ALL_GOVERNANCE_ROLES)),
+    db: Session = Depends(get_tenant_db),
+) -> DeploymentAuthorisationRead:
+    """Returns the most recent ATO plus a computed live_state (design doc
+    §5/NB4, inv 32) — an ATO's existence is never read as "currently
+    authorised"; live_state reflects the current vector/state, e.g. `held`
+    after a regression while the ATO row itself persists unchanged."""
+    use_case = _get_use_case(use_case_id, ctx, db)
+    ato = db.scalar(
+        select(DeploymentAuthorisation)
+        .where(
+            DeploymentAuthorisation.use_case_id == use_case_id,
+            DeploymentAuthorisation.tenant_id == ctx.tenant_id,
+        )
+        .order_by(DeploymentAuthorisation.authorised_at.desc())
+        .limit(1)
+    )
+    if ato is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail="Use case has never been authorised",
+        )
+    return _authorisation_read(ato, use_case)
 
 
 @approvals_router.put(

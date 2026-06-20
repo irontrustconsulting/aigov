@@ -46,6 +46,7 @@ from app.models.governance import GovernanceRole, GovernanceRoleAssignment
 from app.models.identity import Membership, Tenant, User
 from app.models.intake import EUOperatorRole
 from app.models.knowledge import Control, Risk
+from app.models.lifecycle import DeploymentAuthorisation
 
 
 @pytest.fixture
@@ -258,6 +259,33 @@ def _make_aiia(
     db.add(a)
     db.flush()
     return a
+
+
+def _make_ato(
+    db: Session,
+    tenant: Tenant,
+    use_case: UseCase,
+    assessment: Assessment,
+    authoriser: User,
+    *,
+    submission_round: int,
+) -> DeploymentAuthorisation:
+    ato = DeploymentAuthorisation(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        use_case_id=use_case.id,
+        assessment_id=assessment.id,
+        submission_round=submission_round,
+        tier=use_case.eu_tier.value,
+        assessment_version=assessment.version,
+        authorised_by_user_id=authoriser.id,
+        authorised_by_name=authoriser.display_name,
+        authorised_by_email=authoriser.email,
+        residual_risk_statement="Accepted for test.",
+    )
+    db.add(ato)
+    db.flush()
+    return ato
 
 
 def _make_feeder(

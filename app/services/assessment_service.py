@@ -28,10 +28,12 @@ from app.models.assessment import (
     AssessmentItem,
     AssessmentItemControl,
     AssessmentItemEvidence,
+    AssessmentReview,
     AssessmentSectionTemplate,
     Classification,
 )
 from app.models.base import (
+    AssessmentStatus,
     AssessmentType,
     CoverageStatus,
     EUAIActTier,
@@ -51,7 +53,7 @@ from app.models.intake import (
     UsageContext,
 )
 from app.models.knowledge import Control, Risk
-from app.models.lifecycle import AuditEvent, Evidence
+from app.models.lifecycle import AuditEvent, DeploymentAuthorisation, Evidence
 from app.schemas.assessment import (
     AssessmentItemAmend,
     AssessmentItemRead,
@@ -162,6 +164,23 @@ def _load_item(item_id: uuid.UUID, ctx: TenantContext, db: Session) -> Assessmen
             detail="Assessment item not found",
         )
     return item
+
+
+def _assert_authoring_unlocked(assessment_id: uuid.UUID, db: Session) -> None:
+    """Item/feeder-item writes are status-locked while the parent AIIA is
+    under review or approved (Sprint 6a inv 31, design doc §4.3). A feeder's
+    own status stays DRAFT throughout — the lock must reach feeder items by
+    resolving the AIIA they surface into via parent_aiia_id, since that's
+    the assessment actually under review."""
+    assessment = db.get(Assessment, assessment_id)
+    aiia = assessment
+    if assessment.parent_aiia_id is not None:
+        aiia = db.get(Assessment, assessment.parent_aiia_id)
+    if aiia.status in (AssessmentStatus.IN_REVIEW, AssessmentStatus.APPROVED):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="Assessment is under review or approved; authoring is locked",
+        )
 
 
 def _resolve_label(db: Session, model, id_: uuid.UUID | None) -> str | None:
@@ -951,6 +970,7 @@ def create_item_from_section(
     db: Session,
 ) -> AssessmentItem:
     assessment = load_assessment(assessment_id, ctx, db)
+    _assert_authoring_unlocked(assessment.id, db)
     tmpl = db.scalar(
         select(AssessmentSectionTemplate).where(
             AssessmentSectionTemplate.type == assessment.type,
@@ -1005,6 +1025,7 @@ def amend_item(
     db: Session,
 ) -> AssessmentItem:
     item = _load_item(item_id, ctx, db)
+    _assert_authoring_unlocked(item.assessment_id, db)
 
     changes: dict[str, tuple[object, object]] = {}
     for field in _AUTHORING_FIELDS:
@@ -1108,6 +1129,7 @@ def confirm_item(
     db: Session,
 ) -> AssessmentItem:
     item = _load_item(item_id, ctx, db)
+    _assert_authoring_unlocked(item.assessment_id, db)
 
     result = db.execute(
         update(AssessmentItem)
@@ -1180,6 +1202,32 @@ def delete_item(item_id: uuid.UUID, ctx: TenantContext, db: Session) -> None:
 
 
 def _is_pristine(assessment: Assessment, db: Session) -> bool:
+    # Status-and-history-aware (Sprint 6a inv 36, design doc §4.5/D12): an
+    # assessment that has ever entered the review workflow is never
+    # pristine-deletable, regardless of whether its items happen to carry
+    # worked content — closes the all-blank-but-approved edge the item-only
+    # checks below can't see.
+    if assessment.status != AssessmentStatus.DRAFT:
+        return False
+    reviewed = db.scalar(
+        select(AssessmentReview.id)
+        .where(AssessmentReview.assessment_id == assessment.id)
+        .limit(1)
+    )
+    if reviewed is not None:
+        return False
+    # Sprint 6b inv 36 extension: an ATO referencing this assessment also
+    # blocks delete, independent of the AssessmentReview check above (an
+    # explicit per-table guarantee, not a reliance on review always
+    # preceding authorisation staying true forever).
+    authorised = db.scalar(
+        select(DeploymentAuthorisation.id)
+        .where(DeploymentAuthorisation.assessment_id == assessment.id)
+        .limit(1)
+    )
+    if authorised is not None:
+        return False
+
     # "Worked" = a human acted on the item: confirmed/amended a proposed
     # risk, or answered a curated section prompt. System-snapshotted
     # register facts are also USER_PROVIDED but carry a source_ref and are
@@ -1267,6 +1315,7 @@ def create_control_link(
     db: Session,
 ) -> AssessmentItemControl:
     item = _load_item(item_id, ctx, db)
+    _assert_authoring_unlocked(item.assessment_id, db)
     control = db.get(Control, control_id)
     if control is None:
         raise HTTPException(
@@ -1343,6 +1392,7 @@ def create_evidence_link(
     db: Session,
 ) -> AssessmentItemEvidence:
     item = _load_item(item_id, ctx, db)
+    _assert_authoring_unlocked(item.assessment_id, db)
     # Disposition gate: deliberate asymmetry with control-links (design §5) --
     # evidence is substantiation, so it belongs behind the same authoring
     # gate as confirm/amend, not left open on a still-proposed item.

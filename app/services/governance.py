@@ -1,10 +1,22 @@
 """
 Governance role service: SoD enforcement and audit helpers.
 
-assert_governance_assignable is the SINGLE locus of SoD logic. Every code path
-that assigns a governance role calls this function. Object-scope extension later
-means adding a nullable scope_id parameter here and filtering current assignments
-by it; application code outside this module never reasons about SoD directly.
+Two distinct, sanctioned SoD loci (Sprint 6a, design doc §8.1, STATE inv 7
+revised) — never a third, inline conflict check elsewhere:
+
+  assert_governance_assignable  - ASSIGNMENT-time SoD: may this membership
+                                   hold this governance role, given roles it
+                                   already holds? Keyed on membership_id.
+  assert_distinct_workflow_actor - ACT-time SoD: did one person perform two
+                                   roles in the same workflow (e.g. review
+                                   their own submission)? Keyed on user_id —
+                                   distinct from assignment SoD because it
+                                   binds who did what to a specific object,
+                                   not what roles a membership holds.
+
+Object-scope extension later means adding a nullable scope_id parameter to
+assert_governance_assignable and filtering current assignments by it;
+application code outside this module never reasons about SoD directly.
 """
 
 from __future__ import annotations
@@ -79,6 +91,27 @@ def assert_governance_assignable(
                     f"'{held_role.key}'"
                 ),
             )
+
+
+def assert_distinct_workflow_actor(
+    *,
+    actor_user_id: uuid.UUID,
+    excluded_user_ids: set[uuid.UUID | None],
+    action: str,
+) -> None:
+    """Raise 409 if actor_user_id already performed an excluded prior act on
+    this object (Sprint 6a, design doc §4.4, D4): reviewer != submitted_by;
+    authoriser not in {approved_by, submitted_by} (Sprint 6b). None entries
+    in excluded_user_ids (no prior actor stamped yet) never match.
+    """
+    if actor_user_id in excluded_user_ids:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail=(
+                f"Separation of duties: the same person cannot both submit "
+                f"and {action} this assessment"
+            ),
+        )
 
 
 def record_governance_event(

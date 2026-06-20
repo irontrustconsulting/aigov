@@ -24,6 +24,7 @@ from app.models.assessment import (
 )
 from app.models.base import (
     ApprovalStatus,
+    AssessmentStatus,
     AssessmentType,
     ClassificationStatus,
     EUAIActTier,
@@ -32,6 +33,7 @@ from app.models.base import (
     TreatmentDecision,
 )
 from app.models.domain import ProductApproval, System, UseCase, VendorApproval
+from app.models.lifecycle import DeploymentAuthorisation
 
 _DISPOSITIONED = (
     ProvenanceConfidence.USER_CONFIRMED,
@@ -170,8 +172,11 @@ def classification_readiness(use_case: UseCase, db: Session) -> GateResult:
     )
 
 
-def assessment_gate(use_case: UseCase, db: Session) -> GateResult:
-    """Structural only (design doc §5.3) — reviewer sign-off is Sprint 6.
+def structural_assessment_readiness(use_case: UseCase, db: Session) -> GateResult:
+    """Structural completeness only (design doc §5.3, extracted Sprint 6a
+    WI-2): AIIA exists, required feeders present, no still-AI_SUGGESTED item.
+    The single locus for this check — shared by assessment_gate and
+    create_aiia's submit-readiness pre-check (Sprint 6a design doc §4.1 D5).
 
     Deferred import: assessment_service imports classification_readiness
     from this module (WI-4), so a top-level import the other way would be
@@ -238,6 +243,43 @@ def assessment_gate(use_case: UseCase, db: Session) -> GateResult:
     )
 
 
+def assessment_approved(use_case: UseCase, db: Session) -> GateResult:
+    """The reviewer sign-off term (Sprint 6a, design doc §6.1) — a human-act
+    gate, never auto-satisfied. Reads the current AIIA's status directly;
+    structural_assessment_readiness already established that one exists."""
+    aiia = db.scalar(
+        select(Assessment).where(
+            Assessment.use_case_id == use_case.id,
+            Assessment.tenant_id == use_case.tenant_id,
+            Assessment.type == AssessmentType.AIIA,
+            Assessment.parent_aiia_id.is_(None),
+        )
+    )
+    if aiia is None or aiia.status != AssessmentStatus.APPROVED:
+        return GateResult(
+            "park",
+            "assessment_not_approved",
+            "AIIA has not been reviewed and approved",
+            "reviewer",
+        )
+    return GateResult(
+        "advance",
+        "assessment_approved",
+        "AIIA reviewed and approved",
+        "system",
+    )
+
+
+def assessment_gate(use_case: UseCase, db: Session) -> GateResult:
+    """structural_assessment_readiness() AND assessment_approved() (Sprint 6a
+    design doc §6.1, D5) — single locus for structural readiness, AND-ed with
+    the reviewer's human-act sign-off. First non-advance verdict wins."""
+    structural = structural_assessment_readiness(use_case, db)
+    if structural.verdict != "advance":
+        return structural
+    return assessment_approved(use_case, db)
+
+
 def treatment_gate(use_case: UseCase, db: Session) -> GateResult:
     """Met when every dispositioned risk item (risk_id set, provenance
     USER_CONFIRMED/USER_AMENDED — across the AIIA and any feeders, same
@@ -295,5 +337,47 @@ def treatment_gate(use_case: UseCase, db: Session) -> GateResult:
         "advance",
         "treatment_complete",
         "Every dispositioned risk has a substantiated treatment decision",
+        "system",
+    )
+
+
+def authorisation_gate(use_case: UseCase, db: Session) -> GateResult:
+    """assessment_approved() AND a cycle-matched DeploymentAuthorisation
+    (Sprint 6b, design doc §6.1, D11) — a human-act gate, never auto-
+    satisfied. Existence of an ATO is NOT sufficient: its submission_round
+    must equal the current AIIA's submission_round, or a re-submitted cycle
+    would silently pass off a stale grant (inv 37)."""
+    approved = assessment_approved(use_case, db)
+    if approved.verdict != "advance":
+        return approved
+
+    aiia = db.scalar(
+        select(Assessment).where(
+            Assessment.use_case_id == use_case.id,
+            Assessment.tenant_id == use_case.tenant_id,
+            Assessment.type == AssessmentType.AIIA,
+            Assessment.parent_aiia_id.is_(None),
+        )
+    )
+    matching_ato = db.scalar(
+        select(DeploymentAuthorisation.id)
+        .where(
+            DeploymentAuthorisation.use_case_id == use_case.id,
+            DeploymentAuthorisation.tenant_id == use_case.tenant_id,
+            DeploymentAuthorisation.submission_round == aiia.submission_round,
+        )
+        .limit(1)
+    )
+    if matching_ato is None:
+        return GateResult(
+            "park",
+            "no_current_authorisation",
+            "No deployment authorisation for the current submission cycle",
+            "authoriser",
+        )
+    return GateResult(
+        "advance",
+        "authorised_for_current_cycle",
+        "Deployment authorisation granted for the current submission cycle",
         "system",
     )

@@ -21,7 +21,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, func, ForeignKey
+from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -171,6 +171,12 @@ class ClassificationStatus(str, enum.Enum):
     APPROVED = "approved"
     CHANGES_REQUESTED = "changes_requested"   # reserved for workflow track
     NEEDS_REFRESH = "needs_refresh"            # reserved for workflow track
+
+
+class ReviewDecision(str, enum.Enum):
+    """An AssessmentReview's decision (Sprint 6a, design doc §3.2)."""
+    APPROVED = "approved"
+    CHANGES_REQUESTED = "changes_requested"
 
 
 class TreatmentDecision(str, enum.Enum):

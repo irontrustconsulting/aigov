@@ -35,6 +35,7 @@ from app.schemas.lifecycle import GateResultRead, SystemRollupRead, UseCaseRollu
 from app.services.lifecycle_gates import (
     GateResult,
     assessment_gate,
+    authorisation_gate,
     classification_readiness,
     product_gate,
     treatment_gate,
@@ -58,7 +59,11 @@ _ADVANCE_TABLE: dict[LifecycleState, LifecycleState] = {
 # States a use case can have been auto-advanced through — "already passed an
 # upstream gate" is only meaningful from one of these (handoff §2: "any
 # advanced" -> held). REQUESTED never holds: nothing has passed yet.
-_ADVANCED_STATES = frozenset(_ADVANCE_TABLE.values())
+# AUTHORISED is added explicitly (Sprint 6b) — it is never an
+# _ADVANCE_TABLE value (entry is by human act only, see authorisation_gate
+# wiring in full_vector), but "hold" must still be legal from it so
+# re_evaluate can regress an authorised use case (design doc §6.3, inv 33).
+_ADVANCED_STATES = frozenset(_ADVANCE_TABLE.values()) | {LifecycleState.AUTHORISED}
 
 # event="halt": the prohibited rule fires from any non-terminal state
 # (STATE_MACHINE.md §5.5). HALTED_PROHIBITED itself is terminal — re-halting
@@ -71,6 +76,7 @@ _AUDIT_ACTION_BY_EVENT = {
     "restore": "lifecycle.advanced",
     "hold": "lifecycle.held",
     "halt": "lifecycle.halted_prohibited",
+    "authorise": "lifecycle.authorised",
 }
 
 
@@ -89,6 +95,13 @@ def _is_legal(from_state: LifecycleState, event: str, to_state: LifecycleState) 
         # one of the canonical forward states by construction (STATE_MACHINE
         # §4.1, #13). Only legal starting from HELD.
         return from_state == LifecycleState.HELD and to_state in _ADVANCED_STATES
+    if event == "authorise":
+        # The sole entry point into AUTHORISED (Sprint 6b, D10/inv 35) — never
+        # derived by advance/restore. authorise_use_case is the only caller.
+        return (
+            from_state == LifecycleState.PENDING_AUTHORISATION
+            and to_state == LifecycleState.AUTHORISED
+        )
     return False
 
 
@@ -267,7 +280,12 @@ def advance_use_case(
 # Position of each state in the canonical forward sequence — used to compare
 # a re_evaluate target against the use case's current resting state. HELD
 # and HALTED_PROHIBITED have no rank: they're never compared positionally,
-# only entered/exited via their own dedicated events.
+# only entered/exited via their own dedicated events. AUTHORISED has a rank
+# only so the lookup at the top of re_evaluate doesn't KeyError — it is
+# never reached by the generic rank-comparison branch below, since
+# _target_from_vector can never return AUTHORISED (not a gate-guarded
+# position); re_evaluate special-cases AUTHORISED explicitly instead
+# (Sprint 6b, design doc §6.2/§6.3).
 _RANK: dict[LifecycleState, int] = {
     LifecycleState.REQUESTED: 0,
     LifecycleState.VENDOR_CHECK: 1,
@@ -276,6 +294,7 @@ _RANK: dict[LifecycleState, int] = {
     LifecycleState.UNDER_ASSESSMENT: 4,
     LifecycleState.TREATMENT_PENDING: 5,
     LifecycleState.PENDING_AUTHORISATION: 6,
+    LifecycleState.AUTHORISED: 7,
 }
 
 
@@ -285,10 +304,25 @@ def full_vector(
     """Every positional gate, evaluated independently and in canonical order
     (design doc §7) — the source of truth for "where, why, whose court".
     Persisted state is a cursor; this is recomputed on every consequential
-    read or write, never cached. Pure read: no mutation, no flush."""
+    read or write, never cached. Pure read: no mutation, no flush.
+
+    authorisation_gate (Sprint 6b) is appended after the 5-state loop
+    rather than folded into _GATE_FNS — deliberately. _GATE_FNS also drives
+    advance_use_case's auto-advance walk; if authorisation_gate were keyed
+    into it at PENDING_AUTHORISATION, a cycle-matching ATO would make that
+    walk auto-transition into `authorised` with no human act (exactly the
+    bug D10/inv 35 forbid — see docs/AUTORIZATION.md §6.2). Appending it
+    here, outside _GATE_FNS, means full_vector reports on it for every
+    consumer (status reads, re_evaluate, the rollup) while advance_use_case
+    — which never reads past its 5-entry table — stays structurally unable
+    to reach it.
+    """
     vector: list[tuple[LifecycleState, GateResult]] = []
     for state in _VECTOR_STATES:
         vector.append((state, _GATE_FNS[state](use_case, db)))
+    vector.append(
+        (LifecycleState.PENDING_AUTHORISATION, authorisation_gate(use_case, db))
+    )
     return vector
 
 
@@ -334,6 +368,30 @@ def re_evaluate(db: Session, use_case: UseCase, actor_user_id: uuid.UUID) -> Use
     if use_case.state == LifecycleState.HELD:
         reason = blocking.reason if blocking else "All upstream gates satisfied"
         apply_transition(db, use_case, "restore", target_state, actor_user_id, reason)
+        return use_case
+
+    if use_case.state == LifecycleState.AUTHORISED:
+        # Sprint 6b (design doc §6.2/§6.3, D10, inv 35): special-cased
+        # rather than falling through the generic rank comparison below —
+        # AUTHORISED outranks every _RANK entry the vector can target, so
+        # the generic branch would regress it to held unconditionally, even
+        # when nothing has lapsed. blocking is None iff every vector entry,
+        # INCLUDING authorisation_gate, currently advances (the ATO still
+        # cycle-matches and assessment_approved() still holds) — a no-op in
+        # that case. Otherwise: one direct regression to held, same shape as
+        # the generic regress branch. Never restored back to AUTHORISED by
+        # this function — only authorise_use_case can re-enter it.
+        if blocking is None:
+            return use_case
+        apply_transition(
+            db,
+            use_case,
+            "hold",
+            LifecycleState.HELD,
+            actor_user_id,
+            blocking.reason,
+            held_reason=blocking.reason,
+        )
         return use_case
 
     current_rank = _RANK[use_case.state]

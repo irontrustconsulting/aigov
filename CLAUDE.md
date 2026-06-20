@@ -72,7 +72,7 @@ Every connection type has its own engine + sessionmaker in `app/db/session.py`. 
 
 ### 2.5 Multi-tenancy
 
-Shared DB, row-level security. Every tenant-scoped table carries `tenant_id`; the RLS policy reads `app.current_tenant` (set per-transaction by `get_tenant_db`). **Global/reference tables** (catalogue, controls, risks, taxonomy, governance-role catalogue + conflict matrix) carry no `tenant_id` and are **not** under RLS.
+Shared DB, row-level security. Every tenant-scoped table carries `tenant_id`; the RLS policy reads `app.current_tenant` (set per-transaction by `get_tenant_db`). **Global/reference tables** (catalogue, controls, risks, taxonomy, governance-role catalogue + conflict matrix, assessment section templates) carry no `tenant_id` and are **not** under RLS.
 
 ---
 
@@ -87,24 +87,29 @@ ORM models live in `app/models/`. Full entity map + DB-enforced guarantees: `app
 | `base.py` | `Base`, `uuid_pk()`, `TimestampMixin`, all enums |
 | `identity.py` | `Tenant`, `User`, `Membership` |
 | `domain.py` | `CatalogueVendor`, `CatalogueProduct`, `CatalogueFact`, `CatalogueProductRisk`, `System`, `UseCase`, `VendorApproval`, `ProductApproval` |
-| `assessment.py` | `Classification`, `Assessment`, `AssessmentItem`, `AssessmentItemControl`, `AssessmentItemEvidence` |
+| `assessment.py` | `Classification`, `Assessment`, `AssessmentReview`, `AssessmentItem`, `AssessmentItemControl`, `AssessmentItemEvidence`, `AssessmentSectionTemplate` |
 | `knowledge.py` | `Control`, `ControlFrameworkMap`, `Risk`, `RiskControlMap` |
-| `lifecycle.py` | `Evidence`, `AuditEvent`, `LifecycleTransition` |
+| `lifecycle.py` | `Evidence`, `AuditEvent`, `LifecycleTransition`, `DeploymentAuthorisation` |
 | `taxonomy.py` | `EUAIActCategory`, `EUAIActSubcategory`, `ProductCategory`, `ProductCategoryMembership`, `ProductCategoryEUMapping` |
 | `platform_rbac.py` | `Operator`, `Permission`, `Role`, `RolePermission`, `OperatorRole` |
+
+`AssessmentSectionTemplate` is global reference data (no `tenant_id`, no RLS), keyed `(type, tier, section_key)` — the AIIA/feeder section structure, seeded via `data/seed/aiia_section_template.yaml` + `scripts/seed/seed_aiia_section_template.py`, not a migration (§4 still hand-edits migrations for RLS/grants/partial indexes, but row *content* for reference tables follows the YAML+loader convention — see `scripts/seed/`).
 
 ### 3.2 Code-enforced invariants (must be respected in code)
 
 - **`AuditEvent` is append-only.** INSERT only; the writer holds no UPDATE/DELETE and a Postgres trigger enforces immutability. Never mutate audit rows.
 - **Evidence bytes live in S3.** Postgres holds the pointer (`s3_bucket`, `s3_key`, `s3_version_id`) + `sha256`. Never store file bytes in the DB.
 - **Operator permissions reach operators only through roles.** No direct operator→permission grants. If a one-off is needed, make a role.
-- **Three manually-managed partial unique indexes** — `uq_one_aiia_per_use_case`, `uq_current_classification`, `uq_one_primary_eu_mapping` — are hand-written in migrations and skipped by autogenerate (`alembic/env.py` `include_object`).
+- **Three manually-managed partial unique indexes** — `uq_one_aiia_per_use_case`, `uq_current_classification`, `uq_one_primary_eu_mapping` — are hand-written in migrations and skipped by autogenerate (`alembic/env.py` `include_object`). `uq_feeder_type_per_aiia` (`UNIQUE(parent_aiia_id, type)`) is a plain, non-partial constraint and is *not* in this set — autogenerate handles it natively.
+- **`assessment_item_control` / `assessment_item_evidence` carry `tenant_id` + RLS**, same as every other tenant table — item-first access remains a defense-in-depth norm, not the sole isolation mechanism.
+- **Reference-data FKs from assessment items are `RESTRICT`, not `CASCADE`/`SET NULL`.** `AssessmentItem.risk_id` and `AssessmentItemControl.control_id` block deleting a referenced library risk/control rather than silently orphaning or stripping assessment records — deprecate library entries via a soft-flag instead.
+- **Self-referential cascades need `passive_deletes=True`.** `Assessment.feeders` carries it: without it, SQLAlchemy nulls a loaded child's FK on parent delete instead of trusting the DB's `parent_aiia_id` `ON DELETE CASCADE` — apply the same pattern to any future self-referential relationship meant to defer to a DB-level cascade.
 
 ### 3.3 Enums (from `base.py`)
 
-`Framework`, `EUAIActTier`, `RiskLayer`, `RiskSource`, `ApprovalStatus`, `LifecycleState`, `AssessmentType`, `AssessmentStatus`, `CoverageStatus`, `ProvenanceConfidence`, `UserRole`, `OperatorStatus`.
+`Framework`, `EUAIActTier`, `RiskLayer`, `RiskSource`, `ApprovalStatus`, `LifecycleState`, `AssessmentType`, `AssessmentStatus`, `CoverageStatus`, `ProvenanceConfidence`, `SectionApplicability`, `UserRole`, `OperatorStatus`.
 
-`EUAIActTier` is shared by `UseCase.eu_tier`, `Classification.tier`, and `EUAIActSubcategory.tier` — all the same Postgres type `eu_ai_act_tier`.
+`EUAIActTier` is shared by `UseCase.eu_tier`, `Classification.tier`, `EUAIActSubcategory.tier`, and `AssessmentSectionTemplate.tier` — all the same Postgres type `eu_ai_act_tier`. `AssessmentType` is likewise shared between `Assessment.type` and `AssessmentSectionTemplate.type`.
 
 ---
 
@@ -176,7 +181,7 @@ API `http://localhost:8000`; MinIO console `http://localhost:9001`. Health: `GET
 | Path | What's there |
 |---|---|
 | `docs/PRD.md` | Product requirements (authoritative domain spec) |
-| `docs/SPRINT_*.md` | Sprint hand-offs (current units of work) |
+| `sprints/*.md` | Sprint hand-offs (current units of work) |
 | `app/models/MODELS.md` | Data-model notes + DB-enforced guarantees |
 | `alembic/sql/00_roles.sh` | Creates all DB roles (runs once on volume init) |
 | `data/seed/` | YAML seed files for global reference data |

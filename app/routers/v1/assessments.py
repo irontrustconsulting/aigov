@@ -27,14 +27,17 @@ from app.schemas.assessment import (
     AssessmentItemCreate,
     AssessmentItemRead,
     AssessmentRead,
+    AssessmentReviewCreate,
     ControlLinkCreate,
     ControlLinkRead,
     EvidenceLinkCreate,
     EvidenceLinkRead,
     FeederCreate,
     FeederRecommendationRead,
+    ReviewQueueEntryRead,
     SectionRead,
 )
+from app.services import assessment_review_service as review_svc
 from app.services import assessment_service as svc
 
 router = APIRouter(tags=["assessments"])
@@ -117,6 +120,58 @@ def delete_assessment(
     # loading the row, and a role dependency is the wrong layer to special-
     # case that (CLAUDE.md: role checks are dependencies, not inlined).
     svc.delete_assessment(assessment_id, ctx, db)
+
+
+# ---------------------------------------------------------------------------
+# Review & sign-off (Sprint 6a — sprints/SPRINT_AUTHORIZATION_6A.md)
+# ---------------------------------------------------------------------------
+
+@router.post("/assessments/{assessment_id}/submit", response_model=AssessmentRead)
+def submit_for_review(
+    assessment_id: uuid.UUID,
+    if_match: str = Header(..., alias="If-Match"),
+    ctx: TenantContext = Depends(require_governance_role("system_owner")),
+    db: Session = Depends(get_tenant_db),
+) -> Assessment:
+    return review_svc.submit_for_review(
+        assessment_id, _parse_if_match(if_match), ctx, db,
+    )
+
+
+@router.post("/assessments/{assessment_id}/review", response_model=AssessmentRead)
+def record_review(
+    assessment_id: uuid.UUID,
+    payload: AssessmentReviewCreate,
+    if_match: str = Header(..., alias="If-Match"),
+    ctx: TenantContext = Depends(require_governance_role("reviewer")),
+    db: Session = Depends(get_tenant_db),
+) -> Assessment:
+    return review_svc.record_review(
+        assessment_id,
+        payload.decision,
+        payload.note,
+        _parse_if_match(if_match),
+        ctx,
+        db,
+    )
+
+
+@router.post("/assessments/{assessment_id}/reopen", response_model=AssessmentRead)
+def reopen_assessment(
+    assessment_id: uuid.UUID,
+    if_match: str = Header(..., alias="If-Match"),
+    ctx: TenantContext = Depends(require_governance_role("system_owner")),
+    db: Session = Depends(get_tenant_db),
+) -> Assessment:
+    return review_svc.reopen(assessment_id, _parse_if_match(if_match), ctx, db)
+
+
+@router.get("/assessments/review-queue", response_model=list[ReviewQueueEntryRead])
+def get_review_queue(
+    ctx: TenantContext = Depends(require_governance_role("reviewer")),
+    db: Session = Depends(get_tenant_db),
+) -> list[ReviewQueueEntryRead]:
+    return review_svc.list_review_queue(ctx, db)
 
 
 # ---------------------------------------------------------------------------

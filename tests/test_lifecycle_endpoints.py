@@ -79,7 +79,9 @@ class TestStatusEndpoint:
         assert r.status_code == 200
         body = r.json()
         assert body["state"] == "under_assessment"
-        assert len(body["gates"]) == 5
+        # 6 gates since Sprint 6b: vendor/product/intake/assessment/treatment
+        # /authorisation (authorisation_gate, appended in full_vector).
+        assert len(body["gates"]) == 6
         assert body["blocking"]["reason_code"] == "no_aiia"
 
         db_session.refresh(use_case)

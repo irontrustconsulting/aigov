@@ -18,6 +18,7 @@ from app.models.base import (
     CoverageStatus,
     EUAIActTier,
     ProvenanceConfidence,
+    ReviewDecision,
     SectionApplicability,
     TreatmentDecision,
 )
@@ -116,6 +117,8 @@ class AssessmentRead(BaseModel):
     classification_version: int
     is_current: bool
     lock_version: int
+    submission_round: int
+    submitted_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -139,6 +142,24 @@ class SectionRead(BaseModel):
 class FeederCreate(BaseModel):
     """type must be FRIA, DPIA, or MODEL_RISK — AIIA is rejected (422)."""
     type: AssessmentType
+
+
+class AssessmentReviewCreate(BaseModel):
+    """POST .../review body (Sprint 6a, design doc §5). note is required by
+    the service/DB CHECK when decision=CHANGES_REQUESTED, optional otherwise."""
+    decision: ReviewDecision
+    note: str | None = None
+
+
+class ReviewQueueEntryRead(BaseModel):
+    """One IN_REVIEW AIIA awaiting this reviewer's decision (design doc §5,
+    inv 34) — submitter identity resolved via membership, never bare app_user."""
+    assessment_id: uuid.UUID
+    use_case_id: uuid.UUID
+    tier_snapshot: EUAIActTier
+    submitted_by_name: str | None
+    submitted_by_email: str | None
+    submitted_at: datetime | None
 
 
 class FeederRecommendationRead(BaseModel):

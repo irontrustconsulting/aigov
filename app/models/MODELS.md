@@ -42,6 +42,7 @@ TENANT INVENTORY (tenant-scoped)
   UseCase ──< Assessment            (type=AIIA is primary; FRIA/DPIA/MODEL_RISK feed it)
   UseCase ──< LifecycleTransition   (state machine history — apply_transition's sole writer
                                       stages one per hop; STATE.md "Product lifecycle" §3)
+  UseCase ──< DeploymentAuthorisation   (the ATO; see "REVIEW, SIGN-OFF & AUTHORISATION" below)
   UseCase.held_from_state / .held_reason   (regression hint only, set/cleared by
                                              apply_transition — never the un-hold restore
                                              target; that's the full gate vector's job)
@@ -49,6 +50,10 @@ TENANT INVENTORY (tenant-scoped)
   Assessment ──< Assessment          (self-referential: .parent_aiia_id; a feeder's parent is
                                        always type=AIIA; UNIQUE(parent_aiia_id, type) — at
                                        most one feeder of each type per AIIA)
+  Assessment.status (DRAFT/IN_REVIEW/APPROVED/NEEDS_REFRESH) + .submission_round
+    -- the review/sign-off cycle (Sprint 6a) and its cycle key (Sprint 6b); see below
+  Assessment ──< AssessmentReview    (one row per reviewer decision; see below)
+  Assessment ──< DeploymentAuthorisation   (FK: RESTRICT; the ATO; see below)
   Assessment ──< AssessmentItem                       (a finding/answer)
     AssessmentItem ── risk_id ─────────────────> Risk                       (FK: RESTRICT)
     AssessmentItem ──< AssessmentItemControl ──> Control                    (FK: RESTRICT)
@@ -64,12 +69,37 @@ TENANT INVENTORY (tenant-scoped)
        provenance-neutral through amend_item (never flips provenance the way
        the other authoring fields do — STATE.md inv re: override-rate metric)
 
+REVIEW, SIGN-OFF & AUTHORISATION (tenant-scoped, Sprint 6a/6b)
+  AssessmentReview   (reviewer_user_id, decision: APPROVED/CHANGES_REQUESTED,
+                       note [DB CHECK: required when CHANGES_REQUESTED],
+                       submission_round) — plain Base, not TimestampMixin;
+                       rows are never mutated after insert, only created_at
+                       is meaningful (mirrors AuditEvent's append-only shape,
+                       though no DB trigger enforces it here)
+  DeploymentAuthorisation   (the ATO: use_case_id, assessment_id [RESTRICT],
+                       submission_round [the cycle key — D11], tier [text-
+                       stamped, NOT the EUAIActTier enum FK, deliberately
+                       decoupled from the live type], assessment_version,
+                       authorised_by_user_id [RESTRICT] + authorised_by_name/
+                       email [text, stamped — durable attribution], authorised_at,
+                       residual_risk_statement) — plain Base, point-in-time,
+                       never mutated; re-authorisation always writes a NEW row,
+                       so multiple rows may exist per use case (one per
+                       authorised cycle). authorisation_gate keys off the
+                       current-cycle match via submission_round, never
+                       existence alone.
+  -- Assessment.submission_round increments on every submit_for_review call;
+     stamped onto both AssessmentReview and DeploymentAuthorisation rows at
+     write time as the cycle they judged/authorised — the join key
+     authorisation_gate uses to detect a stale ATO after a reopen→resubmit.
+
 THREE INHERITING APPROVAL SCOPES (tenant-scoped)
   VendorApproval   (tenant + catalogue_vendor)         outer gate; vendor_gate reads it
   ProductApproval  (tenant + catalogue_product)         inherits vendor; product_gate reads it
-  UseCase.state reaching pending_authorisation           inherits product (the lifecycle's
-                                                           forward ceiling this sprint;
-                                                           AUTHORISED is Sprint 6)
+  UseCase.state reaching pending_authorisation           inherits product; the human-act
+                                                           authorisation_gate (Sprint 6b) is
+                                                           the final step past this — see
+                                                           "REVIEW, SIGN-OFF & AUTHORISATION"
   Both approval models also carry decided_by_user_id / decided_at / note
   (who cleared it and why) — set by set_vendor_approval/set_product_approval,
   which fan out to every affected use case (STATE.md §3)
@@ -216,6 +246,16 @@ redundant. `ix_assessment_item_evidence_evidence_id` is kept (it backs the
 pristine-delete guard's `NOT EXISTS` and the repository's `link_count`
 subquery, neither of which the item_id-leading composite can serve).
 
+### 2.10 Mandatory note on a changes-requested review
+```sql
+ALTER TABLE assessment_review
+  ADD CONSTRAINT ck_assessment_review_note_required
+  CHECK (decision <> 'CHANGES_REQUESTED' OR note IS NOT NULL);
+```
+DB-enforced backstop for the app-level `422` — a `CHANGES_REQUESTED` decision
+with no note is rejected even if some future code path bypasses the service
+layer's own check.
+
 ---
 
 ## 3. Cognito ↔ app boundary
@@ -277,11 +317,11 @@ list exists for the *order and rationale*, not as a live tracker.**
    FRIA/DPIA/MODEL_RISK feeders that pre-fill from the register and surface
    into the AIIA by read-time reference, not copy.
 6. ✅ **Lifecycle state machine + cascading gates** (vendor → product → intake
-   → assessment → treatment, ceiling at `pending_authorisation`) and the
-   status/rollup surface. `apply_transition`/`advance_use_case`/`full_vector`/
-   `re_evaluate`, five gate predicates, the manual re-evaluate lever, system/
-   portfolio rollup. The authorisation gate itself (`pending_authorisation →
-   authorised`) is Sprint 6.
+   → assessment → treatment → authorisation) and the status/rollup surface.
+   `apply_transition`/`advance_use_case`/`full_vector`/`re_evaluate`, six gate
+   predicates, the manual re-evaluate lever, system/portfolio rollup. The
+   final hop (`pending_authorisation → authorised`) is a human act only —
+   see item 11.
 7. ✅ **Catalogue** (vendor/product/fact/risk) + product-driven prefill
    (display-only; tenant confirm/amend not yet wired).
 8. ✅ **Evidence → S3** (versioned + hashed): proxied upload (hash-then-put
@@ -292,12 +332,25 @@ list exists for the *order and rationale*, not as a live tracker.**
    versioning chains remain unbuilt — see STATE.md §5.
 9. ⬜ **Export / audit pack (EXP-1)**. Not started; the evidence presigned-
    download primitive is its eventual consumer (and the feeder design
-   reserves the seam for feeder-private sections).
+   reserves the seam for feeder-private sections). `DeploymentAuthorisation`
+   (item 11) is now the structured ATO record this was always meant to
+   render — built, but the export/render step itself isn't.
 10. ✅ **Approvals + inheritance** (VendorApproval/ProductApproval). Set/update
     endpoints (`authoriser`-gated), gate reads (auto-pass with no catalogue
     link — that *is* inheritance, no separate code), and the per-use-case
     fan-out on every approval change.
-11. ⬜ **AI-assist** (suggest relevance, draft, freshness) — still last, on top
+11. ✅ **Review, sign-off & deployment authorisation** (Sprint 6a/6b — see
+    "REVIEW, SIGN-OFF & AUTHORISATION" in §1). `Assessment.status` lifecycle
+    + `AssessmentReview` (1st-line submit → 2nd-line reviewer approve/
+    request-changes, act-SoD'd); `assessment_gate` AND-ed with reviewer
+    sign-off; status-locked authoring; status-and-history-aware pristine-
+    delete. `DeploymentAuthorisation` (the ATO) + cycle-matched
+    `authorisation_gate` + `authorise_use_case` (the authoriser's residual-
+    risk acceptance, also act-SoD'd against the same AIIA's reviewer/
+    submitter); `pending_authorisation → authorised` via a dedicated
+    `apply_transition` event, never auto-derived. `deployed`/`retired`
+    remain reserved/unwired (PRD §3.2) — `authorised` is the ceiling.
+12. ⬜ **AI-assist** (suggest relevance, draft, freshness) — still last, on top
     of the now-working base, always human-confirmed. `AssessmentItem
     .ai_suggested_text` is the reserved seam; today's `AI_SUGGESTED` items
     (proposed risks) are deterministic catalogue/library lookups, not
