@@ -1,0 +1,15 @@
+/*
+ * Operator skin (PLATFORM-UX.md §2): the platform console — denser,
+ * utilitarian, no adoption dynamic. Tighter spacing/radius than the tenant
+ * skin; a cooler, less "branded" accent. Overrides VALUES only; the variable
+ * names are declared once in primitives.css's @theme block.
+ */
+[data-theme="operator"] {
+  --color-accent: #3b4a63;
+  --spacing-4: 0.875rem;
+  --spacing-6: 1.25rem;
+  --spacing-8: 1.625rem;
+  --radius-sm: 0.1875rem;
+  --radius-md: 0.3125rem;
+  --radius-lg: 0.5rem;
+}

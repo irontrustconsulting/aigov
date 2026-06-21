@@ -1,0 +1,47 @@
+/*
+ * FE-3: the one primitive token layer. Declared inside @theme so Tailwind v4
+ * derives utility classes directly from these custom properties (e.g.
+ * --color-accent -> bg-accent/text-accent/border-accent) — there is no
+ * separate JS preset to keep in sync with this file.
+ *
+ * Two skins (skin-tenant.css, skin-operator.css) override the VALUES of
+ * these same variable names, scoped under [data-theme="..."] — they never
+ * redeclare new theme keys, only swap what a given key resolves to.
+ */
+@theme {
+  /* colour */
+  --color-bg: #ffffff;
+  --color-surface: #f4f5f7;
+  --color-text: #14181f;
+  --color-text-muted: #5a6472;
+  --color-accent: #2455e6;
+  --color-border: #d8dce3;
+  --color-danger: #c0294a;
+  --color-warning: #b5790a;
+  --color-success: #1c8a52;
+
+  /* spacing */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+
+  /* type scale */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.5rem;
+
+  /* elevation */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.10);
+  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.14);
+
+  /* radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}

@@ -11,10 +11,14 @@ venv/
 .pytest_cache/
 .ruff_cache/
 
-# Node / Next.js (when web/ exists)
+# Node / Next.js
 node_modules/
 .next/
 out/
+.turbo/
+dist/
+*.tsbuildinfo
+next-env.d.ts
 
 # OS / editor
 .DS_Store
@@ -25,6 +29,7 @@ out/
 infra/.terraform/
 infra/terraform.tfstate
 infra/terraform.tfstate.backup
+infra/tfplan
 
 # Local prompts / scratch
 prompts/

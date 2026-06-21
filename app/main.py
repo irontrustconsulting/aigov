@@ -22,6 +22,7 @@ from app.routers.v1 import (
     export,
     governance_roles,
     lifecycle,
+    me,
     members,
     reference,
     systems,
@@ -50,6 +51,7 @@ def whoami(claims: CognitoClaims = Depends(verify_cognito_token)) -> dict:
 app.include_router(reference.router, prefix="/v1")
 app.include_router(systems.router, prefix="/v1")
 app.include_router(governance_roles.router, prefix="/v1")
+app.include_router(me.router, prefix="/v1")
 app.include_router(use_cases.router, prefix="/v1")
 app.include_router(members.router, prefix="/v1")
 app.include_router(classification_context.router, prefix="/v1")

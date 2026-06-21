@@ -74,18 +74,28 @@ resource "aws_cognito_user_pool_client" "operator_console" {
   # works for a browser SPA console (via the Cognito JS SDK) AND for a boto3
   # test-harness login today, with no client secret to manage.
   #
-  # DEFERRED (a console-login-UX decision, not needed yet):
-  #   - To use the Cognito Hosted UI with the OAuth authorization-code flow, add
-  #     allowed_oauth_flows / callback_urls / a user-pool domain later. That is
-  #     an in-place UPDATE to this client.
-  #   - To use a confidential server-side client, set generate_secret = true.
-  #     That forces a client REPLACEMENT, so decide before prod.
+  # To use a confidential server-side client, set generate_secret = true.
+  # That forces a client REPLACEMENT, so decide before prod.
   generate_secret = false
 
   explicit_auth_flows = [
-    "ALLOW_USER_SRP_AUTH",      # secure challenge-response login (no password on the wire)
+    "ALLOW_USER_SRP_AUTH",      # secure challenge-response login (no password on the wire) — kept for CLI/test-harness login
     "ALLOW_REFRESH_TOKEN_AUTH", # refresh without re-entering the password
   ]
+
+  # OAuth authorization-code + PKCE flow for the operator console BFF
+  # (UI-F0-FOUNDATION, FE-2/D-36). Additive alongside SRP above, not a
+  # replacement — Cognito allows both auth paths on one client.
+  allowed_oauth_flows_user_pool_client = true
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid", "email", "profile"]
+  supported_identity_providers         = ["COGNITO"]
+
+  # Dev-origin callback/logout URLs for the operator Next app (apps/operator,
+  # port 3001 by convention — matches the tenant app's 3000 in cognito_tenant.tf).
+  # Add the staging/prod origins here as those environments are stood up.
+  callback_urls = ["http://localhost:3001/api/auth/callback"]
+  logout_urls   = ["http://localhost:3001/"]
 
   # On a failed login, don't reveal whether the email exists in the pool.
   prevent_user_existence_errors = "ENABLED"
@@ -100,4 +110,13 @@ resource "aws_cognito_user_pool_client" "operator_console" {
     access_token  = "minutes"
     refresh_token = "hours"
   }
+}
+
+# Hosted-UI domain — required for the authorization-code/PKCE redirect
+# endpoint to exist at all; allowed_oauth_flows_user_pool_client = true alone
+# is not sufficient without a domain. Domain must be globally unique in the
+# region.
+resource "aws_cognito_user_pool_domain" "operators" {
+  domain       = "irontrustai-operators-${var.environment}"
+  user_pool_id = aws_cognito_user_pool.operators.id
 }

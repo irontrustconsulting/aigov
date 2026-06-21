@@ -1,0 +1,25 @@
+{
+  "name": "@irontrust/tokens",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./primitives.css": "./src/primitives.css",
+    "./skin-tenant.css": "./src/skin-tenant.css",
+    "./skin-operator.css": "./src/skin-operator.css"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^22.10.0",
+    "jest": "^29.7.0",
+    "jest-axe": "^9.0.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "ts-jest": "^29.2.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@irontrust/eslint-plugin-irontrust",
+  "private": true,
+  "version": "0.0.0",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --test src/rules/__tests__/*.test.js"
+  },
+  "devDependencies": {
+    "eslint": "^9.17.0"
+  }
+}

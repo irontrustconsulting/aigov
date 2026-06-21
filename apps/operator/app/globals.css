@@ -1,0 +1,4 @@
+@import "@irontrust/tokens/primitives.css";
+@import "@irontrust/tokens/skin-tenant.css";
+@import "@irontrust/tokens/skin-operator.css";
+@import "tailwindcss";

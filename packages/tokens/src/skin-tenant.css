@@ -1,0 +1,10 @@
+/*
+ * Tenant skin (UX.md §2): the adoption face — friendlier, more spacious.
+ * Overrides VALUES only; the variable names are declared once in
+ * primitives.css's @theme block.
+ */
+[data-theme="tenant"] {
+  --color-accent: #2455e6;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+}

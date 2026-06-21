@@ -210,3 +210,11 @@ Self-referential relationships meant to defer to a DB-level `ON DELETE CASCADE` 
 **INV-48** · DB · global reference tables carry no `tenant_id`, no RLS
 Catalogue, controls, risks, taxonomy, governance-role catalogue + conflict matrix, decision tree, and assessment section templates are cross-tenant by design: no `tenant_id` column, no RLS policy, readable from any session. Tenant data always carries `tenant_id`.
 ↳ origin: foundations (promoted from CLAUDE §3.2)
+
+**INV-49** · CONVENTION · platform functionality is UI-operated, CLI bootstrap-only
+Every platform-plane capability that requires ongoing operator interaction is operated through the operator console UI; CLI/scripts are reserved for initial bootstrap and break-glass that must precede or underlie the UI (DB-role creation, first-operator seeding, the first tenant before any console exists). A platform feature needing interactive operation is not done until its operator UI is built — the UI ships with the feature, never as a deferred follow-on.
+↳ origin: platform-UI rule (retroactively closed at UI-F0-FOUNDATION — cited by `PLATFORM-UX.md`, `UX.md`, `FRONTEND.md`, `INDEX.md` since before this sprint, but never appended until now) · refs: INV-1, D-36
+
+**INV-50** · CONVENTION · browser holds no token; all browser→API via the plane's own BFF
+The browser never holds a Cognito token and never calls the API directly. Every browser→API request is mediated by that plane's own Next-server BFF, which holds the token server-side (keyed by an opaque session id in an httpOnly cookie) and forwards the bearer. A tenant-origin session cannot reach the operator origin or vice versa (plane separation is origin-level).
+↳ origin: UI-F0-FOUNDATION · refs: INV-1, D-37
