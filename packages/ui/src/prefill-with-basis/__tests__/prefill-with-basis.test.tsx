@@ -13,7 +13,7 @@ describe("PrefillWithBasis", () => {
       <PrefillWithBasis
         valueLabel="High"
         basis="Derived from product category"
-        provenance="AI_SUGGESTED"
+        provenance="ai_suggested"
         options={options}
         onOverride={jest.fn()}
       />
@@ -28,7 +28,7 @@ describe("PrefillWithBasis", () => {
       <PrefillWithBasis
         valueLabel="High"
         basis="Derived from product category"
-        provenance="AI_SUGGESTED"
+        provenance="ai_suggested"
         options={options}
         onOverride={onOverride}
       />
@@ -53,7 +53,7 @@ describe("PrefillWithBasis", () => {
       <PrefillWithBasis
         valueLabel="High"
         basis="Derived from product category"
-        provenance="USER_CONFIRMED"
+        provenance="user_confirmed"
         options={options}
         onOverride={jest.fn()}
       />

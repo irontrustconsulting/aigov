@@ -2,7 +2,9 @@ import type { ReactNode } from "react";
 
 export function Table({ children }: { children: ReactNode }) {
   return (
-    <table className="border-border w-full border-collapse text-sm">{children}</table>
+    <table className="border-border w-full border-collapse text-sm">
+      <tbody>{children}</tbody>
+    </table>
   );
 }
 

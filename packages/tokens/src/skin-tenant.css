@@ -1,10 +1,22 @@
 /*
  * Tenant skin (UX.md §2): the adoption face — friendlier, more spacious.
  * Overrides VALUES only; the variable names are declared once in
- * primitives.css's @theme block.
+ * primitives.css's @theme block. Mirrors skin-operator.css's differentiation
+ * (which tightens spacing/radius for density) in the opposite direction:
+ * roomier spacing and a softer, rounder radius read as more approachable to
+ * a non-governance user doing a familiar adoption action (UX.md §2), while
+ * the colour tokens stay AA-checked (contrast.test.ts) against this skin.
  */
 [data-theme="tenant"] {
   --color-accent: #2455e6;
+
+  --spacing-4: 1.125rem;
+  --spacing-6: 1.75rem;
+  --spacing-8: 2.5rem;
+
+  --font-size-base: 1.0625rem;
+  --font-size-lg: 1.1875rem;
+
   --radius-md: 0.625rem;
   --radius-lg: 1rem;
 }

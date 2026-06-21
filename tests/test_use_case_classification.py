@@ -742,6 +742,34 @@ class TestOverride:
 
         assert r.status_code == 422
 
+    def test_override_by_non_system_owner_gets_403(
+        self, client, db_session, tenant, member, gov_roles, product_high,
+    ):
+        """UI-F1-INTAKE WI-10: the override control is rendered absent for a
+        bare contributor client-side (FE-8) — this is the server-side half
+        of that structural bar. A contributor (no system_owner) forcing the
+        call must be rejected, never silently accepted."""
+        user, m = member
+        system = _make_system(db_session, tenant, product_high)
+        uc_id = self._register(client, db_session, tenant, user, m, gov_roles, system)
+
+        contributor_user, contributor_m = _make_member(db_session, tenant)
+        _grant_gov_role(db_session, tenant, contributor_m, gov_roles["contributor"])
+
+        ctx = _make_ctx(contributor_user, contributor_m, tenant)
+        app.dependency_overrides[get_tenant_context] = _ctx_override(ctx)
+        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
+        try:
+            r = client.post(f"/v1/use-cases/{uc_id}/classify/override", json={
+                "tier": "limited_risk",
+                "subcategory_code": "whatever",
+            })
+        finally:
+            app.dependency_overrides.pop(get_tenant_context, None)
+            app.dependency_overrides.pop(get_tenant_db, None)
+
+        assert r.status_code == 403
+
 
 # ---------------------------------------------------------------------------
 # 5. Cross-tenant isolation test

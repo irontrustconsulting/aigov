@@ -90,15 +90,15 @@
 | `product_category_membership` | GLOBAL | Product ↔ category. |
 | `product_category_eu_mapping` | GLOBAL | Partial unique `uq_one_primary_eu_mapping` (one primary). The classification bridge path. |
 
-### Controlled vocabulary *(file: verify — none in CLAUDE §3.1)*
+### Controlled vocabulary — `intake.py` (confirmed)
 | Table | Plane | Notes |
 |---|---|---|
-| `eu_operator_role` | GLOBAL | EU AI Act Art. 3 postures. Named to avoid collision with platform `operator_role`. |
-| `hosting_model` | GLOBAL | |
-| `usage_context` | GLOBAL | |
-| `human_oversight_type` | GLOBAL | EU AI Act Art. 14. |
-| `data_category` | GLOBAL | `is_special_category` flag (GDPR/EU AI Act). |
-| `affected_party` | GLOBAL | `is_vulnerable_group` flag (Art. 27). |
+| `eu_operator_role` | GLOBAL | EU AI Act Art. 3 postures. Named to avoid collision with platform `operator_role`. `GET /v1/reference/operator-roles` (UI-F1-INTAKE WI-0). |
+| `hosting_model` | GLOBAL | `GET /v1/reference/hosting-models` (UI-F1-INTAKE WI-0). |
+| `usage_context` | GLOBAL | `GET /v1/reference/usage-contexts` (UI-F1-INTAKE WI-0). |
+| `human_oversight_type` | GLOBAL | EU AI Act Art. 14. `GET /v1/reference/human-oversight-types` (UI-F1-INTAKE WI-0). |
+| `data_category` | GLOBAL | `is_special_category` flag (GDPR/EU AI Act). `GET /v1/reference/data-categories` (UI-F1-INTAKE WI-0). |
+| `affected_party` | GLOBAL | `is_vulnerable_group` flag (Art. 27). `GET /v1/reference/affected-parties` (UI-F1-INTAKE WI-0). |
 
 ### Governance roles *(file: verify — none in CLAUDE §3.1)*
 | Table | Plane | Notes |

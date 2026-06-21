@@ -40,7 +40,8 @@
       "Bash(python -m pytest tests/test_coverage_service.py -v)",
       "Bash(python -m pytest tests/test_coverage_endpoints.py -v)",
       "Bash(python -m pytest tests/test_coverage_service.py tests/test_coverage_endpoints.py -q)",
-      "Bash(python -c \"from app.schemas.export import UseCaseExportRead, SystemExportRead, AtoDocumentRead, FrameworkExportRead; print\\('OK'\\)\")"
+      "Bash(python -c \"from app.schemas.export import UseCaseExportRead, SystemExportRead, AtoDocumentRead, FrameworkExportRead; print\\('OK'\\)\")",
+      "Bash(pnpm --filter tenant test -- systems/new)"
     ],
     "additionalDirectories": [
       "/private/tmp"

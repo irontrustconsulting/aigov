@@ -80,7 +80,7 @@ Cross-references between canonicals always use these IDs, never section numbers 
 
 ## Current scope
 
-Backend MVP complete **through Sprint 7b** (export / audit pack); **UI build phase** under way — `UI-F0-FOUNDATION` shipped (BFF auth plane, shared contract, smoke surfaces; not a feature surface). Ceilings: `INV-50` (1–37 base · 38–45 sprints 7a/7b · 46–48 schema promotions · 49 platform-UI rule · 50 no-token-in-browser), `D-37`, `OPEN-3`, `PAT-10`, `UX-6`, `FE-10`.
+Backend MVP complete **through Sprint 7b** (export / audit pack); **UI build phase** under way — `UI-F0-FOUNDATION` shipped (BFF auth plane, shared contract, smoke surfaces; not a feature surface), `UI-F1-INTAKE` shipped (the intake/registration wizard, `apps/tenant/app/systems/new` — the first tenant feature surface; one additive backend addition, `DF1-9`). Ceilings: `INV-50` (1–37 base · 38–45 sprints 7a/7b · 46–48 schema promotions · 49 platform-UI rule · 50 no-token-in-browser), `D-37` (+ sprint-local `DF1-3..9`, see `DECISIONS.md`), `OPEN-3`, `PAT-10`, `UX-6`, `FE-10`.
 
 **Frontend canonicals** (`UX`, `PLATFORM-UX`, `FRONTEND`) are the frontend half of the KB. `FRONTEND.md` is no longer a stub: the client↔API topology is resolved (BFF, bearer-forward — `D-37`) and `FE-1..10` are populated. Token palette/type-scale specifics and per-surface fetch splits remain `[TBD — first feature surface]`.
 

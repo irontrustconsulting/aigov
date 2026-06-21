@@ -160,6 +160,28 @@ Each plane (tenant, operator) gets its own Next.js app whose server layer is the
 
 ---
 
+## UI-F1-INTAKE local decisions (`DF1-n`)
+
+Sprint-local decisions, scoped to the intake wizard — a separate id series from the global `D-n` sequence (the design doc minted these; only the ones an agent needs to not silently undo are promoted here at sprint close).
+
+**DF1-3** · Reviewer sign-off is out of F1 scope
+F1 ends at `PENDING_REVIEW` on the context path; whose-court (WI-9) routes to "with the reviewer" and stops there — `POST .../classification/sign-off` is not wired. **Why:** sign-off belongs to the assurance face's review queue (a separate, not-yet-built surface); wiring the act without the queue/attribution surface it lives in would be a half surface, not a deferred one.
+
+**DF1-4** · Prefill is catalogue-fact-only
+WI-6 renders only `CatalogueFactOut` rows from `GET /systems/{id}/prefill` — the AI-suggested and cross-tenant-baseline prefill sources `UX.md` §3 describes are not wired. **Why:** those sources are flagged `[VERIFY]`/deferred in `UX.md` §3 (`OPEN-3`-adjacent), and the catalogue-fact route is the only landed prefill backend.
+
+**DF1-5** · `If-Match` is dormant in F1
+No F1 hook ever sets `If-Match` (`FE-6` stays dormant) — asserted by test (`apps/tenant/lib/intake/__tests__/network.test.tsx`). **Why:** every F1 mutation is a create or a state-machine-driven write, not the `lock_version`-guarded amend pattern `FE-6`/`PAT-6` exists for; none of the consumed routes accept the header.
+
+**DF1-8** · Prefill is display-only; no write-back
+WI-6's "amend" control updates only local wizard display state and never issues a mutation. **Why:** the structured WI-5 fields already submitted via `POST /v1/systems` are the system of record for the tenant's asserted truth; there is no backend route to write back an amended catalogue fact, and adding one would create two sources for the same fact.
+
+**DF1-9** · Vocab-list routes added despite F1's "zero backend" framing
+Six read-only `GET /v1/reference/{operator-roles,hosting-models,usage-contexts,human-oversight-types,data-categories,affected-parties}` routes were added (`app/routers/v1/reference.py`), reusing existing schemas (`VocabItemOut`/`DataCategoryOut`/`AffectedPartyOut`, already defined for `SystemDetail`) and the same any-member gate as the neighbouring `risks`/`controls` reads. **Why:** WI-5's structured selects for these six FK fields had no source of options — only FK-validation against them existed on write, never a listing route; the gap was found at this sprint's §0 pre-flight and the addition was scoped and approved before WI-5 was built. "Zero backend" covered migrations/schema (genuinely zero here — no new model, no new migration, no `DATA-MODEL` table/column change); it did not anticipate every read route the wizard would need. **Rejected:** stubbing the six selects against a hardcoded client-side list — risks drifting from the seeded DB and from the real FK ids the classification/AIIA logic depends on.
+↳ refs: `DATA-MODEL` Controlled vocabulary · source: this sprint's §0 pre-flight
+
+---
+
 ## OPEN — unresolved design questions affecting future work
 
 **OPEN-1** · Worked-state void / withdraw path

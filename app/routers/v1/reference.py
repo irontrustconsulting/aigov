@@ -26,6 +26,14 @@ from app.models import (
     ProductCategoryMembership,
 )
 from app.models.base import Framework, RiskLayer
+from app.models.intake import (
+    AffectedParty,
+    DataCategory,
+    EUOperatorRole,
+    HostingModel,
+    HumanOversightType,
+    UsageContext,
+)
 from app.models.knowledge import Control, ControlFrameworkMap, Risk
 from app.schemas.reference import (
     ControlRead,
@@ -35,7 +43,7 @@ from app.schemas.reference import (
     RiskRead,
     VendorRead,
 )
-from app.schemas.system import ProductDetailOut
+from app.schemas.system import AffectedPartyOut, DataCategoryOut, ProductDetailOut, VocabItemOut
 from app.services.reference_service import get_product_detail
 
 router = APIRouter(prefix="/reference", tags=["reference"])
@@ -116,6 +124,95 @@ def get_product_detail_endpoint(
 ) -> ProductDetailOut:
     """Product detail for the selection wizard: vendor, category tags, EU AI Act subcategories."""
     return get_product_detail(product_id, db)
+
+
+@router.get("/operator-roles", response_model=list[VocabItemOut])
+def list_operator_roles(
+    ctx: TenantContext = Depends(require_role(*_ANY_MEMBER)),
+    db: Session = Depends(get_tenant_db),
+) -> list[EUOperatorRole]:
+    """Intake-vocab list (UI-F1-INTAKE WI-0): the wizard's structured-select
+    options for SystemCreate.operator_role_id. Gated to any tenant member,
+    like risks/controls below — unlike the pre-auth catalogue drill-down
+    above, this backs mid-wizard capture after the caller is signed in."""
+    stmt = (
+        select(EUOperatorRole)
+        .where(EUOperatorRole.active.is_(True))
+        .order_by(EUOperatorRole.sort_order)
+    )
+    return list(db.scalars(stmt))
+
+
+@router.get("/hosting-models", response_model=list[VocabItemOut])
+def list_hosting_models(
+    ctx: TenantContext = Depends(require_role(*_ANY_MEMBER)),
+    db: Session = Depends(get_tenant_db),
+) -> list[HostingModel]:
+    """Intake-vocab list (UI-F1-INTAKE WI-0) for SystemCreate.hosting_model_id."""
+    stmt = (
+        select(HostingModel)
+        .where(HostingModel.active.is_(True))
+        .order_by(HostingModel.sort_order)
+    )
+    return list(db.scalars(stmt))
+
+
+@router.get("/usage-contexts", response_model=list[VocabItemOut])
+def list_usage_contexts(
+    ctx: TenantContext = Depends(require_role(*_ANY_MEMBER)),
+    db: Session = Depends(get_tenant_db),
+) -> list[UsageContext]:
+    """Intake-vocab list (UI-F1-INTAKE WI-0) for SystemCreate.usage_context_id."""
+    stmt = (
+        select(UsageContext)
+        .where(UsageContext.active.is_(True))
+        .order_by(UsageContext.sort_order)
+    )
+    return list(db.scalars(stmt))
+
+
+@router.get("/human-oversight-types", response_model=list[VocabItemOut])
+def list_human_oversight_types(
+    ctx: TenantContext = Depends(require_role(*_ANY_MEMBER)),
+    db: Session = Depends(get_tenant_db),
+) -> list[HumanOversightType]:
+    """Intake-vocab list (UI-F1-INTAKE WI-0) for SystemCreate.human_oversight_type_id."""
+    stmt = (
+        select(HumanOversightType)
+        .where(HumanOversightType.active.is_(True))
+        .order_by(HumanOversightType.sort_order)
+    )
+    return list(db.scalars(stmt))
+
+
+@router.get("/data-categories", response_model=list[DataCategoryOut])
+def list_data_categories(
+    ctx: TenantContext = Depends(require_role(*_ANY_MEMBER)),
+    db: Session = Depends(get_tenant_db),
+) -> list[DataCategory]:
+    """Intake-vocab list (UI-F1-INTAKE WI-0) for SystemCreate.data_category_ids
+    (multi-select). Carries is_special_category for the wizard to surface."""
+    stmt = (
+        select(DataCategory)
+        .where(DataCategory.active.is_(True))
+        .order_by(DataCategory.sort_order)
+    )
+    return list(db.scalars(stmt))
+
+
+@router.get("/affected-parties", response_model=list[AffectedPartyOut])
+def list_affected_parties(
+    ctx: TenantContext = Depends(require_role(*_ANY_MEMBER)),
+    db: Session = Depends(get_tenant_db),
+) -> list[AffectedParty]:
+    """Intake-vocab list (UI-F1-INTAKE WI-0) for SystemCreate.affected_party_ids
+    (multi-select). Carries is_vulnerable_group for the wizard to surface."""
+    stmt = (
+        select(AffectedParty)
+        .where(AffectedParty.active.is_(True))
+        .order_by(AffectedParty.sort_order)
+    )
+    return list(db.scalars(stmt))
 
 
 @router.get("/risks", response_model=list[RiskRead])

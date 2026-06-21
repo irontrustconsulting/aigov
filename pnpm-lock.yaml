@@ -139,6 +139,9 @@ importers:
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@22.20.0)
+      jest-axe:
+        specifier: ^9.0.0
+        version: 9.0.0
       jest-environment-jsdom:
         specifier: ^29.7.0
         version: 29.7.0
