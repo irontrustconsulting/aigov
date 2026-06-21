@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk '{print $2}')",
+      "Bash(awk '{print length}')",
+      "Bash(awk '{print length\": \"$0}')",
+      "Bash(git commit -m ' *)",
+      "Bash(docker exec *)",
+      "Bash(alembic downgrade *)",
+      "Bash(python -c \"import app.models.domain\")",
+      "Bash(python -c \"from app.main import app; print\\('app imports OK'\\)\")",
+      "Bash(python -c \"import app.services.lifecycle_service\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('tests/test_lifecycle_service.py'\\).read\\(\\)\\)\")",
+      "Bash(python -m pytest tests/test_lifecycle_service.py -v)",
+      "Bash(python -m pytest)",
+      "Bash(python -c \"import app.services.lifecycle_gates\")",
+      "Bash(python -c \"import app.services.lifecycle_gates; import app.services.assessment_service\")",
+      "Bash(python -c \"import app.services.lifecycle_gates; import app.services.assessment_service; print\\('OK'\\)\")",
+      "Bash(python -c \"import app.services.lifecycle_gates; print\\('OK'\\)\")",
+      "Bash(python -m pytest tests/test_lifecycle_gates.py -v)",
+      "Bash(python -c \"import app.services.assessment_service\")",
+      "Bash(awk '{ if \\(length\\($0\\) > 89\\) print length\\($0\\)\": \"$0 }')",
+      "Bash(python -m pytest tests/test_aiia.py::TestCreateAIIA -v)",
+      "Bash(python -c \"import app.services.classification\")",
+      "Bash(python -c \"import app.services.context_classification\")",
+      "Bash(python -m pytest tests/test_lifecycle_advance.py -v)",
+      "Bash(python -c \"from app.main import app; print\\('OK'\\); [print\\(r.path, r.methods\\) for r in app.routes if 'lifecycle' in r.path]\")",
+      "Bash(python -c \"import tests.lifecycle_helpers\")",
+      "Bash(python -)",
+      "Bash(python -m pytest tests/test_lifecycle_endpoints.py -v)",
+      "Bash(python -c ' *)",
+      "Bash(python -m pytest tests/test_lifecycle_approvals.py -v)",
+      "Bash(python -m pytest tests/test_lifecycle_approvals.py::TestSetVendorApprovalFanOut::test_revoke_regresses_advanced_use_case_to_held -v)",
+      "Bash(python -m pytest tests/test_lifecycle_rollup.py -v)",
+      "Bash(python -c \"import app.models.assessment\")",
+      "Bash(python -c \"import app.models.assessment; from app.main import app; print\\('OK'\\)\")",
+      "Bash(python -m pytest tests/test_lifecycle_treatment.py -v)",
+      "Bash(python /tmp/live_smoke_6b.py)",
+      "Bash(rm -f /tmp/live_smoke_6b.py)",
+      "Bash(python -m pytest tests/test_coverage_service.py -v)",
+      "Bash(python -m pytest tests/test_coverage_endpoints.py -v)",
+      "Bash(python -m pytest tests/test_coverage_service.py tests/test_coverage_endpoints.py -q)",
+      "Bash(python -c \"from app.schemas.export import UseCaseExportRead, SystemExportRead, AtoDocumentRead, FrameworkExportRead; print\\('OK'\\)\")"
+    ],
+    "additionalDirectories": [
+      "/private/tmp"
+    ]
+  }
+}
