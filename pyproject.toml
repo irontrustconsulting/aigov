@@ -50,6 +50,10 @@ ignore = ["B008"]  # FastAPI Depends() in function defaults is the canonical pat
 "tests/test_lifecycle_treatment.py" = ["F811"]
 "tests/test_assessment_review.py" = ["F811"]
 "tests/test_authorisation.py" = ["F811"]
+"tests/test_coverage_service.py" = ["F811"]
+"tests/test_coverage_endpoints.py" = ["F811"]
+"tests/test_export_service.py" = ["F811"]
+"tests/test_export_endpoints.py" = ["F811"]
 
 [build-system]
 requires = ["setuptools>=68"]

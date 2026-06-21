@@ -17,7 +17,9 @@ from app.routers.platform import whoami as platform_whoami
 from app.routers.v1 import (
     assessments,
     classification_context,
+    coverage,
     evidence,
+    export,
     governance_roles,
     lifecycle,
     members,
@@ -33,10 +35,17 @@ app = FastAPI(
 
 # Versioned API surface.
 
+
 @app.get("/v1/whoami")
 def whoami(claims: CognitoClaims = Depends(verify_cognito_token)) -> dict:
-    return {"sub": claims.sub, "email": claims.email,
-            "name": claims.name, "tenant_id": claims.tenant_id, "role": claims.role}
+    return {
+        "sub": claims.sub,
+        "email": claims.email,
+        "name": claims.name,
+        "tenant_id": claims.tenant_id,
+        "role": claims.role,
+    }
+
 
 app.include_router(reference.router, prefix="/v1")
 app.include_router(systems.router, prefix="/v1")
@@ -49,6 +58,8 @@ app.include_router(evidence.router, prefix="/v1")
 app.include_router(lifecycle.router, prefix="/v1")
 app.include_router(lifecycle.approvals_router, prefix="/v1")
 app.include_router(lifecycle.rollup_router, prefix="/v1")
+app.include_router(coverage.router, prefix="/v1")
+app.include_router(export.router, prefix="/v1")
 app.include_router(platform_whoami.router, prefix="/platform")
 app.include_router(platform_tenants.router, prefix="/platform")
 
