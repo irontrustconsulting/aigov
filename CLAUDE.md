@@ -25,6 +25,7 @@
 | Rules the change must not break | `INVARIANTS.md` (`INV-n`) |
 | Why a choice was made / what's open | `DECISIONS.md` (`D-n` / `OPEN-n`) |
 | Schema: tables, plane/RLS, enums, indexes | `DATA-MODEL.md` |
+| Every route: method, path, auth gate, request/response schema — or whether one exists at all | `API-ROUTES.md` |
 | What's already built / deferred | `STATE.md` |
 
 The current unit of work is `sprints/*.md`. Don't restate any of the above here.
@@ -51,6 +52,7 @@ You are the only agent that edits `docs/`; closure is your job. The **canon stat
 2. **Update the volatile tier only:**
    - `STATE.md` — move shipped capability out of *deferred* into *implemented*; update the deferred register; add any new audit-action strings.
    - `DATA-MODEL.md` — new tables / enums / indexes with **plane + RLS** tag; new guarantees; resolve drift notes.
+   - `API-ROUTES.md` — add/update/remove the rows for any route the sprint touched (method, gate, request/response schema); add to §4 (confirmed absent) if a sprint's pre-flight rules a plausible-sounding route out.
    - `INVARIANTS.md` — **append** new `INV-n`, tagged `DB`/`CODE`/`CONVENTION` + locus + origin.
    - `DECISIONS.md` — **append** new `D-n` (rationale / rejected alternative); add or resolve `OPEN-n`.
    - `PATTERNS.md` — append a `PAT-n` only if the sprint established a genuinely new reusable shape.

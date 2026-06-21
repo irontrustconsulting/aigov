@@ -22,17 +22,18 @@
 | `INVARIANTS.md` | The constraint register (`INV-n`) — the reviewer's checklist | **append each sprint** |
 | `DECISIONS.md` | Locked decisions + rationale (`D-n`), open questions (`OPEN-n`) | **append each sprint** |
 | `DATA-MODEL.md` | Physical schema map: tables, plane/RLS, enums, indexes, guarantees | **append each sprint** |
+| `API-ROUTES.md` | FastAPI route map: every method/path, auth gate, request/response schema, file:line; confirmed-absent routes | **occasional** — update whenever a route is added/removed/re-gated |
 | `STATE.md` | Implemented capabilities + deferred register | **every sprint** |
 
-**Stable tier** (`DOMAIN`, `REQUIREMENTS`, `ARCHITECTURE`, `UX`, `PLATFORM-UX`, `PATTERNS`, `FRONTEND`, `INDEX`) rarely moves — `PATTERNS`/`FRONTEND` occasionally, as a new shape or convention is established. **Volatile tier** (`STATE`, `DATA-MODEL`, `INVARIANTS`, `DECISIONS`) is what a sprint-end update touches — nothing else.
+**Stable tier** (`DOMAIN`, `REQUIREMENTS`, `ARCHITECTURE`, `UX`, `PLATFORM-UX`, `PATTERNS`, `FRONTEND`, `INDEX`) rarely moves — `PATTERNS`/`FRONTEND` occasionally, as a new shape or convention is established. **Volatile tier** (`STATE`, `DATA-MODEL`, `API-ROUTES`, `INVARIANTS`, `DECISIONS`) is what a sprint-end update touches — nothing else.
 
 ---
 
 ## Reading order
 
-**Designing a backend feature / sprint:** `DOMAIN` (what the product is) → `REQUIREMENTS` (what must be built) → `STATE` (what already exists — don't reinvent) → `DATA-MODEL` + `ARCHITECTURE` + `PATTERNS` (the seams to build on) → `INVARIANTS` (constraints the design must not break) → `DECISIONS` (what's settled, what's open).
+**Designing a backend feature / sprint:** `DOMAIN` (what the product is) → `REQUIREMENTS` (what must be built) → `STATE` (what already exists — don't reinvent) → `DATA-MODEL` + `API-ROUTES` + `ARCHITECTURE` + `PATTERNS` (the seams to build on) → `INVARIANTS` (constraints the design must not break) → `DECISIONS` (what's settled, what's open).
 
-**Designing a UI surface:** `UX` (tenant) or `PLATFORM-UX` (operator) — the experience intent → `DOMAIN` (what the surface represents) → `REQUIREMENTS` (what it must do) → `STATE` (the backend capability it wires to) → the `INVARIANTS`/`PATTERNS` the surface must honour (SoD must be *visible*; the client↔API contract) → `FRONTEND` (build conventions). Cite `UX-n`/`FE-n` alongside `INV-n`/`D-n`.
+**Designing a UI surface:** `UX` (tenant) or `PLATFORM-UX` (operator) — the experience intent → `DOMAIN` (what the surface represents) → `REQUIREMENTS` (what it must do) → `STATE` (the backend capability it wires to) → **`API-ROUTES`** (the exact contract: method, gate, request/response schema, and what does *not* exist — verify here before assuming a route, never re-grep the routers from scratch) → the `INVARIANTS`/`PATTERNS` the surface must honour (SoD must be *visible*; the client↔API contract) → `FRONTEND` (build conventions). Cite `UX-n`/`FE-n` alongside `INV-n`/`D-n`.
 
 **Reviewing an implementation:** `INVARIANTS` (the checklist — concentrate on `CONVENTION`-tagged ones, where nothing structural enforces the rule) + `STATE` (does this duplicate or contradict what exists?) + `PATTERNS` (is the shape right?) + `DATA-MODEL` (schema facts). Cite every finding by `INV-n` / `D-n` / requirement id. For a UI surface, add `UX`/`PLATFORM-UX` (intent) and `FRONTEND` (the client↔API contract), citing `UX-n`/`FE-n` too.
 
@@ -46,6 +47,7 @@
 | Why a choice was made / whether it's settled | `DECISIONS` (`D-n` / `OPEN-n`) |
 | A rule the design mustn't break | `INVARIANTS` (`INV-n`) |
 | Whether a table is tenant-scoped; enum labels | `DATA-MODEL` |
+| A route's method/path, auth gate, request/response schema — or whether a route exists at all | `API-ROUTES` |
 | The correct service/concurrency shape | `PATTERNS` (`PAT-n`) |
 | Stack, DB roles, auth chain, RLS mechanics | `ARCHITECTURE` |
 | What's already built / deliberately deferred | `STATE` |
