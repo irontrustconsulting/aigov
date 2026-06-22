@@ -12,6 +12,8 @@ import type {
   ControlLinkCreate,
   ControlLinkRead,
   DeploymentAuthorisationRead,
+  EvidenceLinkCreate,
+  EvidenceLinkRead,
   SignOffRead,
 } from "@irontrust/api-client";
 import { StaleLockError, BadFromStateError } from "@irontrust/api-client";
@@ -268,6 +270,41 @@ export function useAuthorise(useCaseId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: assessKeys.authorisation(useCaseId) });
       queryClient.invalidateQueries({ queryKey: lifecycleKey(useCaseId) });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Evidence links (UI-F5-EVIDENCE WI-E) — gov:write, no If-Match (DF5-4)
+// Disposition-gated server-side: AI_SUGGESTED items reject linking (INV-20, DF5-5).
+// Invalidates AIIA-detail only — NOT lifecycle/whose-court key (DF5-10, D-29).
+// ---------------------------------------------------------------------------
+
+/** POST .../items/{itemId}/evidence-links */
+export function useLinkEvidence(assessmentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, evidenceId }: { itemId: string; evidenceId: string }) =>
+      api.post<EvidenceLinkRead, EvidenceLinkCreate>(
+        `/v1/assessments/${assessmentId}/items/${itemId}/evidence-links`,
+        { evidence_id: evidenceId }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: assessKeys.assessment(assessmentId) });
+    },
+  });
+}
+
+/** DELETE .../items/{itemId}/evidence-links/{evidenceId} — path param is evidence_id (DF5-9) */
+export function useUnlinkEvidence(assessmentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, evidenceId }: { itemId: string; evidenceId: string }) =>
+      api.delete<void>(
+        `/v1/assessments/${assessmentId}/items/${itemId}/evidence-links/${evidenceId}`
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: assessKeys.assessment(assessmentId) });
     },
   });
 }

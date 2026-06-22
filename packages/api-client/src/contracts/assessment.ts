@@ -15,6 +15,7 @@ import type {
   SectionApplicability,
   TreatmentDecision,
 } from "./enums";
+import type { ItemEvidenceRead } from "./evidence";
 
 // ---------------------------------------------------------------------------
 // Control links
@@ -59,6 +60,8 @@ export interface AssessmentItemRead {
   source_assessment_id: string | null;
   source_type: AssessmentType | null;
   control_links: ControlLinkRead[];
+  /** Batch-loaded manifest (WI-F / DF5-8). No download_url — no evidence.access triggered. */
+  evidence_links: ItemEvidenceRead[];
 }
 
 /** PATCH body — authoring fields only. Never include provenance (INV-13). */

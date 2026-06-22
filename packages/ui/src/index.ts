@@ -26,3 +26,8 @@ export { StaleLockBanner } from "./concurrency/stale-lock-banner";
 export { BadFromStateBanner } from "./concurrency/bad-from-state-banner";
 
 export { WhoseCourtIndicator } from "./status/whose-court-indicator";
+
+export { EvidenceTable, type EvidenceRow } from "./evidence/evidence-table";
+export { EvidenceUploadControl } from "./evidence/evidence-upload-control";
+export { EvidenceLinkPicker, type EvidencePickerRow } from "./evidence/evidence-link-picker";
+export { EvidenceManifestChip, type ManifestLink } from "./evidence/evidence-manifest-chip";

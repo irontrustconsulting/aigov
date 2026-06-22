@@ -10,6 +10,7 @@ import {
   BadFromStateError,
 } from "@/lib/assess";
 import { ControlLinks } from "./control-links";
+import { EvidenceManifest } from "./evidence-manifest";
 import type { AssessmentItemRead, TreatmentDecision } from "@irontrust/api-client";
 
 interface Props {
@@ -147,6 +148,13 @@ export function ItemCard({ item, assessmentId, isLocked, canWrite, isFederSurfac
         item={item}
         assessmentId={assessmentId}
         canWrite={canWrite && !isLocked}
+      />
+
+      {/* Evidence manifest (UI-F5-EVIDENCE WI-E) — disposition-gated for AI_SUGGESTED (DF5-5) */}
+      <EvidenceManifest
+        item={item}
+        assessmentId={assessmentId}
+        canWrite={canWrite && !isLocked && !isFederSurfaced}
       />
 
       {/* Delete — absent when locked (INV-31); feeder-surfaced items have no delete affordance */}

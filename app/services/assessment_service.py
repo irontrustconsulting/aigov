@@ -59,6 +59,7 @@ from app.schemas.assessment import (
     AssessmentItemRead,
     ControlLinkRead,
     FeederRecommendationRead,
+    ItemEvidenceRead,
 )
 from app.services.lifecycle_gates import classification_readiness
 from app.services.lifecycle_service import advance_use_case
@@ -774,6 +775,38 @@ def _batch_control_links(
     return out
 
 
+def _batch_evidence_links(
+    db: Session, item_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, list[ItemEvidenceRead]]:
+    """Batch-fetch evidence manifest for a list of item ids — one query, no N+1.
+    Returns self-describing ItemEvidenceRead (no download_url, DF5-3/DF5-8)."""
+    if not item_ids:
+        return {}
+    out: dict[uuid.UUID, list[ItemEvidenceRead]] = {}
+    for row in db.execute(
+        select(
+            AssessmentItemEvidence.item_id,
+            Evidence.id.label("evidence_id"),
+            Evidence.title,
+            Evidence.sha256,
+            Evidence.content_type,
+            Evidence.size_bytes,
+        )
+        .join(Evidence, Evidence.id == AssessmentItemEvidence.evidence_id)
+        .where(AssessmentItemEvidence.item_id.in_(item_ids))
+    ).all():
+        out.setdefault(row.item_id, []).append(
+            ItemEvidenceRead(
+                evidence_id=row.evidence_id,
+                title=row.title,
+                sha256=row.sha256,
+                content_type=row.content_type,
+                size_bytes=row.size_bytes,
+            )
+        )
+    return out
+
+
 def assemble_aiia_items(aiia: Assessment, db: Session) -> list[AssessmentItemRead]:
     """Native items pass through unchanged. Feeder items whose
     (feeder.type, feeder.tier_snapshot, item.section_key) resolves via
@@ -799,10 +832,12 @@ def assemble_aiia_items(aiia: Assessment, db: Session) -> list[AssessmentItemRea
     if aiia.type != AssessmentType.AIIA:
         # Feeders surface nothing of their own — own view only. Still attach links.
         ctrl = _batch_control_links(db, [p[0] for p in pairs])
+        evid = _batch_evidence_links(db, [p[0] for p in pairs])
         for item_id, d in pairs:
             d["control_links"] = [
                 ControlLinkRead.model_validate(c) for c in ctrl.get(item_id, [])
             ]
+            d["evidence_links"] = list(evid.get(item_id, []))
         return [AssessmentItemRead(**d) for _, d in pairs]
 
     feeders = list(
@@ -840,10 +875,12 @@ def assemble_aiia_items(aiia: Assessment, db: Session) -> list[AssessmentItemRea
             pairs.append((item.id, data))
 
     ctrl = _batch_control_links(db, [p[0] for p in pairs])
+    evid = _batch_evidence_links(db, [p[0] for p in pairs])
     for item_id, d in pairs:
         d["control_links"] = [
             ControlLinkRead.model_validate(c) for c in ctrl.get(item_id, [])
         ]
+        d["evidence_links"] = list(evid.get(item_id, []))
     return [AssessmentItemRead(**d) for _, d in pairs]
 
 

@@ -139,7 +139,7 @@ No shared path prefix — routes split across `/use-cases/{id}/assessments` and 
 |---|---|---|---|---|---|
 | `POST /use-cases/{use_case_id}/assessments` | `gov:system_owner` | — | `AssessmentRead` (201) | — | Creates the AIIA from the use case's current classification; 409 on `PROHIBITED`/`REQUIRES_CONTEXT`/no-snapshot, or if one already exists (`uq_one_aiia_per_use_case`). |
 | `GET /use-cases/{use_case_id}/assessments` | `gov:ALL` | — | `AssessmentRead[]` | — | |
-| `GET /assessments/{assessment_id}` | `gov:ALL` | — | `AssessmentDetail` | — | `items` assembled at read time (`assemble_aiia_items`, `INV-16`); each item includes `control_links: ControlLinkRead[]` (batch-loaded, `DF3-7`). |
+| `GET /assessments/{assessment_id}` | `gov:ALL` | — | `AssessmentDetail` | — | `items` assembled at read time (`assemble_aiia_items`, `INV-16`); each item includes `control_links: ControlLinkRead[]` (batch-loaded, `DF3-7`) and `evidence_links: ItemEvidenceRead[]` (batch-loaded, `DF5-8`, UI-F5-EVIDENCE). No `download_url` in manifest — download is on-intent via `GET /evidence/{id}` (DF5-3). |
 | `DELETE /assessments/{assessment_id}` | `gov:system_owner` | — | — (204) | — | Pristine-delete only (`INV-17, 36`); same route/gate for an AIIA or a feeder. |
 | `POST /assessments/{assessment_id}/submit` | `gov:system_owner` | — | `AssessmentRead` | **yes** (`lock_version`) | `DRAFT → IN_REVIEW`. |
 | `POST /assessments/{assessment_id}/review` | `gov:reviewer` | `AssessmentReviewCreate` | `AssessmentRead` | **yes** | `IN_REVIEW → APPROVED`\|`DRAFT` (bounce); `APPROVED` same-transaction-advances the use case. Act-SoD vs. submitter. |
@@ -279,3 +279,16 @@ Evidence linking (`POST .../evidence-links`) and coverage (`GET /assessments/{id
 - `GET /use-cases/{id}/authorisation` — ATO read + live_state (`staleTime: 0`; `gov:ALL`; 404 if never authorised)
 
 **Additive backend schema delta (`DF4-6`):** `AssessmentDetail` now includes `reviews: list[AssessmentReviewRead]` (batch-loaded in `GET /assessments/{id}` handler via INV-34 membership join). `AssessmentReviewRead` carries `reviewer_display_name` (not a durable stamp — D-25; resolved at read time). No migration required (data already existed in `assessment_review`). Gate and path of `GET /assessments/{id}` unchanged; only the response shape grew.
+
+**`UI-F5-EVIDENCE`** — no route delta; consumed-only. No routes added, removed, or re-gated. Routes consumed by this sprint:
+
+- `GET /me` — pre-flight role branch (admin → no evidence request issued, DF5-7)
+- `GET /evidence?limit=50` — evidence repository list (`gov:ALL`)
+- `GET /evidence/{evidence_id}` — on-intent download (presigned URL + `evidence.access` audit; `gov:ALL`; `staleTime: 0`; fired only on user click, DF5-3)
+- `POST /evidence` — evidence upload (`gov:write`; via dedicated BFF handler — NOT the generic proxy, FE-12)
+- `DELETE /evidence/{evidence_id}` — evidence delete (`gov:write`)
+- `GET /assessments/{id}` — assembled detail (now includes `items[].evidence_links`, DF5-8; gate and path unchanged)
+- `POST /assessments/{id}/items/{item_id}/evidence-links` — link evidence (`gov:write`; disposition-gated — AI_SUGGESTED rejects, INV-20; no `If-Match`, DF5-4)
+- `DELETE /assessments/{id}/items/{item_id}/evidence-links/{evidence_id}` — unlink (path param is `evidence_id`, not link-row id, DF5-9; no `If-Match`, DF5-4)
+
+**Additive backend schema delta (DF5-8):** `AssessmentItemRead` now includes `evidence_links: list[ItemEvidenceRead]` (batch-loaded in `assemble_aiia_items` via `_batch_evidence_links` — JOIN `assessment_item_evidence → evidence`). `ItemEvidenceRead` carries `evidence_id`, `title`, `sha256`, `content_type`, `size_bytes` — no `download_url` (DF5-3). No migration required. Same additive pattern as DF3-7/DF4-6; existing callers unbroken.

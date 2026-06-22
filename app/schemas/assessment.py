@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.base import (
     AssessmentStatus,
@@ -36,6 +36,18 @@ class ControlLinkRead(BaseModel):
 class ControlLinkCreate(BaseModel):
     control_id: uuid.UUID
     coverage: CoverageStatus = CoverageStatus.PARTIAL
+
+
+class ItemEvidenceRead(BaseModel):
+    """Self-describing manifest entry on AssessmentItemRead (UI-F5-EVIDENCE WI-F).
+    No download_url: rendering triggers no evidence.access (DF5-3/DF5-8)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    evidence_id: uuid.UUID
+    title: str
+    sha256: str | None
+    content_type: str | None
+    size_bytes: int | None
 
 
 class AssessmentItemRead(BaseModel):
@@ -70,6 +82,22 @@ class AssessmentItemRead(BaseModel):
     # Batch-loaded in assemble_aiia_items (UI-F3-ASSESS) — always present on
     # GET /assessments/{id}; [] for a newly created item before any links are added.
     control_links: list[ControlLinkRead] = Field(default_factory=list)
+    # Batch-loaded in assemble_aiia_items (UI-F5-EVIDENCE WI-F). Self-describing
+    # manifest — no download_url; triggers no evidence.access (DF5-3/DF5-8).
+    evidence_links: list[ItemEvidenceRead] = Field(default_factory=list)
+
+    @field_validator("evidence_links", mode="before")
+    @classmethod
+    def _coerce_evidence_links(cls, v: object) -> list:
+        if not v:
+            return []
+        items = list(v)
+        # ORM from_attributes gives AssessmentItemEvidence objects which lack the
+        # Evidence columns (title/sha256/…). assemble_aiia_items batch-loads the
+        # real manifest and overwrites this field — return [] to let that happen.
+        if items and not hasattr(items[0], "title"):
+            return []
+        return items
 
 
 class AssessmentItemCreate(BaseModel):

@@ -79,6 +79,24 @@ These are fixed by the backend; the client honours them from surface one. The *r
 
 **FE-11 · Whose-court is a direct `blocking.responsible_party` read, mapped through a fixed party→role table.** No pre-branch: court is read directly off the per-use-case `blocking` vector, always — the gate logic (`app/services/lifecycle_gates.py`) already resolves a `REQUIRES_CONTEXT`/`UNCLASSIFIED` use case correctly between the reviewer (classification still `PENDING_REVIEW`) and the owner (once it isn't), so no client-side special case is needed or correct. `responsible_party`'s vocabulary (`"user"|"reviewer"|"authoriser"|"vendor"|"system"`) is distinct from the governance-role vocabulary — map `"user"`→`system_owner`, `"reviewer"`/`"authoriser"` 1:1, `"vendor"`/`"system"`→ no role (never anyone's court, since neither is a governance role). The client matches the resolved role against the caller's server-authoritative `GET /v1/me` roles to highlight "your court" — presentational only, the backend remains the authz authority. → `D-38`, `FE-8`, `INV-28`, `D-4`, `D-24`.
 
+## 9. Binary file upload — `FE-12`
+
+**FE-12 · Binary file uploads must route through a dedicated BFF handler; never through the generic proxy.**
+
+The generic BFF proxy (`app/api/proxy/[...path]/route.ts`) reads the request body via `await request.text()`, which UTF-8-decodes the raw bytes. For binary files (PDF, images, ZIP), this silently corrupts byte sequences that are not valid UTF-8 and corrupts the multipart boundary. The result arrives at the API as a malformed body with a mismatched SHA-256.
+
+Any route that accepts a file upload (`multipart/form-data`) **must** have a dedicated Next.js route handler that:
+1. Reads the body as `await request.arrayBuffer()` — preserves binary content verbatim.
+2. Forwards the `Content-Type` header including the `boundary=` parameter — the API needs the boundary to parse the multipart body.
+3. Enforces the same CSRF check (`isSameOriginRequest`) and session gate (`getSession`) as every other state-changing BFF route (`FE-2`, `NFR-1`).
+4. Applies a client-side size ceiling (50 MB) before the API call to surface a friendly error early.
+
+**Current instance:** `apps/tenant/app/api/evidence-upload/route.ts` for `POST /v1/evidence`. Any future multipart upload route must follow this pattern, not the generic proxy.
+
+**Why not fix the proxy:** the generic proxy is a pass-through router; switching all requests to `arrayBuffer()` would break form-body routes that send `application/x-www-form-urlencoded` or `application/json` and legitimately rely on text decode. The dedicated handler is the narrower, safer fix.
+
+→ `INV-18`, `INV-22`, `FE-2`, `NFR-1`, `INV-50`; rationale `DF5-2`.
+
 ---
 
 ### FE-n index
@@ -96,3 +114,4 @@ These are fixed by the backend; the client honours them from surface one. The *r
 | FE-9 | TanStack Query through the BFF; mutations always via BFF; no client tenant_id/provenance | INV-3, INV-13 |
 | FE-10 | Two-app separate-origin routing; tenant (UX §5) / operator (PLATFORM-UX §3) surfaces; role-aware render | INV-1, INV-49, D-36, UX-5, D-24 |
 | FE-11 | Whose-court derivation — direct `blocking.responsible_party` read, no pre-branch, fixed party→role mapping, presentational highlight | D-38, FE-8, INV-28, D-4, D-24 |
+| FE-12 | Binary file uploads via dedicated BFF handler (arrayBuffer(), not text()); generic proxy must never handle multipart | INV-18, INV-22, FE-2, NFR-1, INV-50, DF5-2 |

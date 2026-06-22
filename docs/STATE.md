@@ -4,7 +4,7 @@
 **Purpose:** What is implemented and what must not be reinvented, at the level of *what exists · what shape · which gate*. It points outward for depth and never restates the detail.
 **Lanes:** constraints → `INVARIANTS.md` (`INV-n`); schema (tables/enums/indexes) → `DATA-MODEL.md`; auth / identity / RLS / session mechanics → `ARCHITECTURE.md`; implementation shapes → `PATTERNS.md` (`PAT-n`); decisions/rationale → `DECISIONS.md` (`D-n`); conceptual model → `DOMAIN.md`.
 
-**Current through:** UI-F4-ASSURE (assurance / act-SoD surface). Sprints 1–7b + UI-F1..F4 built.
+**Current through:** UI-F5-EVIDENCE (evidence repository surface + per-item evidence linking). Sprints 1–7b + UI-F1..F5 built.
 
 ---
 
@@ -104,6 +104,22 @@ Consumed routes: `GET /v1/me` · `GET /v1/use-cases/{id}` · `GET /v1/use-cases/
 
 Consumed routes (no route delta): `GET /v1/me` · `GET /v1/use-cases/{id}` · `GET /v1/use-cases/{id}/assessments` · `GET /v1/use-cases/{id}/lifecycle` · `GET /v1/systems/{id}/rollup` · `GET /v1/assessments/{id}` · `GET /v1/assessments/{id}/sections` · `GET /v1/assessments/{id}/feeder-recommendations` · `GET /assessments/review-queue` · `POST /assessments/{id}/review` (If-Match) · `POST /assessments/{id}/reopen` (If-Match) · `POST /use-cases/{id}/classification/sign-off` · `POST /use-cases/{id}/authorise` · `GET /use-cases/{id}/authorisation`.
 
+### Evidence repository surface (`UI-F5-EVIDENCE`)
+
+`apps/tenant/app/evidence` (NEW) + `apps/tenant/app/use-cases/[id]` (ALTER). Wires the already-built evidence backend (Sprint 4) into the tenant UI, closing `DF3-1`. One additive backend schema delta: `evidence_links: list[ItemEvidenceRead]` added to `AssessmentItemRead` (batch-loaded in `assemble_aiia_items` via `_batch_evidence_links` — one JOIN query, no N+1). No new routes, tables, or enums.
+
+**Role branch:** `GET /v1/me` pre-fetched; admin (zero gov roles) → empty-state, no evidence request issued (DF5-7); all five governance roles → evidence list + download; `system_owner`/`contributor` → additionally upload + delete. Download is on-intent: `GET /evidence/{id}` (presigned URL + audit `evidence.access`) fired only on explicit user click, never pre-fetched per row (DF5-3).
+
+**Evidence repository home** (`apps/tenant/app/evidence/page.tsx`): `EvidenceTable` (all gov roles), `EvidenceUploadControl` (write roles), on-intent download via `useEvidenceDetail(id, enabled)` + `window.location.href` navigation. Delete disabled-with-reason when `link_count > 0` (INV-19, DF5-6).
+
+**Per-item manifest** (`apps/tenant/app/use-cases/[id]/_regions/evidence-manifest.tsx`): reads `item.evidence_links` (the batch-loaded manifest — no download_url, DF5-8). Link is disposition-gated: `AI_SUGGESTED` items show the button disabled-with-reason (INV-20, DF5-5). Unlink targets `evidence_id`, not a link-row id (DF5-9). Feeder-surfaced items: `canWrite=false` → read-only. Invalidates AIIA-detail only after link/unlink; lifecycle key NOT invalidated (DF5-10, D-29).
+
+**FE-12 (new):** binary file uploads must route through a dedicated BFF handler (`apps/tenant/app/api/evidence-upload/route.ts`) that reads the body as `arrayBuffer()`, never `request.text()`. The generic proxy's `request.text()` UTF-8-decodes binary bytes, corrupting the file and producing a mismatched SHA-256. The dedicated handler preserves the `Content-Type` header including the `boundary=` parameter.
+
+**Backend shape:** `_batch_evidence_links(db, item_ids)` JOINs `assessment_item_evidence → evidence` to materialise `ItemEvidenceRead` objects (carrying `title`/`sha256`/`content_type`/`size_bytes` from the `evidence` table, not `assessment_item_evidence`). A `@field_validator("evidence_links", mode="before")` guard in `AssessmentItemRead` short-circuits Pydantic's ORM `from_attributes` path (which would read the incomplete ORM relationship, lacking `evidence` columns) and returns `[]`; `assemble_aiia_items` then overwrites the field with the batch-loaded result.
+
+Consumed routes (no route delta): `GET /v1/me` · `GET /v1/evidence?limit=50` · `GET /v1/evidence/{id}` · `POST /v1/evidence` (via dedicated BFF handler, FE-12) · `DELETE /v1/evidence/{id}` · `POST /v1/assessments/{id}/items/{item_id}/evidence-links` · `DELETE /v1/assessments/{id}/items/{item_id}/evidence-links/{evidence_id}` · `GET /v1/assessments/{id}` (extended — now includes `items[].evidence_links`).
+
 ### Portfolio landing & system drill-in (`UI-F2-PORTFOLIO`)
 `apps/tenant/app/dashboard` (the F0 authenticated-landing route, promoted from the W7a/b smoke surface to the real portfolio home) plus `apps/tenant/app/systems/[id]` (drill-in) — the second tenant feature surface, pure wire-up over `GET /v1/portfolio`, `GET /v1/systems`, `GET /v1/systems/{id}/rollup`, `GET /v1/use-cases/{id}/lifecycle`, `GET /v1/me`; read-only (`re-evaluate` deferred, `A1`); zero backend/schema delta. `GET /v1/me` is fetched first and branches proactively (`DF2-5`): an admin-only caller (zero governance roles) renders an admin/empty state and the `gov:ALL`-gated `GET /portfolio` is never issued. Otherwise the portfolio hub (`PortfolioHub`) renders a "your court" section and a "portfolio posture" section for every governance-role caller — 1st-line roles (`system_owner`/`contributor`) lead with your-court, 2nd/3rd-line lead with posture — plus the per-system use-case list; `GET /v1/systems` entries absent from the portfolio result (no use case yet) render as a separate, non-interactive "register a use case" nudge card (`A2`), excluded from court computation.
 
@@ -146,7 +162,6 @@ The system drill-in renders each use case's blocking reason/court as information
 | **Cross-feeder risk dedup** | — | A risk proposed by AIIA and a feeder surfaces twice, untouched; no merge planned for MVP |
 | **`re-evaluate` on the portfolio hub** | Shipped in `UI-F3-ASSESS` (`apps/tenant/app/use-cases/[id]`, `system_owner`-only) | Intentionally absent from the portfolio hub (hub is read-only, `A1`) |
 | **Per-use-case resumable URL** | `apps/tenant/app/use-cases/[id]` shipped in `UI-F3-ASSESS`; `system-detail-client.tsx` now links each use case forward (`V-4` void closed) | F1's wizard step-progress is still in-memory `useReducer` state — the intake wizard itself has no resumable URL |
-| **Evidence linking / repository surface (A2)** | Evidence repository backend + read-only `source_ref` display in item cards | The evidence-link creation/management UI — deferred with the evidence-repository surface |
 | **Coverage panel (A3)** | Coverage backend built (7a) | Deferred — headline counts only meaningful on an `APPROVED` governing AIIA (INV-38); DRAFT reads mislead |
 | **Feeder authoring (A7, provisional)** | Feeder recommendations read-only panel; no feeder create/author UI | PROVISIONAL: deferred (DF3-6 — confirmed scope hole for feeder-gated tiers) |
 | **`AuditEvent` actor durability** (D-25) | ATO text-stamps name/email (exception); `AssessmentReviewRead.reviewer_display_name` from INV-34 join at read time (WI-9b) | One deferred cross-cutting fix for durable name/email on `AuditEvent` + `AssessmentReview`/`submitted_by`/`approved_by` |

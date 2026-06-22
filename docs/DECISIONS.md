@@ -240,6 +240,54 @@ Per §0 V-1: `list_review_queue` pre-filters submitter; no `caller_eligible` fie
 
 ---
 
+## UI-F5-EVIDENCE sprint-local decisions
+
+**DF5-1** · Closes DF3-1 — evidence linking ships with the evidence-repository surface
+The evidence-link creation/management UI and the evidence repository are built together in one sprint rather than independently. **Why:** linking needs evidence to exist; building the repository without linking would deliver a write-only surface; building linking without a repository would require out-of-band evidence creation. The atomic delivery also defers one additive backend delta (`evidence_links` on `AssessmentItemRead`) until the field is actually consumed.
+↳ refs: DF3-1
+
+**DF5-2** · Upload routes through a dedicated BFF handler, not the generic proxy
+`POST /v1/evidence` (multipart) routes through `apps/tenant/app/api/evidence-upload/route.ts`, not through `apps/tenant/app/api/proxy/[...path]/route.ts`. **Why:** the generic proxy reads `await request.text()` to forward the body; `request.text()` UTF-8-decodes binary bytes, corrupting the file content and producing a mismatched SHA-256 (confirmed by test). The dedicated handler reads `request.arrayBuffer()` and preserves the `Content-Type` header's `boundary=` parameter verbatim. **Rejected:** patching the generic proxy to use `arrayBuffer()` — the proxy is a general-purpose router; changing it to never call `text()` on any request could break form-body routes that legitimately need text decoding.
+↳ enforces: INV-18; refs: FE-12, INV-22, NFR-1
+
+**DF5-3** · Download is on-intent: `GET /evidence/{id}` fetched only on explicit click
+`useEvidenceDetail(id, enabled)` is enabled only when the user clicks "Download"; the result URL is consumed once and the pending ID cleared. No per-row prefetch at list render time. **Why:** `GET /evidence/{id}` stages `evidence.access` in the audit log (INV-22); prefetching it for every visible row would inflate the audit trail without user intent.
+↳ refs: INV-22, FE-7
+
+**DF5-4** · No `If-Match` on evidence-link mutations
+`POST .../evidence-links` and `DELETE .../evidence-links/{evidence_id}` carry no `If-Match` header. **Why:** the link table has no `lock_version` column; link idempotency is structural (`UNIQUE(item_id, evidence_id)`), not optimistic-concurrency guarded. `FE-6` dormant for these routes.
+↳ refs: FE-6, PAT-6, API-ROUTES §5
+
+**DF5-5** · Link is disposition-gated: `AI_SUGGESTED` items reject evidence linking
+The server rejects `POST .../evidence-links` on an `AI_SUGGESTED` item (INV-20); the UI shows the link button disabled-with-reason, not absent, so a reviewer can see that linking exists but is blocked until the item is confirmed/amended. **Why:** a confirmed item carries the human's authoring intent; linking evidence to an unconfirmed suggestion would let a machine-proposed assessment accrue human-authored evidence without human endorsement.
+↳ enforces: INV-20; refs: FE-8, DF5-5
+
+**DF5-6** · Delete disabled-with-reason when `link_count > 0`; not absent
+Evidence delete is structurally blocked server-side when linked (INV-19); the UI renders the control disabled-with-reason (not absent) when `link_count > 0`. **Why:** the user needs to know the evidence is linked and understand why deletion is blocked — absent-control gives no affordance to discover and fix the blocker. Asymmetry with SoD-barred controls (FE-8): SoD bars are structural (role-permanent); link-count blocks are transient (unlink first, then delete).
+↳ enforces: INV-19; refs: FE-8
+
+**DF5-7** · Admin (zero governance roles) → empty-state; no evidence request issued
+The evidence repository home issues no `GET /v1/evidence` when the caller holds no governance role. **Why:** `GET /v1/evidence` is `gov:ALL`-gated; issuing it for an admin would return a 403 with no useful recovery path, adding noise. Consistent with the same branch in UI-F3-ASSESS and UI-F2-PORTFOLIO (DF2-5).
+↳ refs: DF2-5
+
+**DF5-8** · `ItemEvidenceRead` on `AssessmentItemRead` is a self-describing manifest; no `download_url`
+The batch-loaded `evidence_links` field carries `title`, `sha256`, `content_type`, `size_bytes` — enough to display and audit — but never `download_url`. **Why:** including `download_url` would batch-generate presigned S3 URLs for every item on every AIIA page load, triggering `evidence.access` audit events without user intent (DF5-3) and adding S3 signing cost to every assembled-items read.
+↳ refs: DF5-3, INV-22
+
+**DF5-9** · Unlink path param is `evidence_id`, not a link-row id
+`DELETE .../evidence-links/{evidence_id}` targets the natural key of the association, not the surrogate `assessment_item_evidence.id`. **Why:** the client never reads the link-row id (it's not in `ItemEvidenceRead`); requiring the client to do a separate lookup to recover the surrogate id before unlinking adds a round-trip with no benefit. The server uses `(item_id, evidence_id)` as the unique key for the delete.
+↳ refs: DF5-8
+
+**DF5-10** · Link/unlink invalidates AIIA-detail only; lifecycle key not invalidated
+`useLinkEvidence` and `useUnlinkEvidence` call `queryClient.invalidateQueries({ queryKey: assessKeys.assessment(assessmentId) })` only. The lifecycle / whose-court key (`lifecycleKey(useCaseId)`) is not invalidated. **Why:** evidence linking has no effect on lifecycle state or gate readiness (`lifecycle_gates.py` does not read `assessment_item_evidence`). Invalidating the lifecycle key would trigger an unnecessary re-evaluate round-trip. D-29 (`require_evidence_for_satisfied`) is an export-layer concern, not a real-time gate.
+↳ refs: D-29, FE-7, INV-25
+
+**DF5-11** · Uploader display name omitted from MVP; `uploaded_by_user_id` is a bare UUID
+`EvidenceTable` and `EvidenceDetailRead` carry `uploaded_by_user_id` as a UUID. The UI does not resolve or display the uploader's name. **Why:** there is no member-level `GET /v1/members/{id}` endpoint (the route is `admin`-gated), and no join in the evidence read path (D-25 deferred). Adding a per-row lookup to resolve names would introduce N+1 or a second query per page load; adding a join to `evidence_service` would widen scope beyond this sprint.
+↳ refs: D-25
+
+---
+
 ## OPEN — unresolved design questions affecting future work
 
 **OPEN-1** · Worked-state void / withdraw path

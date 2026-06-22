@@ -59,7 +59,7 @@
 | Table | Plane | Notes |
 |---|---|---|
 | `assessment` | TENANT (RLS) | AIIA and feeders share this table; feeder = `parent_aiia_id` set. Self-ref `ON DELETE CASCADE` + `passive_deletes` (INV-47). Status = `AssessmentStatus`; `submission_round` cycle key (INV-37). |
-| `assessment_item` | TENANT (RLS) | Provenance = `ProvenanceConfidence`; `lock_version` concurrency (INV-14). `risk_id` FK is RESTRICT (INV-46). |
+| `assessment_item` | TENANT (RLS) | Provenance = `ProvenanceConfidence`; `lock_version` concurrency (INV-14). `risk_id` FK is RESTRICT (INV-46). `AssessmentItemRead` carries two batch-loaded virtual fields: `control_links: list[ControlLinkRead]` (DF3-7) and `evidence_links: list[ItemEvidenceRead]` (DF5-8, UI-F5-EVIDENCE) — both computed in `assemble_aiia_items`, no N+1. |
 | `assessment_item_control` | TENANT (RLS) | `control_id` FK RESTRICT (INV-46). |
 | `assessment_item_evidence` | TENANT (RLS) | `UNIQUE(item_id, evidence_id)`; `ON DELETE CASCADE` (INV-19, 20). |
 | `assessment_review` | TENANT (RLS) | One row per review decision; `decision` = `ReviewDecision`; `CHECK` note non-null when `CHANGES_REQUESTED`. Append-only by convention (no trigger). |

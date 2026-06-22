@@ -214,7 +214,10 @@ def _assessment_record(
     def _item_read(
         item: AssessmentItem, surfaces_into: str | None
     ) -> ExportAssessmentItemRead:
-        base = AssessmentItemRead.model_validate(item).model_dump()
+        # Exclude link fields from base — both are provided explicitly below.
+        base = AssessmentItemRead.model_validate(item).model_dump(
+            exclude={"control_links", "evidence_links"}
+        )
         return ExportAssessmentItemRead(
             **base,
             surfaces_into=surfaces_into,

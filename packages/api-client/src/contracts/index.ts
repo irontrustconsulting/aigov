@@ -7,3 +7,4 @@ export * from "./classification-context";
 export * from "./lifecycle";
 export * from "./me";
 export * from "./assessment";
+export * from "./evidence";
