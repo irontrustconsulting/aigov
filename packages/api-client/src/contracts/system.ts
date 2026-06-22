@@ -1,10 +1,24 @@
-/** app/schemas/system.py — SystemCreate/SystemDetail/PrefillResponse. */
+/** app/schemas/system.py — SystemCreate/SystemRead/SystemDetail/PrefillResponse. */
 import type { ProvenanceConfidence, SystemLifecycleStage } from "./enums";
 import type { AffectedPartyOut, CatalogueVendorRef, DataCategoryOut, VocabItemOut } from "./reference";
 
 export interface CatalogueProductRef {
   id: string;
   name: string;
+}
+
+/** GET /v1/systems — lean list-view (app/schemas/system.py SystemRead), no
+ * vocab labels or use-case data. UI-F2-PORTFOLIO's A2 zero-use-case merge:
+ * a system here with no matching entry in the GET /portfolio result has no
+ * use cases yet. */
+export interface SystemRead {
+  id: string;
+  tenant_id: string;
+  name: string;
+  is_custom: boolean;
+  lifecycle_stage: SystemLifecycleStage | null;
+  created_at: string;
+  updated_at: string;
 }
 
 /** The request body for POST /v1/systems. `is_custom` XOR a catalogue link

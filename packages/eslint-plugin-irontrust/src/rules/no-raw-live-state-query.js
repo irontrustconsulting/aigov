@@ -15,6 +15,8 @@ const LIVE_STATE_KEYS = new Set([
   "gate-vector",
   "control-coverage",
   "deployment-authorisation",
+  "portfolio",
+  "system-rollup",
 ]);
 
 export default {

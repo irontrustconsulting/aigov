@@ -19,6 +19,24 @@ test("a raw useQuery against a live-state key fails", () => {
   assert.match(messages[0].message, /lifecycle-state/);
 });
 
+test("a raw useQuery against the portfolio live-state key fails", () => {
+  const messages = linter.verify(
+    'useQuery({ queryKey: ["portfolio"], queryFn: fetchIt });',
+    config
+  );
+  assert.equal(messages.length, 1);
+  assert.match(messages[0].message, /portfolio/);
+});
+
+test("a raw useQuery against the system-rollup live-state key fails", () => {
+  const messages = linter.verify(
+    'useQuery({ queryKey: ["system-rollup", id], queryFn: fetchIt });',
+    config
+  );
+  assert.equal(messages.length, 1);
+  assert.match(messages[0].message, /system-rollup/);
+});
+
 test("a raw useQuery against a non-live-state key passes", () => {
   const messages = linter.verify(
     'useQuery({ queryKey: ["systems-list"], queryFn: fetchIt });',

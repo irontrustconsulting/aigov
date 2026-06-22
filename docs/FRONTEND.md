@@ -75,6 +75,10 @@ These are fixed by the backend; the client honours them from surface one. The *r
 - **Operator console** (the separate app) maps to `PLATFORM-UX.md` §3: provisioning · operator RBAC · catalogue/reference curation · curation-task inbox. Every platform capability is UI-operated (`INV-49`, `D-36`); the console never renders a tenant face.
 - **Role-aware rendering** (`UX-5`) reflects governance role from the server-authoritative context (never token claims — `D-24`); structurally-barred controls are absent (`FE-8`).
 
+## 8. Whose-court derivation — `FE-11`
+
+**FE-11 · Whose-court is a direct `blocking.responsible_party` read, mapped through a fixed party→role table.** No pre-branch: court is read directly off the per-use-case `blocking` vector, always — the gate logic (`app/services/lifecycle_gates.py`) already resolves a `REQUIRES_CONTEXT`/`UNCLASSIFIED` use case correctly between the reviewer (classification still `PENDING_REVIEW`) and the owner (once it isn't), so no client-side special case is needed or correct. `responsible_party`'s vocabulary (`"user"|"reviewer"|"authoriser"|"vendor"|"system"`) is distinct from the governance-role vocabulary — map `"user"`→`system_owner`, `"reviewer"`/`"authoriser"` 1:1, `"vendor"`/`"system"`→ no role (never anyone's court, since neither is a governance role). The client matches the resolved role against the caller's server-authoritative `GET /v1/me` roles to highlight "your court" — presentational only, the backend remains the authz authority. → `D-38`, `FE-8`, `INV-28`, `D-4`, `D-24`.
+
 ---
 
 ### FE-n index
@@ -91,3 +95,4 @@ These are fixed by the backend; the client honours them from surface one. The *r
 | FE-8 | SoD-visible controls — structural bar absent, transient block disabled-with-reason; presentational only, backend is authz authority | UX-5, INV-28, D-4, INV-7, D-24 |
 | FE-9 | TanStack Query through the BFF; mutations always via BFF; no client tenant_id/provenance | INV-3, INV-13 |
 | FE-10 | Two-app separate-origin routing; tenant (UX §5) / operator (PLATFORM-UX §3) surfaces; role-aware render | INV-1, INV-49, D-36, UX-5, D-24 |
+| FE-11 | Whose-court derivation — direct `blocking.responsible_party` read, no pre-branch, fixed party→role mapping, presentational highlight | D-38, FE-8, INV-28, D-4, D-24 |

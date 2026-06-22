@@ -11,6 +11,8 @@ export const LIVE_STATE_KEYS = [
   "gate-vector",
   "control-coverage",
   "deployment-authorisation",
+  "portfolio",
+  "system-rollup",
 ] as const;
 
 export type LiveStateKey = (typeof LIVE_STATE_KEYS)[number];

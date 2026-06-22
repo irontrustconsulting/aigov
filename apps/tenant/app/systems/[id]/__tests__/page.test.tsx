@@ -1,0 +1,96 @@
+/**
+ * @jest-environment jsdom
+ */
+import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import type { MeRead, SystemRollupRead } from "@irontrust/api-client";
+import { SystemDetailClient } from "../system-detail-client";
+
+function wrapper({ children }: { children: ReactNode }) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
+
+function me(governanceRoleKeys: string[]): MeRead {
+  return {
+    membership_id: "m1",
+    tenant_id: "tenant-1",
+    role: "member",
+    email: "caller@acme.test",
+    name: "Caller",
+    governance_roles: governanceRoleKeys.map((key) => ({
+      id: key,
+      key,
+      name: key,
+      description: null,
+      line_of_defence: 1,
+    })),
+  };
+}
+
+function mockFetch(meBody: MeRead, rollup: SystemRollupRead) {
+  global.fetch = jest.fn((input: RequestInfo | URL) => {
+    const url = String(input);
+    const body = url.includes("/v1/me") ? meBody : rollup;
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify(body),
+    } as Response);
+  }) as jest.Mock;
+}
+
+afterEach(() => jest.restoreAllMocks());
+
+const rollup: SystemRollupRead = {
+  system_id: "sys-1",
+  system_name: "Acme Resume Screener",
+  use_case_count: 2,
+  highest_tier: "high_risk",
+  use_cases: [
+    {
+      use_case_id: "uc-1",
+      title: "Screen candidate applications",
+      state: "vendor_check",
+      eu_tier: "high_risk",
+      blocking: {
+        state: "vendor_check",
+        verdict: "park",
+        reason_code: "vendor_not_started",
+        reason: "Vendor clearance not yet requested",
+        responsible_party: "authoriser",
+      },
+    },
+    {
+      use_case_id: "uc-2",
+      title: "Internal candidate ranking",
+      state: "under_assessment",
+      eu_tier: "high_risk",
+      blocking: null,
+    },
+  ],
+};
+
+describe("SystemDetailClient (UI-F2-PORTFOLIO drill-in)", () => {
+  test("renders the rollup: system name, use cases, states, and resolved court", async () => {
+    mockFetch(me(["authoriser"]), rollup);
+
+    render(<SystemDetailClient systemId="sys-1" />, { wrapper });
+
+    await waitFor(() => expect(screen.getByText("Acme Resume Screener")).toBeInTheDocument());
+    expect(screen.getByText(/screen candidate applications/i)).toBeInTheDocument();
+    expect(screen.getByText(/vendor clearance not yet requested/i)).toBeInTheDocument();
+    expect(screen.getByText(/internal candidate ranking/i)).toBeInTheDocument();
+    expect(screen.getByText(/nothing is blocking this use case/i)).toBeInTheDocument();
+  });
+
+  test("renders no forward-link control on a blocked use case (no deep-linkable F1 surface)", async () => {
+    mockFetch(me(["authoriser"]), rollup);
+
+    render(<SystemDetailClient systemId="sys-1" />, { wrapper });
+
+    await waitFor(() => expect(screen.getByText("Acme Resume Screener")).toBeInTheDocument());
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+});
