@@ -85,12 +85,14 @@ describe("SystemDetailClient (UI-F2-PORTFOLIO drill-in)", () => {
     expect(screen.getByText(/nothing is blocking this use case/i)).toBeInTheDocument();
   });
 
-  test("renders no forward-link control on a blocked use case (no deep-linkable F1 surface)", async () => {
+  test("V-4: each use case title links to its /use-cases/{id} surface (forward link added by UI-F3-ASSESS)", async () => {
     mockFetch(me(["authoriser"]), rollup);
 
     render(<SystemDetailClient systemId="sys-1" />, { wrapper });
 
     await waitFor(() => expect(screen.getByText("Acme Resume Screener")).toBeInTheDocument());
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(rollup.use_cases.length);
+    expect(links[0]).toHaveAttribute("href", `/use-cases/${rollup.use_cases[0].use_case_id}`);
   });
 });

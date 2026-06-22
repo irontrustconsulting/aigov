@@ -57,6 +57,7 @@ from app.models.lifecycle import AuditEvent, DeploymentAuthorisation, Evidence
 from app.schemas.assessment import (
     AssessmentItemAmend,
     AssessmentItemRead,
+    ControlLinkRead,
     FeederRecommendationRead,
 )
 from app.services.lifecycle_gates import classification_readiness
@@ -759,6 +760,20 @@ def create_feeder(
 # ---------------------------------------------------------------------------
 
 
+def _batch_control_links(
+    db: Session, item_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, list[AssessmentItemControl]]:
+    """Batch-fetch control links for a list of item ids — one query, no N+1."""
+    if not item_ids:
+        return {}
+    out: dict[uuid.UUID, list[AssessmentItemControl]] = {}
+    for row in db.scalars(
+        select(AssessmentItemControl).where(AssessmentItemControl.item_id.in_(item_ids))
+    ):
+        out.setdefault(row.item_id, []).append(row)
+    return out
+
+
 def assemble_aiia_items(aiia: Assessment, db: Session) -> list[AssessmentItemRead]:
     """Native items pass through unchanged. Feeder items whose
     (feeder.type, feeder.tier_snapshot, item.section_key) resolves via
@@ -766,8 +781,8 @@ def assemble_aiia_items(aiia: Assessment, db: Session) -> list[AssessmentItemRea
     they map into and tagged with source_assessment_id/source_type
     (design doc §5.6). Feeder-private items (NULL target) are excluded —
     they surface only in that feeder's own GET /assessments/{feeder_id}.
-    Read-time only: nothing here is written back; provenance, created_by,
-    and control links all travel with the item by id, untouched."""
+    Read-time only: nothing here is written back. control_links are
+    batch-loaded in one query at the end (UI-F3-ASSESS additive delta)."""
     native_items = list(
         db.scalars(
             select(AssessmentItem)
@@ -775,10 +790,20 @@ def assemble_aiia_items(aiia: Assessment, db: Session) -> list[AssessmentItemRea
             .order_by(AssessmentItem.created_at)
         )
     )
-    result = [AssessmentItemRead.model_validate(i) for i in native_items]
+
+    # Pairs of (item_id, mutable dict) — feeder items get section_key etc. rewritten.
+    pairs: list[tuple[uuid.UUID, dict]] = [
+        (i.id, AssessmentItemRead.model_validate(i).model_dump()) for i in native_items
+    ]
 
     if aiia.type != AssessmentType.AIIA:
-        return result  # feeders surface nothing of their own — own view only
+        # Feeders surface nothing of their own — own view only. Still attach links.
+        ctrl = _batch_control_links(db, [p[0] for p in pairs])
+        for item_id, d in pairs:
+            d["control_links"] = [
+                ControlLinkRead.model_validate(c) for c in ctrl.get(item_id, [])
+            ]
+        return [AssessmentItemRead(**d) for _, d in pairs]
 
     feeders = list(
         db.scalars(select(Assessment).where(Assessment.parent_aiia_id == aiia.id))
@@ -812,9 +837,14 @@ def assemble_aiia_items(aiia: Assessment, db: Session) -> list[AssessmentItemRea
             data["section_key"] = target_by_section_key[item.section_key]
             data["source_assessment_id"] = feeder.id
             data["source_type"] = feeder.type
-            result.append(AssessmentItemRead(**data))
+            pairs.append((item.id, data))
 
-    return result
+    ctrl = _batch_control_links(db, [p[0] for p in pairs])
+    for item_id, d in pairs:
+        d["control_links"] = [
+            ControlLinkRead.model_validate(c) for c in ctrl.get(item_id, [])
+        ]
+    return [AssessmentItemRead(**d) for _, d in pairs]
 
 
 # ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@
 **Purpose:** the canonical inventory of every FastAPI route — method, path, auth gate, request/response schema, file:line — so a sprint can verify the contract it's about to consume *from this file*, not by re-grepping `app/routers/` from scratch. It also names routes that sound plausible but **do not exist**, so a design doesn't quietly assume one.
 **Scope (deliberate):** routes and gates, not field-by-field schema detail — schemas are named and pointed at `app/schemas/*.py`; full field shape lives there (D-21: the code is authoritative) or in `DATA-MODEL.md` for the underlying tables. Frontend-side mirrored types live in `packages/api-client/src/contracts/`.
 
-**Authoritative inventory:** every router registered in `app/main.py`, read line-by-line against repo HEAD this sprint (`UI-F1-INTAKE`). **Still verify before relying on it** (`D-21`) — this file can drift the moment a route changes; if it disagrees with `app/routers/`, the code wins and this file is stale, not the other way round.
+**Authoritative inventory:** every router registered in `app/main.py`, read line-by-line against repo HEAD through `UI-F3-ASSESS`. **Still verify before relying on it** (`D-21`) — this file can drift the moment a route changes; if it disagrees with `app/routers/`, the code wins and this file is stale, not the other way round.
 
 ---
 
@@ -139,7 +139,7 @@ No shared path prefix — routes split across `/use-cases/{id}/assessments` and 
 |---|---|---|---|---|---|
 | `POST /use-cases/{use_case_id}/assessments` | `gov:system_owner` | — | `AssessmentRead` (201) | — | Creates the AIIA from the use case's current classification; 409 on `PROHIBITED`/`REQUIRES_CONTEXT`/no-snapshot, or if one already exists (`uq_one_aiia_per_use_case`). |
 | `GET /use-cases/{use_case_id}/assessments` | `gov:ALL` | — | `AssessmentRead[]` | — | |
-| `GET /assessments/{assessment_id}` | `gov:ALL` | — | `AssessmentDetail` | — | `items` assembled at read time (`assemble_aiia_items`, `INV-16`). |
+| `GET /assessments/{assessment_id}` | `gov:ALL` | — | `AssessmentDetail` | — | `items` assembled at read time (`assemble_aiia_items`, `INV-16`); each item includes `control_links: ControlLinkRead[]` (batch-loaded, `DF3-7`). |
 | `DELETE /assessments/{assessment_id}` | `gov:system_owner` | — | — (204) | — | Pristine-delete only (`INV-17, 36`); same route/gate for an AIIA or a feeder. |
 | `POST /assessments/{assessment_id}/submit` | `gov:system_owner` | — | `AssessmentRead` | **yes** (`lock_version`) | `DRAFT → IN_REVIEW`. |
 | `POST /assessments/{assessment_id}/review` | `gov:reviewer` | `AssessmentReviewCreate` | `AssessmentRead` | **yes** | `IN_REVIEW → APPROVED`\|`DRAFT` (bounce); `APPROVED` same-transaction-advances the use case. Act-SoD vs. submitter. |
@@ -230,3 +230,33 @@ Only five routes accept `If-Match` (`PAT-6`, `INV-14`) — all five are AIIA ite
 `POST /assessments/{id}/submit` · `POST /assessments/{id}/review` · `POST /assessments/{id}/reopen` · `PATCH /assessments/{id}/items/{item_id}` · `POST /assessments/{id}/items/{item_id}/confirm`
 
 Every other mutation in this map — including every `UI-F1-INTAKE`-consumed route — never sends or checks it. A client building a generic "send `If-Match` whenever we have a `lock_version`" helper must special-case these five, not default to always-on.
+
+---
+
+## 6. Sprint consumption notes
+
+**`UI-F3-ASSESS`** — no route delta; consumed-only. No routes added, removed, or re-gated. Routes consumed by this sprint:
+
+- `GET /me` — pre-flight role branch (DF2-5: admin → no gov:ALL call)
+- `GET /use-cases/{id}` — identity + system_id for header
+- `GET /systems/{id}/rollup` — system name (not in `UseCaseWithClassification`)
+- `GET /use-cases/{id}/lifecycle` — whose-court + re-evaluate trigger
+- `POST /use-cases/{id}/lifecycle/re-evaluate` — system_owner lever
+- `GET /use-cases/{id}/assessments` — find current AIIA
+- `POST /use-cases/{id}/assessments` — bootstrap
+- `GET /assessments/{id}` — assembled detail (`staleTime: 0`, FE-7)
+- `GET /assessments/{id}/sections` — section template
+- `GET /assessments/{id}/feeder-recommendations` — feeder recs panel (read-only; A7 provisional)
+- `GET /reference/risks` — risk picker
+- `GET /reference/controls` — control picker
+- `POST /assessments/{id}/items` — item create
+- `PATCH /assessments/{id}/items/{item_id}` — amend (If-Match live — first surface to send it, inverts `DF1-5`)
+- `POST /assessments/{id}/items/{item_id}/confirm` — confirm AI_SUGGESTED (If-Match)
+- `DELETE /assessments/{id}/items/{item_id}` — item delete
+- `POST /assessments/{id}/items/{item_id}/control-links` — link control (free on any item, INV-20)
+- `DELETE /assessments/{id}/items/{item_id}/control-links/{link_id}` — unlink
+- `POST /assessments/{id}/submit` — submit (If-Match on assessment.lock_version)
+
+**Additive backend schema delta (`DF3-7`):** `AssessmentItemRead` now includes `control_links: list[ControlLinkRead]` (batch-loaded in `assemble_aiia_items`). This is a response-shape addition to `GET /assessments/{id}` — the route, gate, and path are unchanged; only the shape of items in `AssessmentDetail.items` grew. No migration required (data already existed in `assessment_item_control`). The `§2` assessments table row is still current — the gate and method are unchanged; the schema note for `GET /assessments/{id}` now reflects `AssessmentDetail` includes `items[].control_links`.
+
+Evidence linking (`POST .../evidence-links`) and coverage (`GET /assessments/{id}/coverage`) are available in the route map but **not consumed** by this sprint (A2/A3 deferred — `DF3-1`, `DF3-2`).

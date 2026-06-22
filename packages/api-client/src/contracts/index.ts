@@ -6,3 +6,4 @@ export * from "./use-case";
 export * from "./classification-context";
 export * from "./lifecycle";
 export * from "./me";
+export * from "./assessment";

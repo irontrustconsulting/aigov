@@ -186,6 +186,33 @@ Six read-only `GET /v1/reference/{operator-roles,hosting-models,usage-contexts,h
 
 ---
 
+## UI-F3-ASSESS local decisions (`DF3-n`)
+
+Sprint-local decisions, scoped to the use-case work surface.
+
+**DF3-1** · Evidence-linking deferred with the evidence-repository surface (A2 locked)
+F3 renders `source_ref` fields as manifest-style text only — no bytes/inline (INV-22) — and reads existing `evidence_links` via `source_ref`. The evidence-link creation/management UI is deferred until the evidence-repository surface ships. **Why:** linking needs evidence to exist; there is no surface yet for creating or browsing evidence items.
+
+**DF3-2** · Coverage panel deferred (A3 locked)
+The headline control-coverage count is not shown on the F3 surface. **Why:** the coverage view reports on a governing-AIIA that is `APPROVED` (INV-38); showing counts on a `DRAFT` assessment would mislead (near-zero at start, meaningless as a progress signal).
+
+**DF3-3** · Classification sign-off / review / authorise / queue / reopen reserved for F4 (act-SoD)
+All assurance acts (`POST .../review`, `POST .../classification/sign-off`, `POST .../authorise`, `POST .../reopen`) are absent from F3. **Why:** act-SoD (INV-28) — the reviewer must not be the submitter, the authoriser must not be the approver; grouping all assurance acts into one F4 unit is the only shape that enforces this across the full lifecycle. The assembled-AIIA view built in F3 is reused read-only in F4.
+
+**DF3-4** · `NEEDS_REFRESH` is author-open and resubmittable
+A reopened or backend-flagged `NEEDS_REFRESH` AIIA presents with authoring fields unlocked (INV-31) and the submit control visible (`system_owner`). The `reopen` act itself (`APPROVED → NEEDS_REFRESH`) is **deferred**: `APPROVED` is unreachable until F4 ships, so reopen has no state to act on in an F3-only world.
+
+**DF3-5** · FE-6 live — inverts DF1-5 dormancy
+`If-Match` is sent on PATCH items, confirm items, and submit (`PAT-6`/INV-14). 412 (stale lock → `StaleLockBanner`, invalidate + reload) ≠ 409 (bad from-state → `BadFromStateBanner`, action void) — never collapsed. This is the first frontend surface to exercise the FE-6 concurrency path. Asserted by network test.
+
+**DF3-6** · Feeder authoring remains provisional; V-8 is a confirmed scope hole (A7 not locked)
+V-8 resolved at §0: required feeders DO gate `structural_assessment_readiness` (a missing `REQUIRED` feeder parks the use case with `"required_feeder_missing"`). A7's provisional defer is therefore a confirmed scope hole for any tier that has a `REQUIRED` feeder applicability. The feeder create+author UI is not built; the server-side gate will naturally block submit and advance for affected tiers. This must be revisited before any high-risk or regulated-AI tier is put into full-flow testing. **Why not build it now:** feeder authoring without the full feeder-surface (its own sections, item template, submission) is a half-surface (`DF1-3`-analogous). The full surface lands as its own sprint. **Rejected:** auto-creating required feeders silently — feeder creation is a `gov:write` act that must be human-initiated.
+
+**DF3-7** · Backend additive delta: control_links in AssessmentItemRead (not a "backend delta none" violation)
+`control_links: list[ControlLinkRead] = []` was added to `AssessmentItemRead` in `app/schemas/assessment.py`, and `assemble_aiia_items` was updated to batch-load them via `_batch_control_links`. The design doc's "backend delta none" referred to new routes, tables, and enum values — none of which changed. Adding a field to an existing response schema is an additive, non-breaking change. **Why needed:** there is no `GET` endpoint for control links on an item; without this field, control links would be invisible on page load after a browser refresh, making the feature unusable in practice. **Rejected:** client-side-only tracking of control links via React Query cache (lost on page refresh, poor UX for an audit-oriented governance tool).
+
+---
+
 ## OPEN — unresolved design questions affecting future work
 
 **OPEN-1** · Worked-state void / withdraw path

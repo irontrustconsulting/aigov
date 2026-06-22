@@ -24,6 +24,20 @@ from app.models.base import (
 )
 
 
+class ControlLinkRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    item_id: uuid.UUID
+    control_id: uuid.UUID
+    coverage: CoverageStatus
+
+
+class ControlLinkCreate(BaseModel):
+    control_id: uuid.UUID
+    coverage: CoverageStatus = CoverageStatus.PARTIAL
+
+
 class AssessmentItemRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -53,6 +67,9 @@ class AssessmentItemRead(BaseModel):
     # AIIA's target section in that case, not the feeder's own section_key.
     source_assessment_id: uuid.UUID | None = None
     source_type: AssessmentType | None = None
+    # Batch-loaded in assemble_aiia_items (UI-F3-ASSESS) — always present on
+    # GET /assessments/{id}; [] for a newly created item before any links are added.
+    control_links: list[ControlLinkRead] = Field(default_factory=list)
 
 
 class AssessmentItemCreate(BaseModel):
@@ -76,20 +93,6 @@ class AssessmentItemAmend(BaseModel):
     mitigation_plan: str | None = None
     treatment_decision: TreatmentDecision | None = None
     treatment_rationale: str | None = None
-
-
-class ControlLinkRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    item_id: uuid.UUID
-    control_id: uuid.UUID
-    coverage: CoverageStatus
-
-
-class ControlLinkCreate(BaseModel):
-    control_id: uuid.UUID
-    coverage: CoverageStatus = CoverageStatus.PARTIAL
 
 
 class EvidenceLinkRead(BaseModel):

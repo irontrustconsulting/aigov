@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMe } from "@/lib/intake";
 import { isYourCourt, resolveCourt, useSystemRollup } from "@/lib/portfolio";
 import { WhoseCourtIndicator } from "@irontrust/ui";
@@ -38,7 +39,9 @@ export function SystemDetailClient({ systemId }: { systemId: string }) {
           const court = resolveCourt(useCase.blocking);
           return (
             <li key={useCase.use_case_id}>
-              <h2>{useCase.title}</h2>
+              <h2>
+                <Link href={`/use-cases/${useCase.use_case_id}`}>{useCase.title}</Link>
+              </h2>
               <p>
                 State: {useCase.state} · EU tier: {useCase.eu_tier}
               </p>

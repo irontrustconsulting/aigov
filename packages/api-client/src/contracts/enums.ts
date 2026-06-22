@@ -38,10 +38,25 @@ export type ProvenanceConfidence =
   | "catalogue_curated"
   | "user_confirmed"
   | "user_amended"
-  | "user_provided";
+  | "user_provided"; // section-answer / from-scratch item / snapshotted register fact
 
 /** app/models/base.py SystemLifecycleStage — a fixed, small enum; option
  * list is enumerated client-side (no vocab table/route backs it, unlike the
  * six WI-0 vocab tables) per WI-5's plan. Confirm casing live against
  * pg_enum before relying on it (D-21 / the §0.5 footgun pattern). */
 export type SystemLifecycleStage = "development" | "pilot" | "production" | "retired";
+
+// ---------------------------------------------------------------------------
+// Assessment enums (UI-F3-ASSESS) — wire values from app/models/base.py
+// ---------------------------------------------------------------------------
+
+export type AssessmentStatus = "draft" | "in_review" | "approved" | "needs_refresh";
+
+export type AssessmentType = "aiia" | "fria" | "dpia" | "model_risk";
+
+export type CoverageStatus = "open" | "partial" | "satisfied";
+
+/** SectionApplicability wire value is "not_applicable" (NOT "n_a"). */
+export type SectionApplicability = "required" | "recommended" | "not_applicable";
+
+export type TreatmentDecision = "mitigate" | "accept" | "transfer" | "avoid";

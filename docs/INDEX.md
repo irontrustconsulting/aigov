@@ -62,10 +62,10 @@
 
 - **Requirements:** `LFC` `IXN` `APR` `REG` `CAT` `CLS` `AIIA` `CTL` `RSK` `EVD` `WKF` `EXP` · cross-cutting `XCUT-1` · non-functional `NFR-1..7`.
 - **Invariants:** `INV-1..49`, each tagged `DB` (structurally unviolable) / `CODE` (one routed locus) / `CONVENTION` (discipline only — review must catch).
-- **Decisions:** `D-1..36`; open questions `OPEN-1..3`.
+- **Decisions:** `D-1..38` (+ sprint-local `DF1-3..9`, `DF3-1..7`); open questions `OPEN-1..3`.
 - **Patterns:** `PAT-1..10`.
 - **UX principles:** `UX-1..6` (`UX.md`).
-- **Frontend conventions:** `FE-n` (`FRONTEND.md`) — reserved, populated as conventions stabilise.
+- **Frontend conventions:** `FE-1..11` (`FRONTEND.md`).
 - **Entities, enums, tables:** by name (`DATA-MODEL`).
 
 Cross-references between canonicals always use these IDs, never section numbers (section numbers drift; IDs don't).
@@ -82,11 +82,12 @@ Cross-references between canonicals always use these IDs, never section numbers 
 
 ## Current scope
 
-Backend MVP complete **through Sprint 7b** (export / audit pack); **UI build phase** under way — `UI-F0-FOUNDATION` shipped (BFF auth plane, shared contract, smoke surfaces; not a feature surface), `UI-F1-INTAKE` shipped (the intake/registration wizard, `apps/tenant/app/systems/new` — the first tenant feature surface; one additive backend addition, `DF1-9`), `UI-F2-PORTFOLIO` shipped (the portfolio landing + system drill-in, `apps/tenant/app/dashboard` + `apps/tenant/app/systems/[id]` — the second tenant feature surface; read-only, zero backend/schema delta). Ceilings: `INV-50` (1–37 base · 38–45 sprints 7a/7b · 46–48 schema promotions · 49 platform-UI rule · 50 no-token-in-browser), `D-38` (+ sprint-local `DF1-3..9`, see `DECISIONS.md`), `OPEN-3`, `PAT-10`, `UX-6`, `FE-11`.
+Backend MVP complete **through Sprint 7b** (export / audit pack); **UI build phase** under way — `UI-F0-FOUNDATION` shipped (BFF auth plane, shared contract, smoke surfaces), `UI-F1-INTAKE` shipped (the intake/registration wizard, `apps/tenant/app/systems/new`; one additive backend addition, `DF1-9`), `UI-F2-PORTFOLIO` shipped (portfolio landing + system drill-in, `apps/tenant/app/dashboard` + `apps/tenant/app/systems/[id]`; read-only, zero backend/schema delta), `UI-F3-ASSESS` shipped (the use-case work surface / AIIA authoring, `apps/tenant/app/use-cases/[id]`; one additive backend schema delta, `DF3-7`; first surface to send `If-Match` live, FE-6). Ceilings: `INV-50` (1–37 base · 38–45 sprints 7a/7b · 46–48 schema promotions · 49 platform-UI rule · 50 no-token-in-browser), `D-38` (+ sprint-local `DF1-3..9` · `DF3-1..7`, see `DECISIONS.md`), `OPEN-3`, `PAT-10`, `UX-6`, `FE-11`.
 
-**Frontend canonicals** (`UX`, `PLATFORM-UX`, `FRONTEND`) are the frontend half of the KB. `FRONTEND.md` is no longer a stub: the client↔API topology is resolved (BFF, bearer-forward — `D-37`) and `FE-1..10` are populated. Token palette/type-scale specifics and per-surface fetch splits remain `[TBD — first feature surface]`.
+**Frontend canonicals** (`UX`, `PLATFORM-UX`, `FRONTEND`) are the frontend half of the KB. `FRONTEND.md` has `FE-1..11` populated. Token palette/type-scale specifics remain `[TBD — per-surface]`.
 
 **Open / verify items to be aware of:**
 - `OPEN-1` worked-state void · `OPEN-2` AIIA versioning · `OPEN-3` applicability layer (deferred design intent).
-- `DATA-MODEL §5`: two thin code-confirmations outstanding — `system_*` link-table parent-join isolation (confirm the access path joins via `system`; candidate invariant), and the register-fact provenance mechanism (confirm against `create_aiia`; the enum is 4-value, no `USER_PROVIDED`).
-- `UX.md §3`: the cross-tenant-baseline prefill line is flagged `[VERIFY against INV-4 / RLS]` — confirm it means anonymised/curated baselines, not raw cross-tenant reads, before it stands as a documented prefill source (out of scope for `UI-F0-FOUNDATION`; must resolve before a feature surface wires a prefill source).
+- `DATA-MODEL §5`: register-fact provenance mechanism — `ProvenanceConfidence` is 5-value (includes `USER_PROVIDED` for section answers / from-scratch items / snapshotted register facts); the `DATA-MODEL §5` note that says "4-value, no USER_PROVIDED" is stale and should be corrected when that section is next touched.
+- `DF3-6`: feeder authoring (A7) is a confirmed scope hole for feeder-gated tiers; must re-enter scope before any such tier enters full-flow testing.
+- `UX.md §3`: the cross-tenant-baseline prefill line is flagged `[VERIFY against INV-4 / RLS]` — confirm before a feature surface wires that prefill source.
