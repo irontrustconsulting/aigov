@@ -288,6 +288,50 @@ The batch-loaded `evidence_links` field carries `title`, `sha256`, `content_type
 
 ---
 
+## UI-F6-AUDITPACK sprint-local decisions
+
+**DF6-1** · Topology: dedicated `/audit` programme home + per-entity panels
+`apps/tenant/app/audit` carries the tenant-wide coverage matrix, the framework export, and a pack index. `systems/[id]` (ALTER) gains a system-coverage panel + system-export action. `use-cases/[id]` (ALTER) gains a use-case-coverage panel (APPROVED-gated) + use-case-export action + ATO-document action. `UX.md §5` names audit-pack as its own surface; the auditor wants one coherent programme home while per-entity artefacts stay where the entity lives.
+↳ refs: A1
+
+**DF6-2** · Export/ATO-document generation is a deliberate, user-initiated fetch; coverage eager-loads
+Export routes stage `export.generated` (INV-42, PAT-10/D-35); coverage emits no audit (INV-25). An audited disclosure must not fire on mount/focus; a pure read may.
+↳ refs: A5, INV-42, INV-53
+
+**DF6-3** · Interactive coverage is not audit-grade
+`GET /coverage` family verdicts (internal `require_evidence_for_satisfied=false`) are labelled interactive posture; the audit verdict is the export-embedded coverage (`true`), which downgrades unsubstantiated `SATISFIED → PARTIAL` and carries `downgraded_unsubstantiated`. The two may differ and are visually distinguished. The interactive route exposes no flag to request `true` (N1), so the line is structurally non-bypassable.
+↳ enforces: INV-51; refs: D-29
+
+**DF6-4** · Coverage matrix is not an obligation set
+The UI renders the `not_an_obligation_set` caveat prominently and presents `unaddressed_controls` as gaps-shown-not-failures. No "% compliant" headline treats unaddressed as fail until applicability (OPEN-3) lands. D-28: a whole-library denominator falsely fails a minimal-risk use case; the flagged list shows gaps without asserting obligation.
+↳ enforces: INV-52; refs: D-28, OPEN-3
+
+**DF6-5** · ATO document carries the drift caveat
+`basis_is_current_state_not_authorisation_snapshot` is always true; the UI states the ATO row is the authoritative authorisation while the referenced assessment/classification are read live and may have drifted. Mirrors F4 (DF4-4). `AtoDocumentView` renders the caveat unconditionally — no conditional branch.
+↳ refs: INV-44, D-34, DF4-4
+
+**DF6-6** · PDF render deferred; interim is an in-DOM audit-pack view + browser print
+F6 renders the structured export as a readable, dense, sectioned view; take-away is browser print-to-PDF. Templated PDF (EXP-3) and persisted/async export stay deferred. EXP-1 render-half is frontend/later; print covers MVP take-away without a render pipeline.
+↳ refs: A3
+
+**DF6-7** · EXP-2 auditor-scoping stays deferred
+F6 surfaces auditor read on the existing any-governance-role gate; no thin auditor-membership scoping this sprint. EXP-2 post-MVP; the gate already admits auditor.
+↳ refs: A2
+
+**DF6-8** · `include_unapproved` is a labelled "in-progress, not audit-grade" toggle, default off
+Per-use-case/per-assessment coverage renders only when the governing AIIA is `APPROVED` (else an empty-state), per INV-38/DF3-2. The `include_unapproved`+interactive combination is doubly non-audit-grade and never renders adjacent to audit-grade export-embedded coverage without an `AuditGradeDivider`. INV-38: coverage reports on an APPROVED governing-AIIA; an in-progress view must be opt-in and clearly labelled.
+↳ enforces: INV-51, INV-52; refs: A4, INV-38, DF3-2
+
+**DF6-9** · Single-home: lifecycle posture, control coverage, authorisation status, and ATO basis are distinct truths, cross-linked not duplicated
+Dashboard "portfolio posture" (`PortfolioHub`) = lifecycle rollup; `/audit` coverage = control evidence; F4's ATO terminal (`GET .../authorisation`, `live_state`) = current authorisation status; F6's ATO document (`GET .../authorisation/document`) = take-away basis. F6 links to these truths, never restates them. Dashboard issues no coverage/export call.
+↳ refs: A6
+
+**DF6-10** · ATO-document round handling: default latest; no enumeration call
+The standalone ATO document defaults to the latest round; a prior-round standalone document is a manual `?round=N` deep-link with no enumeration read. All rounds are visible and labelled (`submission_round`) inside the use-case export pack's `atos[]` — itself a deliberate audited generation (INV-53), so listing its own rounds costs no extra disclosure. **Rejected:** (b) a list-ATOs read (breaks zero-delta); (c) picker-generates-export (breaks DF6-2/INV-53).
+↳ refs: B2, N3, INV-53, DF6-2
+
+---
+
 ## OPEN — unresolved design questions affecting future work
 
 **OPEN-1** · Worked-state void / withdraw path

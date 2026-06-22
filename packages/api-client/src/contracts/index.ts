@@ -8,3 +8,5 @@ export * from "./lifecycle";
 export * from "./me";
 export * from "./assessment";
 export * from "./evidence";
+export * from "./coverage";
+export * from "./export";

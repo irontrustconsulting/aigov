@@ -46,6 +46,7 @@ import { SignOffPanel } from "./_regions/sign-off-panel";
 import { AuthorisePanel } from "./_regions/authorise-panel";
 import { AtoTerminal } from "./_regions/ato-terminal";
 import { ReviewHistory } from "./_regions/review-history";
+import { AuditPanels } from "./_regions/audit-panels";
 import {
   useBootstrapAssessment,
   useSubmitAssessment,
@@ -171,6 +172,14 @@ function AssessmentSurface({
       {lifecycleState === "authorised" && (
         <AtoTerminal useCaseId={useCaseId} />
       )}
+
+      {/* Audit panels: coverage + export + ATO document (UI-F6-AUDITPACK). */}
+      <AuditPanels
+        useCaseId={useCaseId}
+        assessmentId={aiia?.id ?? null}
+        assessmentStatus={aiia?.status ?? null}
+        canView={true}
+      />
 
       {aiia === null ? (
         <NoAssessmentState useCaseId={useCaseId} branch={branch} classification={classification} />

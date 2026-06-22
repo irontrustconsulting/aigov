@@ -95,6 +95,10 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
         {portfolio.data.length} system{portfolio.data.length === 1 ? "" : "s"} with at least one use
         case under governance.
       </p>
+      {/* Navigation only — no coverage truth rendered here (DF6-9). */}
+      <Link href="/audit" className="text-sm underline">
+        View control coverage and audit packs →
+      </Link>
     </section>
   );
 

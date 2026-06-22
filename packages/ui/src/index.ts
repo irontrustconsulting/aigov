@@ -31,3 +31,10 @@ export { EvidenceTable, type EvidenceRow } from "./evidence/evidence-table";
 export { EvidenceUploadControl } from "./evidence/evidence-upload-control";
 export { EvidenceLinkPicker, type EvidencePickerRow } from "./evidence/evidence-link-picker";
 export { EvidenceManifestChip, type ManifestLink } from "./evidence/evidence-manifest-chip";
+
+export { CoverageMatrix } from "./audit/coverage-matrix";
+export { NotAnObligationSetBanner } from "./audit/not-an-obligation-set-banner";
+export { AuditGradeDivider } from "./audit/audit-grade-divider";
+export { AuditPackView } from "./audit/audit-pack-view";
+export { EvidenceManifestTable } from "./audit/evidence-manifest-table";
+export { AtoDocumentView } from "./audit/ato-document-view";

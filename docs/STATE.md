@@ -4,7 +4,7 @@
 **Purpose:** What is implemented and what must not be reinvented, at the level of *what exists · what shape · which gate*. It points outward for depth and never restates the detail.
 **Lanes:** constraints → `INVARIANTS.md` (`INV-n`); schema (tables/enums/indexes) → `DATA-MODEL.md`; auth / identity / RLS / session mechanics → `ARCHITECTURE.md`; implementation shapes → `PATTERNS.md` (`PAT-n`); decisions/rationale → `DECISIONS.md` (`D-n`); conceptual model → `DOMAIN.md`.
 
-**Current through:** UI-F5-EVIDENCE (evidence repository surface + per-item evidence linking). Sprints 1–7b + UI-F1..F5 built.
+**Current through:** UI-F6-AUDITPACK (audit/coverage capstone — control-coverage view, export/audit pack, ATO document). Sprints 1–7b + UI-F1..F6 built (tenant UI plane complete).
 
 ---
 
@@ -119,6 +119,33 @@ Consumed routes (no route delta): `GET /v1/me` · `GET /v1/use-cases/{id}` · `G
 **Backend shape:** `_batch_evidence_links(db, item_ids)` JOINs `assessment_item_evidence → evidence` to materialise `ItemEvidenceRead` objects (carrying `title`/`sha256`/`content_type`/`size_bytes` from the `evidence` table, not `assessment_item_evidence`). A `@field_validator("evidence_links", mode="before")` guard in `AssessmentItemRead` short-circuits Pydantic's ORM `from_attributes` path (which would read the incomplete ORM relationship, lacking `evidence` columns) and returns `[]`; `assemble_aiia_items` then overwrites the field with the batch-loaded result.
 
 Consumed routes (no route delta): `GET /v1/me` · `GET /v1/evidence?limit=50` · `GET /v1/evidence/{id}` · `POST /v1/evidence` (via dedicated BFF handler, FE-12) · `DELETE /v1/evidence/{id}` · `POST /v1/assessments/{id}/items/{item_id}/evidence-links` · `DELETE /v1/assessments/{id}/items/{item_id}/evidence-links/{evidence_id}` · `GET /v1/assessments/{id}` (extended — now includes `items[].evidence_links`).
+
+### Audit / coverage capstone (`UI-F6-AUDITPACK`)
+
+`apps/tenant/app/audit` (NEW) + `apps/tenant/app/systems/[id]` (ALTER) + `apps/tenant/app/use-cases/[id]` (ALTER) + `apps/tenant/app/dashboard` (ALTER, link only). Pure frontend wire-up over the already-built Sprint 7a/7b coverage and export backend. **Zero backend/schema delta** — every route was `gov:ALL` at the sprint's §0 pre-flight. Closes EXP-1's render half (interim: in-DOM sectioned view + browser print; templated PDF remains deferred as EXP-3).
+
+**`/audit` programme home (`apps/tenant/app/audit`):** `GET /v1/me` first (DF2-5 role branch): admin (zero governance roles) → empty-state, no coverage/export call issued. Gov-role callers: `useTenantCoverage` eager (`staleTime: 0`, FE-7/NB5); `include_unapproved` toggle default off — when on, wraps the not-yet-audit-grade matrix in `AuditGradeDivider` (INV-52/DF6-8); framework picker + "Generate framework audit pack" button → one deliberate `useFrameworkExport` fetch (INV-53) → `AuditPackView` rendered inline; pack index links to per-system/per-use-case surfaces.
+
+**System panels (`systems/[id]` ALTER):** system-coverage panel (`useSystemCoverage`, eager, `staleTime: 0`, `CoverageMatrix` with `NotAnObligationSetBanner` when `not_an_obligation_set`); system-export action (`useSystemExport`, deliberate-only — `enabled: false`, `staleTime: Infinity`, `refetchOnWindowFocus: false`). Both gated to governance-role callers (admin → omitted, no call issued).
+
+**Use-case panels (`use-cases/[id]` ALTER):** three sub-panels via `apps/tenant/app/use-cases/[id]/_regions/audit-panels.tsx`:
+1. **Coverage** — `useUseCaseCoverage` (`GET /assessments/{id}/coverage`); renders only when the governing AIIA is `APPROVED` (INV-38/DF3-2); else "coverage available after approval" empty-state (no fetch issued when not approved).
+2. **Use-case export** — `useUseCaseExport`, deliberate-only; "Generate use-case audit pack" button → `AuditPackView`.
+3. **ATO document** — `useAtoDocument`, deliberate-only; defaults to latest round; honours `?round=N` deep-link (DF6-10); no round-enumeration call. 404 → "never authorised" empty-state. Renders `AtoDocumentView` with always-shown drift caveat (DF6-5/INV-44).
+
+**Dashboard ALTER (link only):** PortfolioHub `postureSection` gains `<Link href="/audit">View control coverage and audit packs →</Link>`; no coverage truth rendered (DF6-9).
+
+**`@irontrust/ui` additions:** `CoverageMatrix` (verdict chips SATISFIED/PARTIAL/OPEN/UNADDRESSED; `downgraded_unsubstantiated` distinct from `partial`, never merged — INV-51; `verdict` treated as plain `str`, no enum bind); `NotAnObligationSetBanner` (prominent caveat + gaps list; no compliance-% headline — INV-52); `AuditGradeDivider` (hard visual boundary, `role="region"`, required between interactive-posture and audit-grade views — INV-51/52); `AuditPackView` (sectioned for `UseCaseExportRead`/`SystemExportRead`/`FrameworkExportRead`; trail actors: `name ?? email ?? user_id ?? "(system)"` per §4.5; footer `content_hash` + `generated_at`); `EvidenceManifestTable` (download via callback → `GET /v1/evidence/{id}`; no URL in props/DOM — INV-40); `AtoDocumentView` (drift caveat always rendered first — DF6-5; `authorised_by_name`/`_email` from durable stamp, no hedge — §4.4).
+
+**`@irontrust/api-client` additions:** `CoverageMatrixRead` + related coverage types (`packages/api-client/src/contracts/coverage.ts`); `AtoDocumentRead`, `AssessmentExportRead`, `UseCaseExportRead`, `SystemExportRead`, `FrameworkExportRead`, `ActorRef`, `EvidenceManifestEntryRead`, `ClassificationHistoryEntryRead` (`packages/api-client/src/contracts/export.ts`).
+
+**`apps/tenant/lib/audit` hooks:** `useTenantCoverage`/`useSystemCoverage`/`useUseCaseCoverage` (eager, `staleTime: 0`); `useSystemExport`/`useUseCaseExport`/`useFrameworkExport`/`useAtoDocument` (deliberate-only, `enabled: boolean`, `staleTime: Infinity`, `refetchOnWindowFocus: false`, `refetchOnMount: false` — INV-53).
+
+**Two-event audit model (NB2):** `export.generated` per deliberate pack/ATO-document generation (INV-42); `evidence.access` per manifest download on-intent (INV-22, same pattern as F5/DF5-3). Coverage reads are audit-free (INV-25).
+
+Consumed routes (no route delta): `GET /v1/me` · `GET /v1/coverage` · `GET /v1/systems/{id}/coverage` · `GET /v1/assessments/{id}/coverage` · `GET /v1/systems/{id}/export` · `GET /v1/use-cases/{id}/export` · `GET /v1/use-cases/{id}/authorisation/document` · `GET /v1/export?framework=` · `GET /v1/evidence/{id}`.
+
+---
 
 ### Portfolio landing & system drill-in (`UI-F2-PORTFOLIO`)
 `apps/tenant/app/dashboard` (the F0 authenticated-landing route, promoted from the W7a/b smoke surface to the real portfolio home) plus `apps/tenant/app/systems/[id]` (drill-in) — the second tenant feature surface, pure wire-up over `GET /v1/portfolio`, `GET /v1/systems`, `GET /v1/systems/{id}/rollup`, `GET /v1/use-cases/{id}/lifecycle`, `GET /v1/me`; read-only (`re-evaluate` deferred, `A1`); zero backend/schema delta. `GET /v1/me` is fetched first and branches proactively (`DF2-5`): an admin-only caller (zero governance roles) renders an admin/empty state and the `gov:ALL`-gated `GET /portfolio` is never issued. Otherwise the portfolio hub (`PortfolioHub`) renders a "your court" section and a "portfolio posture" section for every governance-role caller — 1st-line roles (`system_owner`/`contributor`) lead with your-court, 2nd/3rd-line lead with posture — plus the per-system use-case list; `GET /v1/systems` entries absent from the portfolio result (no use case yet) render as a separate, non-interactive "register a use case" nudge card (`A2`), excluded from court computation.

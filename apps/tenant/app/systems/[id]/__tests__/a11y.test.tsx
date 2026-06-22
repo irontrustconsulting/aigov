@@ -55,15 +55,25 @@ const rollup: SystemRollupRead = {
   ],
 };
 
+const coverageMatrix = {
+  scope: "system", scope_id: "sys-1", framework_filter: null, include_unapproved: false,
+  controls: [], frameworks: [], unaddressed_controls: [], not_an_obligation_set: false,
+  generated_at: "2026-06-22T12:00:00Z",
+};
+
 afterEach(() => jest.restoreAllMocks());
 
 test("SystemDetailClient axe pass", async () => {
   global.fetch = jest.fn((input: RequestInfo | URL) => {
     const url = String(input);
+    let body: unknown;
+    if (url.includes("/v1/me")) body = me(["authoriser"]);
+    else if (url.includes("/coverage")) body = coverageMatrix;
+    else body = rollup;
     return Promise.resolve({
       ok: true,
       status: 200,
-      text: async () => JSON.stringify(url.includes("/v1/me") ? me(["authoriser"]) : rollup),
+      text: async () => JSON.stringify(body),
     } as Response);
   }) as jest.Mock;
 

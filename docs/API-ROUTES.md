@@ -292,3 +292,17 @@ Evidence linking (`POST .../evidence-links`) and coverage (`GET /assessments/{id
 - `DELETE /assessments/{id}/items/{item_id}/evidence-links/{evidence_id}` — unlink (path param is `evidence_id`, not link-row id, DF5-9; no `If-Match`, DF5-4)
 
 **Additive backend schema delta (DF5-8):** `AssessmentItemRead` now includes `evidence_links: list[ItemEvidenceRead]` (batch-loaded in `assemble_aiia_items` via `_batch_evidence_links` — JOIN `assessment_item_evidence → evidence`). `ItemEvidenceRead` carries `evidence_id`, `title`, `sha256`, `content_type`, `size_bytes` — no `download_url` (DF5-3). No migration required. Same additive pattern as DF3-7/DF4-6; existing callers unbroken.
+
+**`UI-F6-AUDITPACK`** — **no route delta; consumed-only**. No routes added, removed, or re-gated. Routes consumed by this sprint:
+
+- `GET /me` — pre-flight role branch (admin → no coverage/export call issued, DF2-5)
+- `GET /coverage[?framework][&include_unapproved]` — tenant-wide coverage matrix (`gov:ALL`; eager, `staleTime: 0`)
+- `GET /systems/{id}/coverage[?framework][&include_unapproved]` — system-scoped coverage (`gov:ALL`; eager)
+- `GET /assessments/{id}/coverage[?framework][&include_unapproved]` — use-case/assessment-scoped coverage (`gov:ALL`; eager; only when governing AIIA is `APPROVED` — INV-38/DF3-2)
+- `GET /systems/{id}/export[?framework]` — system audit pack (`gov:ALL` in-session; deliberate-only — INV-53; stages `export.generated`)
+- `GET /use-cases/{id}/export[?framework]` — use-case audit pack (`gov:ALL` in-session; deliberate-only — INV-53)
+- `GET /use-cases/{id}/authorisation/document[?round]` — ATO document (`gov:ALL` in-session; deliberate-only — INV-53; 404 if never authorised; no round-enumeration call — DF6-10)
+- `GET /export?framework=` — framework audit pack (`gov:ALL` in-session; deliberate-only — INV-53)
+- `GET /evidence/{id}` — on-intent manifest download (presigned URL + `evidence.access` audit; same DF5-3 pattern as F5)
+
+**Zero backend/schema delta:** all routes built at Sprint 7a/7b; response shapes (`CoverageMatrixRead`, `UseCaseExportRead`, `SystemExportRead`, `FrameworkExportRead`, `AtoDocumentRead`) mirrored into `packages/api-client/src/contracts/coverage.ts` and `export.ts` — no server change.

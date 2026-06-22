@@ -218,3 +218,15 @@ Every platform-plane capability that requires ongoing operator interaction is op
 **INV-50** · CONVENTION · browser holds no token; all browser→API via the plane's own BFF
 The browser never holds a Cognito token and never calls the API directly. Every browser→API request is mediated by that plane's own Next-server BFF, which holds the token server-side (keyed by an opaque session id in an httpOnly cookie) and forwards the bearer. A tenant-origin session cannot reach the operator origin or vice versa (plane separation is origin-level).
 ↳ origin: UI-F0-FOUNDATION · refs: INV-1, D-37
+
+**INV-51** · CONVENTION · interactive coverage is never presented as the audit verdict
+Interactive coverage (`require_evidence_for_satisfied=false`, internal to the coverage router) is labelled "interactive posture" and is never presented as the audit verdict. The audit-grade verdict is the export-embedded coverage (`require_evidence_for_satisfied=true`, passed by the export service — D-29), which downgrades unsubstantiated `SATISFIED → PARTIAL` and carries `downgraded_unsubstantiated`. The two may legitimately differ for one control and must be visually distinguished. The interactive route exposes no flag for a client to request `true`, so the line is structurally non-bypassable.
+↳ origin: UI-F6-AUDITPACK · refs: D-29, DF6-3
+
+**INV-52** · CONVENTION · coverage matrix visibly carries its caveat; no compliance-% headline
+The coverage matrix always renders `not_an_obligation_set` prominently and presents `unaddressed_controls` as gaps-shown-not-failures. No "% compliant" headline treats unaddressed controls as fail until applicability (OPEN-3) lands. The `include_unapproved`+interactive combined state (doubly non-audit-grade) is always hard-divided from any adjacent audit-grade coverage view by an `AuditGradeDivider`.
+↳ origin: UI-F6-AUDITPACK · refs: D-28, OPEN-3, DF6-4, DF6-8
+
+**INV-53** · CONVENTION · export/ATO-document hooks fire only on explicit user action
+The client issues an export/audit-pack or ATO-document fetch only on explicit user action, never as an eager mount/focus fetch. Hooks must carry `enabled: false`, `staleTime: Infinity`, `refetchOnWindowFocus: false`, `refetchOnMount: false`. Coverage reads are exempt (no audit staging). The staging fact for export reads lives in INV-42, not restated here.
+↳ origin: UI-F6-AUDITPACK · refs: INV-42, PAT-10, D-35, DF6-2

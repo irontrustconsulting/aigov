@@ -1,20 +1,19 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMe } from "@/lib/intake";
 import { isYourCourt, resolveCourt, useSystemRollup } from "@/lib/portfolio";
-import { WhoseCourtIndicator } from "@irontrust/ui";
+import { useSystemCoverage, useSystemExport } from "@/lib/audit";
+import { useEvidenceDetail } from "@/lib/evidence";
+import { WhoseCourtIndicator, CoverageMatrix, AuditPackView } from "@irontrust/ui";
 
 /**
  * UI-F2-PORTFOLIO system drill-in: `GET /v1/systems/{id}/rollup` (live
  * state) — use cases, states, highest tier, per-use-case resolved court.
  *
- * No forward links into F1's wizard: `apps/tenant/app/systems/new`'s step
- * is plain in-memory `useReducer` state, never synced to the URL, so there
- * is no real per-use-case resumable destination to link to (confirmed at
- * this sprint's pre-flight). The blocking reason/court is rendered as
- * informational text only; resuming a specific use case is deferred
- * (STATE.md).
+ * UI-F6-AUDITPACK (ALTER): coverage panel (eager, staleTime: 0) + system
+ * export action (deliberate-only, INV-53). Admin → no coverage/export call.
  */
 export function SystemDetailClient({ systemId }: { systemId: string }) {
   const me = useMe();
@@ -25,6 +24,7 @@ export function SystemDetailClient({ systemId }: { systemId: string }) {
   if (rollup.isError || !rollup.data) return <p role="alert">Could not load this system.</p>;
 
   const roleKeys = new Set(me.data.governance_roles.map((r) => r.key));
+  const hasGovRole = roleKeys.size > 0;
 
   return (
     <main>
@@ -60,6 +60,57 @@ export function SystemDetailClient({ systemId }: { systemId: string }) {
           );
         })}
       </ul>
+
+      {/* Coverage + export — gov roles only (DF2-5 / V-2) */}
+      {hasGovRole && <SystemAuditPanels systemId={systemId} />}
     </main>
+  );
+}
+
+function SystemAuditPanels({ systemId }: { systemId: string }) {
+  const coverageQuery = useSystemCoverage(systemId);
+  const [exportEnabled, setExportEnabled] = useState(false);
+  const exportQuery = useSystemExport(systemId, exportEnabled);
+
+  // Evidence download on-intent (DF5-3 / INV-22).
+  const [pendingDownloadId, setPendingDownloadId] = useState("");
+  const detailQuery = useEvidenceDetail(pendingDownloadId, Boolean(pendingDownloadId));
+  useEffect(() => {
+    if (pendingDownloadId && detailQuery.data) {
+      window.location.href = detailQuery.data.download_url;
+      setPendingDownloadId("");
+    }
+  }, [pendingDownloadId, detailQuery.data]);
+
+  return (
+    <>
+      <section aria-label="system-coverage" className="mt-6">
+        <h2 className="mb-2 text-lg font-semibold">Control coverage</h2>
+        {coverageQuery.isLoading && <p>Loading coverage…</p>}
+        {coverageQuery.isError && <p role="alert">Could not load coverage.</p>}
+        {coverageQuery.data && <CoverageMatrix matrix={coverageQuery.data} />}
+      </section>
+
+      <section aria-label="system-export" className="mt-6">
+        <h2 className="mb-2 text-lg font-semibold">Audit pack</h2>
+        <button
+          type="button"
+          disabled={exportQuery.isFetching}
+          className="border-border rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+          onClick={() => setExportEnabled(true)}
+        >
+          {exportQuery.isFetching ? "Generating…" : "Generate system audit pack"}
+        </button>
+        {exportQuery.isError && <p role="alert">Could not generate the audit pack.</p>}
+        {exportQuery.data && (
+          <div className="mt-4">
+            <AuditPackView
+              pack={exportQuery.data}
+              onDownloadEvidence={(id) => setPendingDownloadId(id)}
+            />
+          </div>
+        )}
+      </section>
+    </>
   );
 }
