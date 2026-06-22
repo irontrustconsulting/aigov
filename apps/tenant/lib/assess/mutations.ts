@@ -7,8 +7,12 @@ import type {
   AssessmentItemCreate,
   AssessmentItemRead,
   AssessmentRead,
+  AssessmentReviewCreate,
+  AuthoriseRequest,
   ControlLinkCreate,
   ControlLinkRead,
+  DeploymentAuthorisationRead,
+  SignOffRead,
 } from "@irontrust/api-client";
 import { StaleLockError, BadFromStateError } from "@irontrust/api-client";
 import { api } from "@/lib/api";
@@ -177,6 +181,92 @@ export function useReEvaluate(useCaseId: string) {
     mutationFn: () =>
       api.post<unknown>(`/v1/use-cases/${useCaseId}/lifecycle/re-evaluate`, {}),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: lifecycleKey(useCaseId) });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// UI-F4-ASSURE mutations
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /assessments/{id}/reopen — APPROVED → NEEDS_REFRESH.
+ * Sends If-Match (FE-6). 412 → StaleLockBanner; 409 → BadFromStateBanner.
+ * On success: invalidate assessment detail + lifecycle (DF4-5 / DF3-4).
+ */
+export function useReopen(useCaseId: string, assessmentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (lockVersion: number) =>
+      api.post<AssessmentRead>(
+        `/v1/assessments/${assessmentId}/reopen`,
+        {},
+        { lockVersion: String(lockVersion) }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: assessKeys.assessment(assessmentId) });
+      queryClient.invalidateQueries({ queryKey: assessKeys.assessments(useCaseId) });
+      queryClient.invalidateQueries({ queryKey: lifecycleKey(useCaseId) });
+    },
+  });
+}
+
+/**
+ * POST /assessments/{id}/review — gov:reviewer, If-Match (FE-6).
+ * decision="approved" advances use case same-txn; "changes_requested" bounces to DRAFT.
+ * note required (server 422) when decision="changes_requested".
+ * On success: invalidate assessment detail + lifecycle (court moves).
+ */
+export function useRecordReview(useCaseId: string, assessmentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ body, lockVersion }: { body: AssessmentReviewCreate; lockVersion: number }) =>
+      api.post<AssessmentRead, AssessmentReviewCreate>(
+        `/v1/assessments/${assessmentId}/review`,
+        body,
+        { lockVersion: String(lockVersion) }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: assessKeys.assessment(assessmentId) });
+      queryClient.invalidateQueries({ queryKey: assessKeys.assessments(useCaseId) });
+      queryClient.invalidateQueries({ queryKey: lifecycleKey(useCaseId) });
+    },
+  });
+}
+
+/**
+ * POST /use-cases/{id}/classification/sign-off — gov:reviewer, no If-Match.
+ * No 412 path. 409/403 only.
+ * On success: refetch lifecycle (eu_tier stamped, court moves).
+ */
+export function useSignOff(useCaseId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api.post<SignOffRead>(`/v1/use-cases/${useCaseId}/classification/sign-off`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: lifecycleKey(useCaseId) });
+      queryClient.invalidateQueries({ queryKey: assessKeys.detail(useCaseId) });
+    },
+  });
+}
+
+/**
+ * POST /use-cases/{id}/authorise — gov:authoriser, no If-Match.
+ * Only entry to the "authorised" state. 409/403 only; no 412 path.
+ * On success: invalidate authorisation (ATO terminal refetches) + lifecycle.
+ */
+export function useAuthorise(useCaseId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AuthoriseRequest) =>
+      api.post<DeploymentAuthorisationRead, AuthoriseRequest>(
+        `/v1/use-cases/${useCaseId}/authorise`,
+        body
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: assessKeys.authorisation(useCaseId) });
       queryClient.invalidateQueries({ queryKey: lifecycleKey(useCaseId) });
     },
   });

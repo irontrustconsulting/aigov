@@ -4,7 +4,7 @@
 **Purpose:** What is implemented and what must not be reinvented, at the level of *what exists · what shape · which gate*. It points outward for depth and never restates the detail.
 **Lanes:** constraints → `INVARIANTS.md` (`INV-n`); schema (tables/enums/indexes) → `DATA-MODEL.md`; auth / identity / RLS / session mechanics → `ARCHITECTURE.md`; implementation shapes → `PATTERNS.md` (`PAT-n`); decisions/rationale → `DECISIONS.md` (`D-n`); conceptual model → `DOMAIN.md`.
 
-**Current through:** Sprint 7b (export / audit pack). Sprints 1–7b built.
+**Current through:** UI-F4-ASSURE (assurance / act-SoD surface). Sprints 1–7b + UI-F1..F4 built.
 
 ---
 
@@ -78,6 +78,32 @@ Consumed routes: `GET /v1/me` · `GET /v1/use-cases/{id}` · `GET /v1/use-cases/
 
 **V-8 outcome (recorded at §0):** required feeders DO gate `structural_assessment_readiness` (`"required_feeder_missing"` park) — A7's provisional defer is a confirmed scope hole for feeder-gated tiers. Noted in DF3-6.
 
+### Assurance / act-SoD surface (`UI-F4-ASSURE`)
+
+`apps/tenant/app/use-cases/[id]` (ALTER) + `apps/tenant/app/review-queue` (NEW). Frontend wire-up; zero new routes, tables, or enums. One additive backend schema delta: `reviews: list[AssessmentReviewRead] = []` added to `AssessmentDetail` (WI-9b — elected at §0 V-2; `reviewer_display_name` from INV-34 membership join; D-25-guarded — no durable name/email stamp on `AssessmentReview` model). `app/schemas/assessment.py` and `app/routers/v1/assessments.py` only; no migration.
+
+**Role branch extension (WI-8):** `resolveRoleBranch` extended from 4-way (`assurance` catch-all) to 5-way — `reviewer | authoriser | auditor` each get their own act surface. Auditor: assembled AIIA + ATO read-only only; no court row; no act controls; issues no `gov:reviewer` call.
+
+**Review queue (WI-1):** `apps/tenant/app/review-queue` — `GET /assessments/review-queue` (`gov:reviewer`) issued only when caller is a reviewer; non-reviewer/admin renders empty-state with no queue call. Each row links to `/use-cases/{use_case_id}` (Topology B, DF4-1).
+
+**AIIA review panel (WI-2):** reviewer branch, AIIA `IN_REVIEW` → `POST /assessments/{id}/review` + `If-Match`; `decision = "approved" | "changes_requested"`; `note` required (server 422) when `changes_requested`. 412 (`StaleLockBanner`) ≠ 409 (`BadFromStateBanner`). Approved → same-txn `advance_use_case`; `changes_requested` → bounce to `DRAFT`. act-SoD (`assert_distinct_workflow_actor`) enforced at server (INV-28).
+
+**Classification sign-off panel (WI-3):** reviewer branch, classification `status = "pending_review"` → `POST /use-cases/{id}/classification/sign-off` (no `If-Match`). 409/403 only; no 412 path. Disambiguation: AIIA `IN_REVIEW` → review panel; classification `PENDING_REVIEW` → sign-off panel; both map to `"reviewer"` court; surface disambiguates by object state, not court vocabulary (DF4-2).
+
+**Authorise panel (WI-4):** authoriser branch, lifecycle state `pending_authorisation` → `POST /use-cases/{id}/authorise` (body: `{residual_risk_statement}`; no `If-Match`). 409/403 only. `residual_risk_statement` required client-side. act-SoD at server (INV-28; authoriser ∉ {reviewer, submitter}).
+
+**ATO terminal (WI-5):** any gov role, lifecycle state `authorised` → `GET /use-cases/{id}/authorisation` (`staleTime: 0`, INV-32). 404 → renders nothing. Drift caveat when `live_state ≠ "authorised"` (DF4-4 / INV-44 precedent). `authorised_by_name` from INV-34 join (already on the response shape at `DeploymentAuthorisationRead`).
+
+**Reopen control (WI-6):** system_owner branch, AIIA `status = "approved"` → `POST /assessments/{id}/reopen` + `If-Match`; `APPROVED → NEEDS_REFRESH`; authoring fields unlock on refetch. 412/409 distinct. Completes the rework loop (DF4-5).
+
+**Review history (WI-7):** sourced from `AssessmentDetail.reviews` (WI-9b). Visible to system_owner, reviewer, authoriser. Each row: `reviewer_display_name` (INV-34 join), `decision`, `submission_round`, `created_at`, `note`.
+
+**§0 V-1 resolution:** `list_review_queue` pre-filters `submitted_by_user_id != ctx.user_id` at the query level. WI-9a NOT elected — queue pre-filter covers the common SoD case; across-reassignment edge degrades to act-time 403 (DF4-3).
+
+**If-Match callers in this sprint:** `POST /assessments/{id}/review` + `POST /assessments/{id}/reopen`. No `If-Match` on sign-off or authorise (no 412 path on those routes). `FE-6` live callers: F3's submit/amend/confirm + F4's review/reopen.
+
+Consumed routes (no route delta): `GET /v1/me` · `GET /v1/use-cases/{id}` · `GET /v1/use-cases/{id}/assessments` · `GET /v1/use-cases/{id}/lifecycle` · `GET /v1/systems/{id}/rollup` · `GET /v1/assessments/{id}` · `GET /v1/assessments/{id}/sections` · `GET /v1/assessments/{id}/feeder-recommendations` · `GET /assessments/review-queue` · `POST /assessments/{id}/review` (If-Match) · `POST /assessments/{id}/reopen` (If-Match) · `POST /use-cases/{id}/classification/sign-off` · `POST /use-cases/{id}/authorise` · `GET /use-cases/{id}/authorisation`.
+
 ### Portfolio landing & system drill-in (`UI-F2-PORTFOLIO`)
 `apps/tenant/app/dashboard` (the F0 authenticated-landing route, promoted from the W7a/b smoke surface to the real portfolio home) plus `apps/tenant/app/systems/[id]` (drill-in) — the second tenant feature surface, pure wire-up over `GET /v1/portfolio`, `GET /v1/systems`, `GET /v1/systems/{id}/rollup`, `GET /v1/use-cases/{id}/lifecycle`, `GET /v1/me`; read-only (`re-evaluate` deferred, `A1`); zero backend/schema delta. `GET /v1/me` is fetched first and branches proactively (`DF2-5`): an admin-only caller (zero governance roles) renders an admin/empty state and the `gov:ALL`-gated `GET /portfolio` is never issued. Otherwise the portfolio hub (`PortfolioHub`) renders a "your court" section and a "portfolio posture" section for every governance-role caller — 1st-line roles (`system_owner`/`contributor`) lead with your-court, 2nd/3rd-line lead with posture — plus the per-system use-case list; `GET /v1/systems` entries absent from the portfolio result (no use case yet) render as a separate, non-interactive "register a use case" nudge card (`A2`), excluded from court computation.
 
@@ -118,10 +144,9 @@ The system drill-in renders each use case's blocking reason/court as information
 | **Per-object governance roles** (D-22) | Nullable `scope_id` seam described | Not built; do not add yet |
 | **Multi-component MODEL_RISK** | `uq_feeder_type_per_aiia` scoped to allow it | 0..1 per AIIA today, like FRIA/DPIA |
 | **Cross-feeder risk dedup** | — | A risk proposed by AIIA and a feeder surfaces twice, untouched; no merge planned for MVP |
-| **Review-queue surface** | `GET /v1/assessments/review-queue` route; portfolio surfaces the reviewer's/authoriser's pending court via the same whose-court mechanism and links forward (`DF2-7`); F3's assembled-AIIA read is the view the queue will open | The queue UI itself — out of `UI-F3-ASSESS` scope, lands in F4 |
 | **`re-evaluate` on the portfolio hub** | Shipped in `UI-F3-ASSESS` (`apps/tenant/app/use-cases/[id]`, `system_owner`-only) | Intentionally absent from the portfolio hub (hub is read-only, `A1`) |
 | **Per-use-case resumable URL** | `apps/tenant/app/use-cases/[id]` shipped in `UI-F3-ASSESS`; `system-detail-client.tsx` now links each use case forward (`V-4` void closed) | F1's wizard step-progress is still in-memory `useReducer` state — the intake wizard itself has no resumable URL |
 | **Evidence linking / repository surface (A2)** | Evidence repository backend + read-only `source_ref` display in item cards | The evidence-link creation/management UI — deferred with the evidence-repository surface |
 | **Coverage panel (A3)** | Coverage backend built (7a) | Deferred — headline counts only meaningful on an `APPROVED` governing AIIA (INV-38); DRAFT reads mislead |
-| **Feeder authoring (A7, provisional)** | Feeder recommendations read-only panel; no feeder create/author UI | PROVISIONAL: deferred pending V-8 resolution. V-8 resolved — required feeders DO gate `structural_assessment_readiness`; A7 remains deferred but is a scope hole for feeder-gated tiers (DF3-6) |
-| **Classification sign-off / review / authorise / queue / reopen (F4)** | F3 assembled-AIIA view is built and reusable read-only in F4 | All assurance acts deferred to F4 (act-SoD, INV-28) |
+| **Feeder authoring (A7, provisional)** | Feeder recommendations read-only panel; no feeder create/author UI | PROVISIONAL: deferred (DF3-6 — confirmed scope hole for feeder-gated tiers) |
+| **`AuditEvent` actor durability** (D-25) | ATO text-stamps name/email (exception); `AssessmentReviewRead.reviewer_display_name` from INV-34 join at read time (WI-9b) | One deferred cross-cutting fix for durable name/email on `AuditEvent` + `AssessmentReview`/`submitted_by`/`approved_by` |

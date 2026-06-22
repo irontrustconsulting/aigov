@@ -7,7 +7,7 @@ import { ItemCard } from "./item-card";
 interface Props {
   assessmentId: string;
   assessmentStatus: AssessmentStatus;
-  branch: "system_owner" | "contributor" | "assurance";
+  branch: "system_owner" | "contributor" | "reviewer" | "authoriser" | "auditor";
 }
 
 /**

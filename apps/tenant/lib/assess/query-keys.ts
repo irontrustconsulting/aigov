@@ -11,4 +11,6 @@ export const assessKeys = {
   feederRecs: (assessmentId: string) => ["feeder-recs", assessmentId] as const,
   risks: () => ["reference-risks"] as const,
   controls: () => ["reference-controls"] as const,
+  reviewQueue: () => ["review-queue"] as const,
+  authorisation: (useCaseId: string) => ["authorisation", useCaseId] as const,
 } as const;

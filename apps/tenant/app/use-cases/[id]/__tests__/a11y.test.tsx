@@ -103,8 +103,8 @@ const draftAiia: AssessmentRead = {
 
 const inReviewAiia: AssessmentRead = { ...draftAiia, id: "ass-2", status: "in_review" };
 
-const emptyDetail: AssessmentDetail = { ...draftAiia, items: [] };
-const inReviewDetail: AssessmentDetail = { ...inReviewAiia, items: [] };
+const emptyDetail: AssessmentDetail = { ...draftAiia, items: [], reviews: [] };
+const inReviewDetail: AssessmentDetail = { ...inReviewAiia, items: [], reviews: [] };
 
 const sections: SectionRead[] = [];
 const feederRecs: FeederRecommendationRead[] = [];

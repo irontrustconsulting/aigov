@@ -213,6 +213,33 @@ V-8 resolved at §0: required feeders DO gate `structural_assessment_readiness` 
 
 ---
 
+## UI-F4-ASSURE sprint-local decisions
+
+**DF4-1** · Topology B — portfolio whose-court is the entry index; `use-cases/[id]` is the single role-and-state-conditioned act surface
+The reviewer AIIA queue (`apps/tenant/app/review-queue`) is a thin reviewer-only index linking to `use-cases/[id]`. Authoriser and reviewer sign-off work is surfaced from the portfolio whose-court forward-link (`DF2-7`). All acts land on `use-cases/[id]`. **Why:** reuses the landed `FE-11`/`court.ts`/`WhoseCourtIndicator` + the `DF2-7` forward-link seam; avoids fused-inbox dedup + reviewer-act-type disambiguation cost of Topology A. **Rejected:** a unified-queue index fusing all assurance acts (more dedup complexity, harder disambiguation).
+↳ refs: DF2-7, FE-11, D-38
+
+**DF4-2** · Reviewer's two acts disambiguated by object state, not court vocabulary
+Both classification sign-off (`PENDING_REVIEW`) and AIIA review (`IN_REVIEW`) route `responsible_party == "reviewer"` in the lifecycle court. The act surface disambiguates by checking classification status and AIIA status independently; both panels can coexist if both conditions hold simultaneously (sequential in the normal case, but the surface handles both). **Why:** court vocabulary is presentation-level, not a routing key; duplicating a routing-key concept into the court string would violate FE-11. **Rejected:** separate court strings for the two reviewer acts (would require a stable-tier change to the lifecycle model).
+
+**DF4-3** · act-SoD presentation is role-branch-first; across-reassignment edge degrades to act-time 403
+Assignment SoD (`INV-7`) ensures reviewer ≠ submitter and authoriser ∉ {reviewer, submitter} in the common case; the role branch alone meets FE-8 structural absence for those branches. The across-reassignment edge (reviewer was reassigned after submitting) degrades to act-time 403 at the server (`assert_distinct_workflow_actor`, INV-28) surfaced as a blocked-reason via `BadFromStateBanner`. WI-9a (server-computed `caller_eligible` field) not elected: queue pre-filters `submitted_by_user_id != ctx.user_id` already, and the edge is rare. Client never compares raw individual identities (D-25/FE-11 spirit preserved).
+↳ refs: INV-7, INV-28, D-4, FE-8, DF4-6
+
+**DF4-4** · ATO terminal governed by INV-32 (`live_state`); drift caveat in the spirit of INV-44
+The ATO terminal reads `live_state` from `GET /use-cases/{id}/authorisation` (never infers "authorised" from row existence). A drift caveat is shown when `live_state ≠ "authorised"` — in the spirit of INV-44 (the export-pack drift rule), cited only as precedent. INV-44 is the export-scoped rule; INV-32 is the live-state authority for the rendered terminal. **Why:** authority as of last read, not authority as of issue date — the rendered terminal must distinguish these.
+↳ refs: INV-32, INV-44
+
+**DF4-5** · Reopen ships in F4, on the authoring surface (`system_owner` branch, APPROVED AIIA)
+`APPROVED → NEEDS_REFRESH` completes the rework loop; without reopen, `APPROVED` is terminal-for-rework. Reopen belongs where authoring lives, not the reviewer queue. Not OPEN-1 (void/withdraw — reopen is rework, not withdrawal). **Why:** the F3 surface is where the owner authorises and reviews their work; reopen is a natural extension of the owner's act set. **Rejected:** separate surface or placing reopen on the reviewer queue (wrong actor, wrong surface).
+↳ refs: DF3-4, INV-31, OPEN-1
+
+**DF4-6** · Backend response-shape deltas are additive; WI-9a not elected, WI-9b elected
+Per §0 V-1: `list_review_queue` pre-filters submitter; no `caller_eligible` field needed for the common case. WI-9a not elected. Per §0 V-2: `AssessmentDetail` had no review history. WI-9b elected: `reviews: list[AssessmentReviewRead] = []` added to `AssessmentDetail`; `reviewer_display_name` from INV-34 membership join; no durable name/email stamp (D-25). Same additive pattern as DF3-7; no migration required; existing callers unbroken.
+↳ refs: DF3-7, INV-34, D-25
+
+---
+
 ## OPEN — unresolved design questions affecting future work
 
 **OPEN-1** · Worked-state void / withdraw path

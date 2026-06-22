@@ -4,7 +4,7 @@
 **Purpose:** the canonical inventory of every FastAPI route — method, path, auth gate, request/response schema, file:line — so a sprint can verify the contract it's about to consume *from this file*, not by re-grepping `app/routers/` from scratch. It also names routes that sound plausible but **do not exist**, so a design doesn't quietly assume one.
 **Scope (deliberate):** routes and gates, not field-by-field schema detail — schemas are named and pointed at `app/schemas/*.py`; full field shape lives there (D-21: the code is authoritative) or in `DATA-MODEL.md` for the underlying tables. Frontend-side mirrored types live in `packages/api-client/src/contracts/`.
 
-**Authoritative inventory:** every router registered in `app/main.py`, read line-by-line against repo HEAD through `UI-F3-ASSESS`. **Still verify before relying on it** (`D-21`) — this file can drift the moment a route changes; if it disagrees with `app/routers/`, the code wins and this file is stale, not the other way round.
+**Authoritative inventory:** every router registered in `app/main.py`, read line-by-line against repo HEAD through `UI-F4-ASSURE`. **Still verify before relying on it** (`D-21`) — this file can drift the moment a route changes; if it disagrees with `app/routers/`, the code wins and this file is stale, not the other way round.
 
 ---
 
@@ -260,3 +260,22 @@ Every other mutation in this map — including every `UI-F1-INTAKE`-consumed rou
 **Additive backend schema delta (`DF3-7`):** `AssessmentItemRead` now includes `control_links: list[ControlLinkRead]` (batch-loaded in `assemble_aiia_items`). This is a response-shape addition to `GET /assessments/{id}` — the route, gate, and path are unchanged; only the shape of items in `AssessmentDetail.items` grew. No migration required (data already existed in `assessment_item_control`). The `§2` assessments table row is still current — the gate and method are unchanged; the schema note for `GET /assessments/{id}` now reflects `AssessmentDetail` includes `items[].control_links`.
 
 Evidence linking (`POST .../evidence-links`) and coverage (`GET /assessments/{id}/coverage`) are available in the route map but **not consumed** by this sprint (A2/A3 deferred — `DF3-1`, `DF3-2`).
+
+**`UI-F4-ASSURE`** — no route delta; consumed-only. No routes added, removed, or re-gated. Routes consumed by this sprint:
+
+- `GET /me` — pre-flight role branch (5-way extension: reviewer/authoriser/auditor split from assurance catch-all)
+- `GET /use-cases/{id}` — classification status for sign-off disambiguation (DF4-2)
+- `GET /use-cases/{id}/lifecycle` — whose-court + lifecycle state for act routing
+- `GET /use-cases/{id}/assessments` — find current AIIA
+- `GET /assessments/{id}` — assembled detail + review history (WI-9b additive field; see below)
+- `GET /assessments/{id}/sections` — section template (reviewer/authoriser read)
+- `GET /assessments/{id}/feeder-recommendations` — feeder recs panel (read)
+- `GET /assessments/review-queue` — reviewer queue (`gov:reviewer`; issued only when caller is reviewer)
+- `GET /systems/{id}/rollup` — system name for header
+- `POST /assessments/{id}/review` — AIIA review decision (If-Match; `gov:reviewer`)
+- `POST /assessments/{id}/reopen` — APPROVED → NEEDS_REFRESH (If-Match; `gov:system_owner`)
+- `POST /use-cases/{id}/classification/sign-off` — reviewer sign-off (no If-Match; `gov:reviewer`)
+- `POST /use-cases/{id}/authorise` — deployment authorisation (no If-Match; `gov:authoriser`)
+- `GET /use-cases/{id}/authorisation` — ATO read + live_state (`staleTime: 0`; `gov:ALL`; 404 if never authorised)
+
+**Additive backend schema delta (`DF4-6`):** `AssessmentDetail` now includes `reviews: list[AssessmentReviewRead]` (batch-loaded in `GET /assessments/{id}` handler via INV-34 membership join). `AssessmentReviewRead` carries `reviewer_display_name` (not a durable stamp — D-25; resolved at read time). No migration required (data already existed in `assessment_review`). Gate and path of `GET /assessments/{id}` unchanged; only the response shape grew.

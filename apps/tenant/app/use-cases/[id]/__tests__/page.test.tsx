@@ -102,6 +102,7 @@ const aiia: AssessmentRead = {
 const assessmentDetail: AssessmentDetail = {
   ...aiia,
   items: [],
+  reviews: [],
 };
 
 const sections: SectionRead[] = [];

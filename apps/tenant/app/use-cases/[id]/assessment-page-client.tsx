@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * UI-F3-ASSESS — use-case work surface.
+ * UI-F3-ASSESS / UI-F4-ASSURE — use-case work surface.
  *
- * §0 pre-flight outcomes (resolved against live code, D-21):
+ * F3 §0 pre-flight outcomes (resolved against live code, D-21):
  *   V-1a PENDING_REVIEW: bridge snapshot status is PENDING_REVIEW — no path assumed APPROVED.
  *   V-1b B1 does NOT invert: create_aiia guard uses classification_readiness(), which
  *        does NOT require snapshot status=APPROVED; only requires eu_tier ≠
@@ -20,6 +20,19 @@
  *   Backend additive delta: control_links added to AssessmentItemRead + batch-loaded
  *        in assemble_aiia_items (UI-F3-ASSESS; not captured in "backend delta none"
  *        which referred to routes/tables/enums, not response schema fields).
+ *
+ * F4 §0 pre-flight outcomes:
+ *   V-1  list_review_queue pre-filters submitted_by_user_id != ctx.user_id.
+ *        ReviewQueueEntryRead = {assessment_id, use_case_id, tier_snapshot,
+ *        submitted_by_name, submitted_by_email, submitted_at}. No caller_eligible.
+ *        WI-9a NOT elected; across-reassignment edge → act-time 403.
+ *   V-2  AssessmentDetail has no review history. WI-9b elected: additive reviews[]
+ *        field added to AssessmentDetail (reviewer_display_name from INV-34 join).
+ *   V-3  AuthoriseRequest = {residual_risk_statement: str}.
+ *        DeploymentAuthorisationRead includes live_state (INV-32).
+ *   V-4  ReviewDecision = "approved" | "changes_requested". note required (422) on
+ *        changes_requested, optional on approved.
+ *   V-6  SignOffRead shape confirmed; no If-Match on sign-off route; 409/403 only.
  */
 
 import { useMe, useUseCaseLifecycle } from "@/lib/assess";
@@ -28,23 +41,46 @@ import { isYourCourt, resolveCourt, useSystemRollup } from "@/lib/portfolio";
 import { AssessmentHeader } from "./_regions/assessment-header";
 import { AiiaBody } from "./_regions/aiia-body";
 import { FeederRecs } from "./_regions/feeder-recs";
-import { useBootstrapAssessment, useSubmitAssessment, StaleLockError, BadFromStateError } from "@/lib/assess";
+import { ReviewPanel } from "./_regions/review-panel";
+import { SignOffPanel } from "./_regions/sign-off-panel";
+import { AuthorisePanel } from "./_regions/authorise-panel";
+import { AtoTerminal } from "./_regions/ato-terminal";
+import { ReviewHistory } from "./_regions/review-history";
+import {
+  useBootstrapAssessment,
+  useSubmitAssessment,
+  useReopen,
+  StaleLockError,
+  BadFromStateError,
+} from "@/lib/assess";
 import { SodAction, StaleLockBanner, BadFromStateBanner } from "@irontrust/ui";
 import { useState } from "react";
+import type { ClassificationStatusRead } from "@irontrust/api-client";
 
 interface Props {
   useCaseId: string;
 }
 
-/** Resolve the four-way role branch from the caller's governance roles.
- * Admin = zero governance roles. System_owner and contributor are exclusive
- * (a user can hold only one first-line role at a time per the SoD matrix).
- * Assurance roles (reviewer/authoriser/auditor) may coexist with each other. */
-function resolveRoleBranch(roleKeys: Set<string>) {
-  if (roleKeys.size === 0) return "admin" as const;
-  if (roleKeys.has("system_owner")) return "system_owner" as const;
-  if (roleKeys.has("contributor")) return "contributor" as const;
-  return "assurance" as const; // reviewer | authoriser | auditor
+export type RoleBranch =
+  | "system_owner"
+  | "contributor"
+  | "reviewer"
+  | "authoriser"
+  | "auditor";
+
+/**
+ * Resolve the five-way role branch from the caller's governance roles (UI-F4-ASSURE).
+ * Admin = zero governance roles. system_owner/contributor are exclusive first-line roles.
+ * Assurance roles are split so each gets its own act surface (DF4-1).
+ * Priority: system_owner > contributor > reviewer > authoriser > auditor.
+ */
+export function resolveRoleBranch(roleKeys: Set<string>): "admin" | RoleBranch {
+  if (roleKeys.size === 0) return "admin";
+  if (roleKeys.has("system_owner")) return "system_owner";
+  if (roleKeys.has("contributor")) return "contributor";
+  if (roleKeys.has("reviewer")) return "reviewer";
+  if (roleKeys.has("authoriser")) return "authoriser";
+  return "auditor";
 }
 
 export function AssessmentPageClient({ useCaseId }: Props) {
@@ -85,7 +121,7 @@ function AssessmentSurface({
 }: {
   useCaseId: string;
   roleKeys: Set<string>;
-  branch: "system_owner" | "contributor" | "assurance";
+  branch: RoleBranch;
 }) {
   const useCaseDetail = useUseCaseDetail(useCaseId);
   const lifecycle = useUseCaseLifecycle(useCaseId);
@@ -114,6 +150,8 @@ function AssessmentSurface({
   }
 
   const useCase = useCaseDetail.data.use_case;
+  const classification = useCaseDetail.data.classification ?? null;
+  const lifecycleState = lifecycle.data.state;
   const court = resolveCourt(lifecycle.data.blocking);
   const aiia = (assessmentsQuery.data ?? []).find((a) => a.type === "aiia" && a.is_current) ?? null;
 
@@ -129,8 +167,13 @@ function AssessmentSurface({
         branch={branch}
       />
 
+      {/* ATO terminal: shown to any gov role when use case is authorised (INV-32, WI-5) */}
+      {lifecycleState === "authorised" && (
+        <AtoTerminal useCaseId={useCaseId} />
+      )}
+
       {aiia === null ? (
-        <NoAssessmentState useCaseId={useCaseId} branch={branch} />
+        <NoAssessmentState useCaseId={useCaseId} branch={branch} classification={classification} />
       ) : (
         <>
           <AiiaBody
@@ -139,6 +182,28 @@ function AssessmentSurface({
             branch={branch}
           />
           <FeederRecs assessmentId={aiia.id} />
+
+          {/* Reviewer act panels — mutually exclusive by object state (DF4-2) */}
+          {branch === "reviewer" && aiia.status === "in_review" && (
+            <ReviewPanel
+              useCaseId={useCaseId}
+              assessmentId={aiia.id}
+              assessmentLockVersion={aiia.lock_version}
+            />
+          )}
+          {branch === "reviewer" && classification?.status === "pending_review" && (
+            <SignOffPanel
+              useCaseId={useCaseId}
+              classification={classification}
+            />
+          )}
+
+          {/* Authoriser act panel */}
+          {branch === "authoriser" && lifecycleState === "pending_authorisation" && (
+            <AuthorisePanel useCaseId={useCaseId} />
+          )}
+
+          {/* Submit — system_owner only, DRAFT/NEEDS_REFRESH only (WI-6 / F3) */}
           <SubmitSection
             useCaseId={useCaseId}
             assessmentId={aiia.id}
@@ -146,19 +211,26 @@ function AssessmentSurface({
             assessmentLockVersion={aiia.lock_version}
             branch={branch}
           />
+
+          {/* Reopen — system_owner only, APPROVED only (WI-6 / F4) */}
+          <ReopenSection
+            useCaseId={useCaseId}
+            assessmentId={aiia.id}
+            assessmentStatus={aiia.status}
+            assessmentLockVersion={aiia.lock_version}
+            branch={branch}
+          />
+
+          {/* Review history — visible to owner, reviewer, authoriser (WI-7) */}
+          {(branch === "system_owner" || branch === "reviewer" || branch === "authoriser") && (
+            <ReviewHistory assessmentId={aiia.id} />
+          )}
         </>
       )}
     </main>
   );
 }
 
-/**
- * Submit section (WI-6) — system_owner only (FE-8 structural: absent for contributor).
- * Sends If-Match on assessment.lock_version (FE-6/PAT-6).
- * Post-submit: body locked (IN_REVIEW), court moves to reviewer (lifecycle invalidated).
- * V-8 note: required feeders gate structural_assessment_readiness server-side; the 409
- * "bad from-state" surface handles any server rejection gracefully.
- */
 function SubmitSection({
   useCaseId,
   assessmentId,
@@ -170,7 +242,7 @@ function SubmitSection({
   assessmentId: string;
   assessmentStatus: string;
   assessmentLockVersion: number;
-  branch: "system_owner" | "contributor" | "assurance";
+  branch: RoleBranch;
 }) {
   const [submitError, setSubmitError] = useState<"stale" | "bad_state" | null>(null);
   const submit = useSubmitAssessment(useCaseId, assessmentId);
@@ -186,7 +258,7 @@ function SubmitSection({
       )}
       {submitError === "bad_state" && <BadFromStateBanner />}
 
-      {/* Submit is structurally absent for contributor (FE-8) */}
+      {/* Submit is structurally absent for non-system_owner (FE-8) */}
       <SodAction barred={!isSystemOwner}>
         <button
           onClick={() => {
@@ -208,12 +280,63 @@ function SubmitSection({
   );
 }
 
-function NoAssessmentState({
+/**
+ * Reopen control (WI-6 / F4) — system_owner only, APPROVED AIIA only.
+ * APPROVED → NEEDS_REFRESH; authoring fields unlock on refetch.
+ * Sends If-Match (FE-6); 412 ≠ 409 surfaced distinctly.
+ */
+function ReopenSection({
   useCaseId,
+  assessmentId,
+  assessmentStatus,
+  assessmentLockVersion,
   branch,
 }: {
   useCaseId: string;
-  branch: "system_owner" | "contributor" | "assurance";
+  assessmentId: string;
+  assessmentStatus: string;
+  assessmentLockVersion: number;
+  branch: RoleBranch;
+}) {
+  const [reopenError, setReopenError] = useState<"stale" | "bad_state" | null>(null);
+  const reopen = useReopen(useCaseId, assessmentId);
+
+  if (branch !== "system_owner" || assessmentStatus !== "approved") return null;
+
+  return (
+    <section aria-label="reopen-section">
+      {reopenError === "stale" && (
+        <StaleLockBanner onReload={() => setReopenError(null)} />
+      )}
+      {reopenError === "bad_state" && <BadFromStateBanner />}
+
+      <button
+        onClick={() => {
+          setReopenError(null);
+          reopen.mutate(assessmentLockVersion, {
+            onError: (err) => {
+              if (err instanceof StaleLockError) setReopenError("stale");
+              else if (err instanceof BadFromStateError) setReopenError("bad_state");
+            },
+          });
+        }}
+        disabled={reopen.isPending}
+        aria-busy={reopen.isPending}
+      >
+        {reopen.isPending ? "Reopening…" : "Reopen for revision"}
+      </button>
+    </section>
+  );
+}
+
+function NoAssessmentState({
+  useCaseId,
+  branch,
+  classification,
+}: {
+  useCaseId: string;
+  branch: RoleBranch;
+  classification: ClassificationStatusRead | null;
 }) {
   const bootstrap = useBootstrapAssessment(useCaseId);
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
@@ -226,7 +349,21 @@ function NoAssessmentState({
     );
   }
 
-  if (branch === "assurance") {
+  if (branch === "reviewer") {
+    // Reviewer may have a classification sign-off pending even without an AIIA
+    if (classification?.status === "pending_review") {
+      return (
+        <SignOffPanel useCaseId={useCaseId} classification={classification} />
+      );
+    }
+    return (
+      <section aria-label="assessment-empty-state">
+        <p>No assessment has been started for this use case yet.</p>
+      </section>
+    );
+  }
+
+  if (branch === "authoriser" || branch === "auditor") {
     return (
       <section aria-label="assessment-empty-state">
         <p>No assessment has been started for this use case yet.</p>

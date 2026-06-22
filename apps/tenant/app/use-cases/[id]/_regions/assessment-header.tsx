@@ -4,6 +4,7 @@ import { SodAction, WhoseCourtIndicator } from "@irontrust/ui";
 import { useReEvaluate } from "@/lib/assess";
 import { isYourCourt, type ResolvedCourt } from "@/lib/portfolio";
 import type { EUAIActTier } from "@irontrust/api-client";
+import type { RoleBranch } from "../assessment-page-client";
 
 interface Props {
   useCaseId: string;
@@ -12,13 +13,14 @@ interface Props {
   systemName: string | null;
   court: ResolvedCourt | null;
   roleKeys: Set<string>;
-  branch: "system_owner" | "contributor" | "assurance";
+  branch: RoleBranch;
 }
 
 /**
  * Use-case header: identity + whose-court + re-evaluate lever.
- * Court sourced only from lifecycle (FE-11, S3): never inferred client-side.
- * re-evaluate is system_owner-only (FE-8 structural: absent for contributor/assurance).
+ * Court sourced only from lifecycle (FE-11): never inferred client-side.
+ * re-evaluate is system_owner-only (FE-8 structural: absent for all other branches).
+ * Auditor: no court row (they don't act; court is irrelevant to their view).
  */
 export function AssessmentHeader({
   useCaseId,
@@ -42,16 +44,19 @@ export function AssessmentHeader({
         </p>
       )}
 
-      {court ? (
-        <p>
-          <WhoseCourtIndicator
-            partyLabel={court.partyLabel}
-            isYourCourt={isYourCourt(court, roleKeys)}
-          />{" "}
-          {court.reason}
-        </p>
-      ) : (
-        <p aria-label="court-status">No blocking gate at this time.</p>
+      {/* Auditor has no court row — they observe, not act (UI-F4-ASSURE WI-8) */}
+      {branch !== "auditor" && (
+        court ? (
+          <p>
+            <WhoseCourtIndicator
+              partyLabel={court.partyLabel}
+              isYourCourt={isYourCourt(court, roleKeys)}
+            />{" "}
+            {court.reason}
+          </p>
+        ) : (
+          <p aria-label="court-status">No blocking gate at this time.</p>
+        )
       )}
 
       {/* structural absence for non-system_owner (FE-8) */}

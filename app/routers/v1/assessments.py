@@ -20,7 +20,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.context import TenantContext, get_tenant_db, require_governance_role
-from app.models.assessment import Assessment, AssessmentItem
+from app.models.assessment import Assessment, AssessmentItem, AssessmentReview
+from app.models.identity import User
 from app.schemas.assessment import (
     AssessmentDetail,
     AssessmentItemAmend,
@@ -28,6 +29,7 @@ from app.schemas.assessment import (
     AssessmentItemRead,
     AssessmentRead,
     AssessmentReviewCreate,
+    AssessmentReviewRead,
     ControlLinkCreate,
     ControlLinkRead,
     EvidenceLinkCreate,
@@ -101,10 +103,46 @@ def get_assessment(
     db: Session = Depends(get_tenant_db),
 ) -> AssessmentDetail:
     assessment = svc.load_assessment(assessment_id, ctx, db)
+    reviews = _load_reviews(assessment_id, db)
     return AssessmentDetail(
         **AssessmentRead.model_validate(assessment).model_dump(),
         items=svc.assemble_aiia_items(assessment, db),
+        reviews=reviews,
     )
+
+
+def _load_reviews(
+    assessment_id: uuid.UUID, db: Session
+) -> list[AssessmentReviewRead]:
+    """Load AssessmentReview rows for the review-history display (WI-9b).
+    reviewer_display_name resolved via User join (INV-34); rows are ordered
+    chronologically so the latest request-changes comment is at the end."""
+    rows = db.execute(
+        select(
+            AssessmentReview.id,
+            AssessmentReview.assessment_id,
+            AssessmentReview.decision,
+            AssessmentReview.note,
+            AssessmentReview.submission_round,
+            AssessmentReview.created_at,
+            User.display_name,
+        )
+        .join(User, User.id == AssessmentReview.reviewer_user_id)
+        .where(AssessmentReview.assessment_id == assessment_id)
+        .order_by(AssessmentReview.created_at)
+    ).all()
+    return [
+        AssessmentReviewRead(
+            id=row.id,
+            assessment_id=row.assessment_id,
+            reviewer_display_name=row.display_name,
+            decision=row.decision,
+            note=row.note,
+            submission_round=row.submission_round,
+            created_at=row.created_at,
+        )
+        for row in rows
+    ]
 
 
 @router.delete("/assessments/{assessment_id}", status_code=status.HTTP_204_NO_CONTENT)

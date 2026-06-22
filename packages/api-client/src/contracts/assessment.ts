@@ -11,6 +11,7 @@ import type {
   CoverageStatus,
   EUAIActTier,
   ProvenanceConfidence,
+  ReviewDecision,
   SectionApplicability,
   TreatmentDecision,
 } from "./enums";
@@ -100,6 +101,82 @@ export interface AssessmentRead {
 
 export interface AssessmentDetail extends AssessmentRead {
   items: AssessmentItemRead[];
+  /** WI-9b: review history rows (reviewer_display_name from INV-34 join, D-25). */
+  reviews: AssessmentReviewRead[];
+}
+
+// ---------------------------------------------------------------------------
+// Review (UI-F4-ASSURE)
+// ---------------------------------------------------------------------------
+
+/** One review decision row for the attributed review-history display. */
+export interface AssessmentReviewRead {
+  id: string;
+  assessment_id: string;
+  reviewer_display_name: string | null;
+  decision: ReviewDecision;
+  note: string | null;
+  submission_round: number;
+  created_at: string;
+}
+
+/** POST /assessments/{id}/review body. note required when decision = "changes_requested". */
+export interface AssessmentReviewCreate {
+  decision: ReviewDecision;
+  note?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Review queue (UI-F4-ASSURE)
+// ---------------------------------------------------------------------------
+
+export interface ReviewQueueEntryRead {
+  assessment_id: string;
+  use_case_id: string;
+  tier_snapshot: EUAIActTier;
+  submitted_by_name: string | null;
+  submitted_by_email: string | null;
+  submitted_at: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Authorisation / ATO (UI-F4-ASSURE)
+// ---------------------------------------------------------------------------
+
+/** POST /use-cases/{id}/authorise body. */
+export interface AuthoriseRequest {
+  residual_risk_statement: string;
+}
+
+/** GET /use-cases/{id}/authorisation response.
+ * live_state reflects the current vector — never read "authorised" from row
+ * existence alone (INV-32). authorised_by_name from INV-34 join. */
+export interface DeploymentAuthorisationRead {
+  id: string;
+  use_case_id: string;
+  assessment_id: string;
+  submission_round: number;
+  tier: string;
+  assessment_version: number;
+  authorised_by_name: string | null;
+  authorised_by_email: string | null;
+  authorised_at: string;
+  residual_risk_statement: string;
+  live_state: string;
+}
+
+// ---------------------------------------------------------------------------
+// Classification sign-off (UI-F4-ASSURE)
+// ---------------------------------------------------------------------------
+
+/** POST /use-cases/{id}/classification/sign-off response. */
+export interface SignOffRead {
+  id: string;
+  use_case_id: string;
+  tier: string;
+  status: string;
+  version: number;
+  updated_at: string;
 }
 
 // ---------------------------------------------------------------------------

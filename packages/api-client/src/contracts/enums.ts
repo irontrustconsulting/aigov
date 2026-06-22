@@ -60,3 +60,6 @@ export type CoverageStatus = "open" | "partial" | "satisfied";
 export type SectionApplicability = "required" | "recommended" | "not_applicable";
 
 export type TreatmentDecision = "mitigate" | "accept" | "transfer" | "avoid";
+
+/** ReviewDecision (UI-F4-ASSURE) — wire values from app/models/base.py ReviewDecision. */
+export type ReviewDecision = "approved" | "changes_requested";

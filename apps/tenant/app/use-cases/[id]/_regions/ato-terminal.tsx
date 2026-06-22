@@ -1,0 +1,61 @@
+"use client";
+
+import { useAuthorisation } from "@/lib/assess";
+
+interface Props {
+  useCaseId: string;
+}
+
+/**
+ * ATO terminal (UI-F4-ASSURE WI-5) — shown to any gov role when the use case
+ * is in the "authorised" lifecycle state.
+ * live_state is read from the GET /authorisation response (INV-32) — never
+ * inferred from row existence. authorised_by_name from INV-34 join.
+ * Drift caveat: rendered when live_state ≠ "authorised" (DF4-4 / INV-44 precedent).
+ * 404: use case has never been authorised → renders nothing.
+ */
+export function AtoTerminal({ useCaseId }: Props) {
+  const query = useAuthorisation(useCaseId);
+
+  if (query.isLoading) return null;
+
+  // 404 = never authorised; any other error = transient — render nothing
+  if (query.isError || !query.data) return null;
+
+  const ato = query.data;
+  const isDrifted = ato.live_state !== "authorised";
+
+  return (
+    <section aria-label="ato-terminal">
+      <h2>Authority to Operate</h2>
+
+      {isDrifted && (
+        <p role="alert" aria-label="ato-drift-caveat">
+          Note: the deployment status has changed since this ATO was issued
+          (current state: <strong>{ato.live_state}</strong>). Review the
+          current lifecycle status before relying on this record.
+        </p>
+      )}
+
+      <dl>
+        <dt>Tier</dt>
+        <dd>{ato.tier}</dd>
+
+        <dt>Authorised by</dt>
+        <dd>{ato.authorised_by_name ?? "Unknown"}</dd>
+
+        <dt>Authorised at</dt>
+        <dd>{new Date(ato.authorised_at).toLocaleString()}</dd>
+
+        <dt>Residual risk</dt>
+        <dd>{ato.residual_risk_statement}</dd>
+
+        <dt>Assessment version</dt>
+        <dd>{ato.assessment_version}</dd>
+
+        <dt>Submission round</dt>
+        <dd>{ato.submission_round}</dd>
+      </dl>
+    </section>
+  );
+}

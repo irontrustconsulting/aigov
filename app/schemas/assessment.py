@@ -126,8 +126,24 @@ class AssessmentRead(BaseModel):
     updated_at: datetime
 
 
+class AssessmentReviewRead(BaseModel):
+    """One review decision row, for the attributed review-history display
+    (UI-F4-ASSURE WI-9b). reviewer_display_name is resolved via the INV-34
+    membership join at read time — never a durable stamp (D-25)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    assessment_id: uuid.UUID
+    reviewer_display_name: str | None
+    decision: ReviewDecision
+    note: str | None
+    submission_round: int
+    created_at: datetime
+
+
 class AssessmentDetail(AssessmentRead):
     items: list[AssessmentItemRead] = Field(default_factory=list)
+    reviews: list[AssessmentReviewRead] = Field(default_factory=list)
 
 
 class SectionRead(BaseModel):

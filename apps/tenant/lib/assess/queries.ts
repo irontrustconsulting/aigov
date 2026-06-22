@@ -5,7 +5,9 @@ import type {
   AssessmentDetail,
   AssessmentRead,
   ControlRead,
+  DeploymentAuthorisationRead,
   FeederRecommendationRead,
+  ReviewQueueEntryRead,
   RiskRead,
   SectionRead,
   UseCaseWithClassification,
@@ -81,5 +83,35 @@ export function useControls() {
   return useQuery({
     queryKey: assessKeys.controls(),
     queryFn: () => api.get<ControlRead[]>("/v1/reference/controls"),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// UI-F4-ASSURE queries
+// ---------------------------------------------------------------------------
+
+/** GET /v1/assessments/review-queue — gov:reviewer; call only when caller is a reviewer. */
+export function useReviewQueue() {
+  return useQuery({
+    queryKey: assessKeys.reviewQueue(),
+    queryFn: () => api.get<ReviewQueueEntryRead[]>("/v1/assessments/review-queue"),
+  });
+}
+
+/**
+ * GET /v1/use-cases/{id}/authorisation — most-recent ATO + computed live_state.
+ * staleTime: 0 (FE-7): live_state is consequential; never serve a cached snapshot.
+ * 404 = use case has never been authorised (caller renders nothing).
+ */
+export function useAuthorisation(useCaseId: string) {
+  return useQuery({
+    queryKey: assessKeys.authorisation(useCaseId),
+    queryFn: () => api.get<DeploymentAuthorisationRead>(`/v1/use-cases/${useCaseId}/authorisation`),
+    enabled: Boolean(useCaseId),
+    staleTime: 0,
+    retry: (failureCount, error) => {
+      if ((error as { status?: number }).status === 404) return false;
+      return failureCount < 3;
+    },
   });
 }
