@@ -52,7 +52,7 @@ You are the only agent that edits `docs/`; closure is your job. The **canon stat
 2. **Update the volatile tier only:**
    - `STATE.md` — move shipped capability out of *deferred* into *implemented*; update the deferred register; add any new audit-action strings.
    - `DATA-MODEL.md` — new tables / enums / indexes with **plane + RLS** tag; new guarantees; resolve drift notes.
-   - `API-ROUTES.md` — add/update/remove the rows for any route the sprint touched (method, gate, request/response schema); add to §4 (confirmed absent) if a sprint's pre-flight rules a plausible-sounding route out.
+   - `API-ROUTES.md` — **volatile tier; update every sprint that adds, removes, or re-gates a route**, not just UI sprints: add/update/remove the rows for any route the sprint touched (method, gate, request/response schema); add to §4 (confirmed absent) if a sprint's pre-flight rules a plausible-sounding route out.
    - `INVARIANTS.md` — **append** new `INV-n`, tagged `DB`/`CODE`/`CONVENTION` + locus + origin.
    - `DECISIONS.md` — **append** new `D-n` (rationale / rejected alternative); add or resolve `OPEN-n`.
    - `PATTERNS.md` — append a `PAT-n` only if the sprint established a genuinely new reusable shape.
