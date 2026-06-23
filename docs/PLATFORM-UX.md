@@ -26,7 +26,7 @@ IronTrust staff, on the platform plane (separate Cognito pool, `require_permissi
 
 Designed just-in-time when built, each run through §1–2 and INV-49. The framework to fill:
 
-- **Provisioning console** — create / list tenants; wraps `provision_tenant` / `POST /platform/provision` (D-23). CLI remains the bootstrap path only. *[to design when built]*
+- **Provisioning console** — `apps/operator/app/(console)/provisioning`. Two regions on a single dense surface: (1) **tenant list** — read-only `GET /platform/tenants` result, columns `name`/`slug`/`created_at`/`id`, no per-tenant mutation; (2) **provision form** — captures `ProvisionRequest` (`org_name`, `slug`, `owner_email`, `owner_name`), posts through the operator BFF, surfaces 201 success with `{tenant_id, owner_id}` and refetches the list, 409 conflict flagged per field (`slug` or `owner_email`), 403 triggers identity refetch and re-branch. Operator-plane register per §2: information density over friendliness, operational vocabulary, no adoption layering, no prefill ladder. Desktop-only workstation tool (`FE-1`). CLI remains the bootstrap/break-glass path only (D-23).
 - **Operator RBAC** — operators, roles, role→permission grants (INV-8); operator status. *[to design when built]*
 - **Catalogue & reference curation** — vendors / products / facts / mappings, risk & control libraries, taxonomy, decision tree (the GLOBAL reference data, INV-48). *[to design when built]*
 - **Curation-task inbox** — the tenant-side taxonomy misses routed here (`UX.md` §3); the operator adds the option properly, with its mapping, and it becomes structured for everyone next time. The moat-compounding loop. *[to design when built]*

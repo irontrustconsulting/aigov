@@ -5,7 +5,7 @@
 **Lanes:** tenant experience intent → `UX.md`; operator experience intent → `PLATFORM-UX.md`; backend service / concurrency shapes → `PATTERNS.md` (`PAT-n`); this file → how surfaces are rendered and how the client talks to the API.
 **ID scheme:** frontend build conventions take **`FE-n`** (parallel to backend `PAT-n`), so designs and reviews can cite them. The *rule* lives once here; rationale stays in `DECISIONS.md` (`D-n`) / `INVARIANTS.md` (`INV-n`) and is cited, not restated.
 
-**Status:** topology resolved (`D-37`); `FE-1..10` populated. Token palette/type-scale specifics and per-surface fetch splits remain `[TBD — first feature surface]`.
+**Status:** topology resolved (`D-37`); `FE-1..13` populated. Token palette/type-scale specifics and per-surface fetch splits remain `[TBD — per-surface]`.
 
 ---
 
@@ -73,7 +73,7 @@ These are fixed by the backend; the client honours them from surface one. The *r
 - **Two apps, never a shared route tree** (`INV-1`, `FE-1`). Each app's BFF owns its auth routes; protected routes gate on the session cookie. Plane separation is origin-level.
 - **Tenant app** carries both faces on one capture-once spine (`UX.md` §2 — adoption vs assurance are role-conditioned renderings, not separate apps). Surfaces map to `UX.md` §5: intake/registration wizard · inventory/dashboard · review queue · assessment (AIIA) view · evidence/audit-pack · "whose-court" status. Each surface is designed just-in-time against the principles and the two faces (`UX.md` §5).
 - **Operator console** (the separate app) maps to `PLATFORM-UX.md` §3: provisioning · operator RBAC · catalogue/reference curation · curation-task inbox. Every platform capability is UI-operated (`INV-49`, `D-36`); the console never renders a tenant face.
-- **Role-aware rendering** (`UX-5`) reflects governance role from the server-authoritative context (never token claims — `D-24`); structurally-barred controls are absent (`FE-8`).
+- **Role-aware rendering** (`UX-5`) reflects governance role from the server-authoritative context (never token claims — `D-24`); structurally-barred controls are absent (`FE-8`). Operator-console permission-aware rendering follows `FE-13` (cross-ref).
 
 ## 8. Whose-court derivation — `FE-11`
 
@@ -97,6 +97,22 @@ Any route that accepts a file upload (`multipart/form-data`) **must** have a ded
 
 → `INV-18`, `INV-22`, `FE-2`, `NFR-1`, `INV-50`; rationale `DF5-2`.
 
+## 10. Operator-console permission-aware rendering — `FE-13`
+
+**FE-13 · Controls for an operator permission the caller does not hold are absent, not disabled. Presentational only; `require_permission` is the authz authority.**
+
+The operator-plane analogue of `FE-8` (tenant act-SoD absence), grounded on `INV-8`/`D-24` rather than act-SoD:
+
+- **Permission held:** the control renders normally.
+- **Permission not held:** the control is **absent** from the DOM — never disabled, never greyed. No capability is leaked behind a visible placeholder.
+- **Presentational only:** a forged direct call to a permission-gated API route still returns 403. The UI absence is a usability/non-disclosure choice; the backend `require_permission` dependency is the enforcement locus.
+
+**Implementation:** `apps/operator/components/require-permission.tsx` (`RequirePermission` component). Usage pattern: wrap any permission-gated nav entry or control in `<RequirePermission permission="tenant:provision" permissions={permissions}>...</RequirePermission>`. The permission keys come from `GET /platform/me` (`D-39`); the byte-exact key for provisioning is `'tenant:provision'`.
+
+**Nav shell axis:** operator nav distinguishes `FE-13` permission-absence (absent) from unbuilt-surface visibility (visible-disabled). When an unbuilt surface is built and permission-gated, its entry adopts `FE-13` absence, never a greyed placeholder (`DF7-2`).
+
+→ `INV-8`, `D-24`, `D-39`, `FE-8`, `PLATFORM-UX §2`; source `UI-F7-PROVISION`.
+
 ---
 
 ### FE-n index
@@ -115,3 +131,4 @@ Any route that accepts a file upload (`multipart/form-data`) **must** have a ded
 | FE-10 | Two-app separate-origin routing; tenant (UX §5) / operator (PLATFORM-UX §3) surfaces; role-aware render | INV-1, INV-49, D-36, UX-5, D-24 |
 | FE-11 | Whose-court derivation — direct `blocking.responsible_party` read, no pre-branch, fixed party→role mapping, presentational highlight | D-38, FE-8, INV-28, D-4, D-24 |
 | FE-12 | Binary file uploads via dedicated BFF handler (arrayBuffer(), not text()); generic proxy must never handle multipart | INV-18, INV-22, FE-2, NFR-1, INV-50, DF5-2 |
+| FE-13 | Operator-console permission-aware render — permission absent → control absent (not disabled); presentational only, `require_permission` is authz authority | INV-8, D-24, D-39, FE-8, PLATFORM-UX §2 |

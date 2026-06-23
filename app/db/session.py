@@ -56,8 +56,8 @@ ProvisionerSessionLocal = sessionmaker(
 )
 
 # Operator-provisioner engine — used ONLY by the create-operator CLI command.
-# Bound to irontrustai_operator_provisioner: SELECT,INSERT on operator/operator_role;
-# SELECT on role. NOBYPASSRLS (those tables carry no RLS).
+# Bound to irontrustai_operator_provisioner: SELECT,INSERT,UPDATE on operator;
+# INSERT,SELECT on platform_audit_event; INSERT on operator_role; SELECT on role.
 operator_provisioner_engine = create_engine(
     settings.operator_provisioner_database_url,
     echo=settings.debug,

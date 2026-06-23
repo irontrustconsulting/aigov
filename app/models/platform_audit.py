@@ -3,7 +3,8 @@ Platform-plane audit trail.
 
 Separate from the tenant-plane audit_event table — platform operator actions
 have no tenant_id at write time and must not pollute the tenant compliance log.
-Append-only: the writer roles hold INSERT only; a DB trigger enforces it.
+Append-only: the writer roles hold INSERT + SELECT (SELECT needed for
+    INSERT ... RETURNING); a DB trigger enforces no UPDATE/DELETE.
 """
 
 from __future__ import annotations

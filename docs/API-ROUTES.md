@@ -19,6 +19,7 @@
 | `gov:write` | `require_governance_role("system_owner","contributor")` | First-line write gate (capture/provision acts). |
 | `gov:<role>` | `require_governance_role("<role>")` | A single named governance role. |
 | `operator:<perm>` | `require_permission("<perm>")` (platform plane) | Operator-console auth — a platform permission, never a tenant governance role. |
+| `op-auth` | `get_current_operator` (platform plane) | Authenticated operator only — identity verified from DB, no permission assertion. Any valid active operator gets 200 regardless of permissions held. |
 
 `member`/`admin`/`gov:*` all run on the RLS-scoped session from `get_tenant_db` (tenant isolation is structural, not a per-route concern to re-verify — `INV-4`). Routes with no DB session at all (the export router) gate inside their own self-owned session — noted per-route below.
 
@@ -203,11 +204,13 @@ Separate auth context entirely (`operator_authz`, not `app.auth.context`) — `C
 | `POST /platform/provision` | `operator:tenant:provision` | `ProvisionRequest` | `ProvisionResponse` (201) | — | The **only** tenant-creation path (`D-23`); 409 if already provisioned. |
 | `GET /platform/tenants` | `operator:tenant:provision` | — | `TenantListItem[]` | — | Cross-tenant read — operator plane only, never reachable from the tenant plane. |
 
-### `app/routers/platform/whoami.py`
+### `app/routers/platform/me.py`
 
 | Method · Path | Gate | Request | Response | If-Match | Notes |
 |---|---|---|---|---|---|
-| `GET /platform/whoami` | `operator:tenant:provision` | — | `{id, cognito_sub, email, display_name, permissions}` (raw `dict`) | — | Verification aid, marked `TODO: remove after acceptance testing` in source — still live as of this sprint. |
+| `GET /platform/me` | `op-auth` | — | `{id, email, display_name, permissions}` (raw `dict`) | — | Durable operator identity contract (`D-39`); the operator-plane analogue of `GET /v1/me`. Permission key in the returned `permissions` set is exactly `'tenant:provision'` (byte-exact; `operator:tenant:provision` in gate-column shorthand means `require_permission("tenant:provision")`). |
+
+`GET /platform/whoami` was struck this sprint (`UI-F7-PROVISION`, A1/N4); route returns 404.
 
 ---
 
@@ -292,6 +295,12 @@ Evidence linking (`POST .../evidence-links`) and coverage (`GET /assessments/{id
 - `DELETE /assessments/{id}/items/{item_id}/evidence-links/{evidence_id}` — unlink (path param is `evidence_id`, not link-row id, DF5-9; no `If-Match`, DF5-4)
 
 **Additive backend schema delta (DF5-8):** `AssessmentItemRead` now includes `evidence_links: list[ItemEvidenceRead]` (batch-loaded in `assemble_aiia_items` via `_batch_evidence_links` — JOIN `assessment_item_evidence → evidence`). `ItemEvidenceRead` carries `evidence_id`, `title`, `sha256`, `content_type`, `size_bytes` — no `download_url` (DF5-3). No migration required. Same additive pattern as DF3-7/DF4-6; existing callers unbroken.
+
+**`UI-F7-PROVISION`** — **durable route delta +1** (`whoami` struck → `/platform/me` added; raw-route replace, no net route count change). Backend item only; frontend surface consumes existing `POST /platform/provision` + `GET /platform/tenants` (gates unchanged). Routes consumed:
+
+- `GET /platform/me` — operator identity + permission set at surface root (`op-auth`; `D-39`); no `GET /platform/tenants` or form issued when `tenant:provision ∉ permissions` (`DF7-1`)
+- `GET /platform/tenants` — tenant list, read-only (`operator:tenant:provision`)
+- `POST /platform/provision` — provision a new tenant (`operator:tenant:provision`; 409 collision keys: `slug` and `owner_email` independently)
 
 **`UI-F6-AUDITPACK`** — **no route delta; consumed-only**. No routes added, removed, or re-gated. Routes consumed by this sprint:
 

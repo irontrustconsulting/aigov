@@ -332,6 +332,24 @@ The standalone ATO document defaults to the latest round; a prior-round standalo
 
 ---
 
+**D-39** · Durable operator identity contract — `GET /platform/me`
+`GET /platform/me`, gated authenticated-operator-only (`get_current_operator`, no permission assertion), is the operator-plane analogue of `GET /v1/me`: DB-authoritative identity + effective permission set, safe for permission-aware render without blanket-gating on any specific permission. Promotes the F0 `GET /platform/whoami` verification aid (which was gated `require_permission("tenant:provision")` — unsuitable as the identity bootstrap for a permission-poor operator). Response drops `cognito_sub` (not needed by any consumer). Additive over greenfield (`D-22`); permissions resolved from the DB operator→role→permission chain, never from token claims (`D-24`).
+↳ enforces: INV-8, INV-50 · refs: FE-13, A1/N4 (UI-F7-PROVISION) · source: UI-F7-PROVISION design doc A1
+
+**DF7-1** · Root-branch B1 fix — zero-permission operator issues no gated call
+Because `GET /platform/tenants` carries the same `tenant:provision` gate as `POST /platform/provision`, there is no "list-but-not-provision" operator role. The provisioning surface branches at the root on `'tenant:provision' ∈ permissions` (from `GET /platform/me`): with permission → issue both `GET /platform/tenants` and render the form; without permission → render empty state and issue **no** `GET /platform/tenants`. This prevents the zero-permission operator from receiving a 403 on the list call that would mask the real empty state. Follows the established "zero gated permission → issue no gated call" pattern (DF2-5, DF5-7).
+↳ refs: D-39, FE-13, INV-8, D-24 · source: UI-F7-PROVISION design doc B1
+
+**DF7-2** · Nav unbuilt-vs-absent axis — two distinct visibility states
+Operator nav distinguishes two axes: (a) **unbuilt** surfaces render visible-disabled ("not yet available") to all operators — roadmap signalling, no capability behind the row; (b) **permission-lacking** controls render **absent** (`FE-13`) — a held permission governs presence. Forward rule: when an unbuilt surface is built and is permission-gated, its nav entry adopts FE-13 absence, never a greyed row.
+↳ refs: FE-13 · source: UI-F7-PROVISION design doc N2/A2
+
+**DF7-3** · FE-13 placement — operator-plane permission analogue, not a restatement of FE-8
+`FE-13` is the operator-console analogue of `FE-8`: structural permission absence → not rendered. Its grounding is distinct — `INV-8`/`D-24` (operator authority is permission-through-role; permissions read DB-authoritative via `/platform/me`) rather than FE-8's act-SoD grounding. Lives in `FRONTEND.md` FE register with a one-line `FE-10` cross-reference; no `FE-8` restatement.
+↳ refs: FE-8, FE-13, INV-8, D-24 · source: UI-F7-PROVISION design doc N3
+
+---
+
 ## OPEN — unresolved design questions affecting future work
 
 **OPEN-1** · Worked-state void / withdraw path

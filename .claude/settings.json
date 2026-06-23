@@ -41,7 +41,22 @@
       "Bash(python -m pytest tests/test_coverage_endpoints.py -v)",
       "Bash(python -m pytest tests/test_coverage_service.py tests/test_coverage_endpoints.py -q)",
       "Bash(python -c \"from app.schemas.export import UseCaseExportRead, SystemExportRead, AtoDocumentRead, FrameworkExportRead; print\\('OK'\\)\")",
-      "Bash(pnpm --filter tenant test -- systems/new)"
+      "Bash(pnpm --filter tenant test -- systems/new)",
+      "Bash(xargs -I{} cat {})",
+      "Bash(pnpm --filter tenant test)",
+      "Bash(pnpm exec *)",
+      "Bash(git push *)",
+      "Bash(pnpm --filter tenant test -- --testPathPattern=\"use-cases/\\\\[id\\\\]/__tests__\" --passWithNoTests)",
+      "Bash(pnpm --filter tenant test -- --testPathPattern=\"use-cases\")",
+      "Bash(pnpm --filter tenant test -- --testPathPattern=\"systems\")",
+      "Bash(pnpm --filter tenant test -- --verbose)",
+      "Bash(npx jest *)",
+      "Bash(git -C /Users/hmaosa/dev/aigov status --short)",
+      "Bash(git -C /Users/hmaosa/dev/aigov status)",
+      "Bash(git -C /Users/hmaosa/dev/aigov log --oneline -5)",
+      "Bash(git -C /Users/hmaosa/dev/aigov diff --stat HEAD)",
+      "Bash(git -C /Users/hmaosa/dev/aigov add app/schemas/assessment.py app/services/assessment_service.py apps/tenant/app/systems/[id]/__tests__/page.test.tsx apps/tenant/app/systems/[id]/system-detail-client.tsx docs/API-ROUTES.md docs/DECISIONS.md docs/INDEX.md docs/STATE.md docs/UX.md packages/api-client/src/contracts/enums.ts packages/api-client/src/contracts/index.ts packages/api-client/src/contracts/assessment.ts sprints/UI-F3-ASSESS.md designs/UI-F3-ASSESS.design.md)",
+      "Bash(git -C /Users/hmaosa/dev/aigov add apps/tenant/app/use-cases/ apps/tenant/lib/assess/)"
     ],
     "additionalDirectories": [
       "/private/tmp"

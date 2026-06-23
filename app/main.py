@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session
 from app.auth.cognito import CognitoClaims, verify_cognito_token
 from app.config import settings
 from app.db import get_db
+from app.routers.platform import me as platform_me
 from app.routers.platform import tenants as platform_tenants
-from app.routers.platform import whoami as platform_whoami
 from app.routers.v1 import (
     assessments,
     classification_context,
@@ -62,7 +62,7 @@ app.include_router(lifecycle.approvals_router, prefix="/v1")
 app.include_router(lifecycle.rollup_router, prefix="/v1")
 app.include_router(coverage.router, prefix="/v1")
 app.include_router(export.router, prefix="/v1")
-app.include_router(platform_whoami.router, prefix="/platform")
+app.include_router(platform_me.router, prefix="/platform")
 app.include_router(platform_tenants.router, prefix="/platform")
 
 

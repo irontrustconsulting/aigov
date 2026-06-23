@@ -65,9 +65,11 @@ def upgrade() -> None:
 
     # --- Grants ----------------------------------------------------------------
     # Write path: provisioner (tenant provision events) and operator_provisioner
-    # (create-operator events). INSERT only — no UPDATE/DELETE per above.
+    # (create-operator events). INSERT + SELECT — SELECT is required by
+    # INSERT ... RETURNING which SQLAlchemy emits to fetch server-default columns.
+    # UPDATE/DELETE are blocked above.
     op.execute(
-        "GRANT INSERT ON platform_audit_event "
+        "GRANT INSERT, SELECT ON platform_audit_event "
         "TO irontrustai_provisioner, irontrustai_operator_provisioner"
     )
     # Read path: platform_ro for future audit-log endpoints.

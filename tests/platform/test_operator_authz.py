@@ -3,8 +3,9 @@ Behaviour contract for the operator authZ seam (get_current_operator +
 require_permission). All five contract rows from the hand-off doc, plus
 cross-plane isolation checks.
 
-All tests hit GET /platform/whoami which is gated by
-require_permission("tenant:provision").
+Tests exercise GET /platform/tenants which is gated by
+require_permission("tenant:provision"), verifying both the bare identity
+resolution and the permission assertion layers.
 """
 
 from __future__ import annotations
@@ -19,12 +20,12 @@ from app.models.base import OperatorStatus
 from app.models.platform_rbac import Operator
 from tests.conftest import token_override
 
-WHOAMI = "/platform/whoami"
+TENANTS = "/platform/tenants"
 
 
 def test_no_token(client):
     """No Authorization header -> 401, no DB or Cognito lookup attempted."""
-    r = client.get(WHOAMI)
+    r = client.get(TENANTS)
     assert r.status_code == 401
 
 
@@ -32,7 +33,7 @@ def test_valid_token_unknown_operator(client):
     """Valid token but sub has no matching operator row -> 403."""
     app.dependency_overrides[verify_operator_token] = token_override("ghost-sub-xyz")
     try:
-        r = client.get(WHOAMI)
+        r = client.get(TENANTS)
     finally:
         app.dependency_overrides.pop(verify_operator_token, None)
     assert r.status_code == 403
@@ -50,7 +51,7 @@ def test_operator_disabled(client, db_session):
 
     app.dependency_overrides[verify_operator_token] = token_override(sub)
     try:
-        r = client.get(WHOAMI)
+        r = client.get(TENANTS)
     finally:
         app.dependency_overrides.pop(verify_operator_token, None)
     assert r.status_code == 403
@@ -68,7 +69,7 @@ def test_active_operator_no_permission(client, db_session):
 
     app.dependency_overrides[verify_operator_token] = token_override(sub)
     try:
-        r = client.get(WHOAMI)
+        r = client.get(TENANTS)
     finally:
         app.dependency_overrides.pop(verify_operator_token, None)
     assert r.status_code == 403
@@ -76,17 +77,14 @@ def test_active_operator_no_permission(client, db_session):
 
 
 def test_active_operator_permitted(client, active_operator):
-    """Active operator with tenant:provision -> 200, identity echoed."""
+    """Active operator with tenant:provision -> 200."""
     app.dependency_overrides[verify_operator_token] = token_override(active_operator.cognito_sub)
     try:
-        r = client.get(WHOAMI)
+        r = client.get(TENANTS)
     finally:
         app.dependency_overrides.pop(verify_operator_token, None)
     assert r.status_code == 200
-    body = r.json()
-    assert body["cognito_sub"] == active_operator.cognito_sub
-    assert body["email"] == active_operator.email
-    assert "tenant:provision" in body["permissions"]
+    assert isinstance(r.json(), list)
 
 
 # ---------------------------------------------------------------------------
@@ -95,7 +93,7 @@ def test_active_operator_permitted(client, active_operator):
 
 def test_platform_route_rejects_missing_token(client):
     """No token on a platform route -> 401 (not a tenant-plane 403)."""
-    r = client.get(WHOAMI)
+    r = client.get(TENANTS)
     assert r.status_code == 401
 
 

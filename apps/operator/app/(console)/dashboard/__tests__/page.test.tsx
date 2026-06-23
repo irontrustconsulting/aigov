@@ -19,14 +19,13 @@ afterEach(() => {
 });
 
 describe("DashboardPage (W7a smoke surface, operator)", () => {
-  test("renders the caller's identity from GET /platform/whoami", async () => {
+  test("renders the caller's identity from GET /platform/me", async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
       text: async () =>
         JSON.stringify({
           id: "op-1",
-          cognito_sub: "sub-1",
           email: "operator@irontrust.test",
           display_name: "Operator One",
           permissions: ["tenant:provision"],
