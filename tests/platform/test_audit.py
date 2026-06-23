@@ -120,16 +120,27 @@ def test_cli_provision_genesis_actor_null(db_session, _test_session_factory):
 
 def test_cli_create_operator_writes_audit(db_session, _test_session_factory):
     """provision_operator writes a CREATE_OPERATOR audit row."""
-    # Seed the provisioner role that provision_operator looks up
+    from app.models.base import OperatorStatus
+    from app.models.platform_rbac import Operator, Role
+
+    actor_id = uuid.uuid4()
     role_id = uuid.uuid4()
-    from app.models.platform_rbac import Role
+
+    # Seed the provisioner role and the acting operator (granted_by_id FK requires a real row)
     session = _test_session_factory()
-    session.add(Role(id=role_id, key="provisioner"))
+    session.add_all([
+        Role(id=role_id, key="provisioner"),
+        Operator(
+            id=actor_id, cognito_sub="granting-op-sub",
+            email="grantor@irontrust.io", display_name="Grantor",
+            status=OperatorStatus.ACTIVE,
+        ),
+    ])
     session.commit()
     session.close()
 
     actor = CurrentOperator(
-        id=uuid.uuid4(),
+        id=actor_id,
         cognito_sub="granting-op-sub",
         email="grantor@irontrust.io",
         display_name="Grantor",

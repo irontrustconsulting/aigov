@@ -201,16 +201,26 @@ Separate auth context entirely (`operator_authz`, not `app.auth.context`) — `C
 
 | Method · Path | Gate | Request | Response | If-Match | Notes |
 |---|---|---|---|---|---|
-| `POST /platform/provision` | `operator:tenant:provision` | `ProvisionRequest` | `ProvisionResponse` (201) | — | The **only** tenant-creation path (`D-23`); 409 if already provisioned. |
-| `GET /platform/tenants` | `operator:tenant:provision` | — | `TenantListItem[]` | — | Cross-tenant read — operator plane only, never reachable from the tenant plane. |
+| `POST /platform/provision` | `tenant:provision` | `ProvisionRequest` | `ProvisionResponse` (201) | — | The **only** tenant-creation path (`D-23`); 409 if already provisioned. |
+| `GET /platform/tenants` | `tenant:provision` | — | `TenantListItem[]` | — | Cross-tenant read — operator plane only, never reachable from the tenant plane. |
 
 ### `app/routers/platform/me.py`
 
 | Method · Path | Gate | Request | Response | If-Match | Notes |
 |---|---|---|---|---|---|
-| `GET /platform/me` | `op-auth` | — | `{id, email, display_name, permissions}` (raw `dict`) | — | Durable operator identity contract (`D-39`); the operator-plane analogue of `GET /v1/me`. Permission key in the returned `permissions` set is exactly `'tenant:provision'` (byte-exact; `operator:tenant:provision` in gate-column shorthand means `require_permission("tenant:provision")`). |
+| `GET /platform/me` | `op-auth` | — | `{id, email, display_name, permissions}` (raw `dict`) | — | Durable operator identity contract (`D-39`); the operator-plane analogue of `GET /v1/me`. Permission keys in `permissions` are byte-exact (e.g. `'tenant:provision'`). |
 
 `GET /platform/whoami` was struck this sprint (`UI-F7-PROVISION`, A1/N4); route returns 404.
+
+### `app/routers/platform/operators.py`
+
+All three routes share gate `operator:create` (`require_permission("operator:create")`). Note: the gate column uses the bare permission key — the `operator:<perm>` shorthand would double-prefix (`operator:operator:create`) for permissions whose key already begins with `operator:` (`D-40`).
+
+| Method · Path | Gate | Request | Response | If-Match | Notes |
+|---|---|---|---|---|---|
+| `POST /platform/operators` | `operator:create` | `OperatorCreate` | `OperatorCreated` (201) | — | Wraps `provision_operator`; 409 duplicate email; 422 unknown `role_key`; 500 Cognito failure. `PlatformAuditEvent` `CREATE_OPERATOR` attributed to calling operator. |
+| `GET /platform/operators` | `operator:create` | — | `OperatorListItem[]` | — | Lists all operators with their roles. |
+| `GET /platform/roles` | `operator:create` | — | `RoleListItem[]` | — | Lists assignable roles (for the create-operator form select). |
 
 ---
 
@@ -301,6 +311,13 @@ Evidence linking (`POST .../evidence-links`) and coverage (`GET /assessments/{id
 - `GET /platform/me` — operator identity + permission set at surface root (`op-auth`; `D-39`); no `GET /platform/tenants` or form issued when `tenant:provision ∉ permissions` (`DF7-1`)
 - `GET /platform/tenants` — tenant list, read-only (`operator:tenant:provision`)
 - `POST /platform/provision` — provision a new tenant (`operator:tenant:provision`; 409 collision keys: `slug` and `owner_email` independently)
+
+**`UI-F8-OPERATOR-RBAC`** — **durable route delta +3** (`POST /platform/operators`, `GET /platform/operators`, `GET /platform/roles`; all gated `operator:create`). Backend + frontend; schema delta 0 DDL (seed-only migration `c8f3a2e91bd5`). Routes consumed:
+
+- `GET /platform/me` — operator identity + permission set at surface root (`op-auth`); `operator:create ∈ permissions` gates list + form (`DF7-1` pattern)
+- `GET /platform/operators` — operator list (`operator:create`; enabled only when permission held)
+- `GET /platform/roles` — assignable roles for form select (`operator:create`; enabled only when permission held)
+- `POST /platform/operators` — create new operator with role (`operator:create`; 409 duplicate email; 422 unknown role; 500 Cognito failure)
 
 **`UI-F6-AUDITPACK`** — **no route delta; consumed-only**. No routes added, removed, or re-gated. Routes consumed by this sprint:
 

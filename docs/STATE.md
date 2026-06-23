@@ -56,7 +56,7 @@ Full assign/revoke/list-by-tenant/list-by-member. SoD enforced at assignment via
 Product-category hierarchy, vendors/products by category, EU subcategory list — anonymous (back the public-ish wizard). `GET /v1/reference/products/{id}` (intake wizard detail). `GET /v1/reference/risks` (filter `layer`), `/v1/reference/controls` (filter `framework`) — member-level. `GET /v1/reference/{operator-roles,hosting-models,usage-contexts,human-oversight-types,data-categories,affected-parties}` (UI-F1-INTAKE WI-0; any tenant member; `active=true` rows, `sort_order`) — the six intake-vocab tables' list routes, backing the wizard's structured selects (`DF1-9`). Seeded: six controlled-vocab tables, control library (ISO 42001 / EU AI Act cross-map), risk library (OWASP LLM + NIST/ISO with risk→control links), EU taxonomy, product-category taxonomy, governance-role catalogue + conflict matrix, decision tree, AIIA/feeder section template.
 
 ### Platform (operator-facing)
-Tenant provisioning (Cognito + DB, orphan-free — PAT-1); tenant listing; durable operator identity endpoint (`GET /platform/me`, authenticated-operator-only, `D-39` — `GET /platform/whoami` struck `UI-F7-PROVISION`).
+Tenant provisioning (Cognito + DB, orphan-free — PAT-1); tenant listing; durable operator identity endpoint (`GET /platform/me`, authenticated-operator-only, `D-39` — `GET /platform/whoami` struck `UI-F7-PROVISION`). Operator creation via HTTP (`POST /platform/operators`, `UI-F8-OPERATOR-RBAC`); operator + role listing; `platform_admin` role + `operator:create` permission seeded; operators surface in operator console.
 
 ### UI foundation (`UI-F0-FOUNDATION`)
 Two Next.js App Router BFF apps, `apps/tenant` (port 3000) and `apps/operator` (port 3001), pnpm/Turborepo monorepo. Each app's own Next server runs the Cognito authorization-code + PKCE flow against that plane's pool, holds the ID/refresh token server-side in a session store keyed by an opaque session id (MVP: in-memory, dev-only — `lib/auth/in-memory-session-store.ts`), and forwards the bearer ID token to the API via a per-app BFF proxy (`app/api/proxy/[...path]/route.ts`); the browser never holds a token (`INV-50`). CSRF guard (`Sec-Fetch-Site`/`Origin`) on state-changing BFF routes. Shared packages: `@irontrust/tokens` (one primitive token layer as Tailwind v4 `@theme` custom properties, two skins via `[data-theme]`); `@irontrust/ui` (Radix+Tailwind primitives, the FE-4 structured-input set, the FE-5 prefill-with-basis control, the FE-8 SoD-visible `SodAction` wrapper, 412/409 banners, a scaffold whose-court indicator); `@irontrust/api-client` (typed BFF-only fetch wrapper, `If-Match`/412→`StaleLockError`/409→`BadFromStateError` mapping, runtime+compile-time guard against client-supplied `tenant_id`/`provenance`, the mandatory `useLiveState` hook for lifecycle/gate-vector/coverage/authorisation reads). `packages/eslint-plugin-irontrust` enforces the package boundary, the no-literal-token-value rule, and the no-raw-live-state-query rule. Smoke surfaces only (`/dashboard` per app, calling `GET /v1/whoami` / `GET /platform/me` and, on the tenant side, `GET /v1/me` for a role-aware affordance render) — not a feature surface; the intake wizard is next. Added `GET /v1/me` (W-BE): the caller's own membership + administrative role + governance roles, self-scoped only (no path param), filling the gap left by `governance-roles/assignments/member/{membership_id}` (which takes a foreign id with no self-check).
@@ -145,6 +145,31 @@ Consumed routes (no route delta): `GET /v1/me` · `GET /v1/evidence?limit=50` ·
 
 Consumed routes (no route delta): `GET /v1/me` · `GET /v1/coverage` · `GET /v1/systems/{id}/coverage` · `GET /v1/assessments/{id}/coverage` · `GET /v1/systems/{id}/export` · `GET /v1/use-cases/{id}/export` · `GET /v1/use-cases/{id}/authorisation/document` · `GET /v1/export?framework=` · `GET /v1/evidence/{id}`.
 
+### Operator RBAC management console (`UI-F8-OPERATOR-RBAC`)
+
+`apps/operator/app/(console)/operators` (NEW) + `apps/operator/app/(console)/layout.tsx` (ALTER — RBAC Management nav entry lit). Brings operator creation into `INV-49` compliance. `INV-49`/`D-36` remain live (the convention continues to judge all future operator surfaces); only the creation-via-UI gap is resolved.
+
+**Backend — seed (migration `c8f3a2e91bd5`, 0 DDL):** new permission `operator:create` + new role `platform_admin` (full platform administration: both `tenant:provision` and `operator:create`) seeded as migration-embedded deployment data, following `cef7211ddfe4` precedent (`DF8-1`). `provisioner` role unchanged (`{tenant:provision}` only).
+
+**Backend — routes (`app/routers/platform/operators.py`):**
+- `POST /platform/operators` — wraps `provision_operator(actor=caller, source="http")`; gate `operator:create`; 409 duplicate email; 422 unknown `role_key`; 500 Cognito failure; `PlatformAuditEvent` `CREATE_OPERATOR` attributes calling operator.
+- `GET /platform/operators` — operator list with roles; gate `operator:create` (`DF8-2` shared gate).
+- `GET /platform/roles` — role list for form select; gate `operator:create` (`DF8-2`).
+
+`provision_operator` corrected: `granted_by_id` now set to `actor.id` when actor is not None (was hardcoded `None`; genesis-only `NULL` is preserved for `actor=None` path).
+
+**Frontend — operators surface:** Root branch gates on `operator:create ∈ permissions` (from `GET /platform/me`):
+- **With permission:** issues `GET /platform/operators` + `GET /platform/roles` (both `enabled: true`), renders operator list + create form. Form captures `email`, `display_name`, `role_key` (select, default `provisioner`). 201 → "Invite sent" + invalidates `["platform-operators"]`. 409 → email field error. 422 → role-select field error. 403 → refetches `["platform-me"]`.
+- **Without permission:** renders nothing; **zero** calls to `GET /platform/operators` or `GET /platform/roles` (`DF7-1` pattern).
+
+**Frontend — nav:** "RBAC Management" entry moved from visible-disabled UNBUILT array to `RequirePermission` gate on `operator:create` (`FE-13`), linking to `/operators` — absent (not greyed) when permission not held (`DF7-2`).
+
+Tested: `tests/platform/test_operators_create.py` (5 assertions: 201 + invite; 409; 422; 403; audit attribution); `tests/platform/test_operators_list.py` (4 assertions: list 200 + role; list 403; roles 200; roles 403); `apps/operator/app/(console)/operators/__tests__/operators.test.tsx` (5 assertions: zero-call guard; list+form; 201+invalidate; 409; 422). `test_audit.py::test_cli_create_operator_writes_audit` corrected to seed actor's operator row (FK requirement of corrected `granted_by_id`).
+
+**Deferred (`DF8-3`):** operator status toggle (ACTIVE↔DISABLED); role re-grant / revoke.
+
+---
+
 ### Operator provisioning console (`UI-F7-PROVISION`)
 
 `apps/operator/app/(console)/provisioning` (NEW) + `apps/operator/app/(console)/layout.tsx` (NEW nav shell) + `GET /platform/me` backend (NEW, durable D-39). Brings provisioning into `INV-49` compliance — the live gap (provisioning operable only via CLI/raw HTTP) is removed. `INV-49`/`D-36` remain live (the convention continues to judge all future operator surfaces); only the provisioning gap is resolved.
@@ -177,7 +202,7 @@ The system drill-in renders each use case's blocking reason/court as information
 **Tenant plane** (`AuditEvent`, append-only, RLS, immutability trigger — INV-5):
 `system.created`/`updated` · `classification.created`/`overridden`/`signed_off` · `governance_role.granted`/`revoked` · `member.created` · `assessment.created`/`deleted`/`feeder_created` · `assessment_item.created`/`amended`/`confirmed`/`deleted`/`treatment_set` · `control_link.created`/`deleted` · `evidence.created`/`deleted`/`access`/`linked`/`unlinked` · `lifecycle.advanced`/`held`/`halted_prohibited`/`authorised` · `vendor_approval.set`/`updated` · `product_approval.set`/`updated` · `assessment.submitted`/`review_recorded`/`reopened`/`needs_refresh` (6a) · `authorisation.granted` (6b) · `export.generated` (7b).
 
-`action` is `varchar(120)` — a new action string needs no migration. `AuditEvent` stores `actor_user_id` (FK only); durable name/email is the deferred cross-cutting gap (D-25), with the ATO the lone exception. 7a coverage emits no audit (pure read). **Platform plane:** `PlatformAuditEvent` (operator-attributed).
+`action` is `varchar(120)` — a new action string needs no migration. `AuditEvent` stores `actor_user_id` (FK only); durable name/email is the deferred cross-cutting gap (D-25), with the ATO the lone exception. 7a coverage emits no audit (pure read). **Platform plane:** `PlatformAuditEvent` (operator-attributed). Actions: `PROVISION_TENANT` (source `http`/`cli`); `CREATE_OPERATOR` (source `http` from `POST /platform/operators` — `UI-F8`; source `cli` from `create-operator` CLI).
 
 ---
 

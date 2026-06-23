@@ -148,7 +148,7 @@ def provision_operator(
         session.add(OperatorRole(
             operator_id=operator_id,
             role_id=role.id,
-            granted_by_id=None,   # genesis bootstrap — no prior operator
+            granted_by_id=actor.id if actor is not None else None,
         ))
 
         # --- 5. Stage audit row, then commit atomically ---

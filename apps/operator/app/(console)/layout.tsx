@@ -15,9 +15,9 @@ interface PlatformMe {
 }
 
 const PERM_PROVISION = "tenant:provision";
+const PERM_OPERATOR_CREATE = "operator:create";
 
 const UNBUILT: { label: string }[] = [
-  { label: "RBAC Management" },
   { label: "Catalogue Curation" },
   { label: "Curation Inbox" },
 ];
@@ -42,6 +42,17 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
                 aria-current={pathname.startsWith("/provisioning") ? "page" : undefined}
               >
                 Provisioning
+              </Link>
+            </li>
+          </RequirePermission>
+
+          <RequirePermission permission={PERM_OPERATOR_CREATE} permissions={permissions}>
+            <li>
+              <Link
+                href="/operators"
+                aria-current={pathname.startsWith("/operators") ? "page" : undefined}
+              >
+                RBAC Management
               </Link>
             </li>
           </RequirePermission>

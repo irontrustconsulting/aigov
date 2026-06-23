@@ -114,8 +114,19 @@
 | `permission` | PLATFORM | |
 | `role` | PLATFORM | |
 | `role_permission` | PLATFORM | Permissions reach operators only through roles (INV-8). |
-| `operator_role` | PLATFORM | Operator ↔ role. |
+| `operator_role` | PLATFORM | Operator ↔ role. `granted_by_id` NULL = genesis bootstrap; non-NULL = granting operator's id. |
 | `platform_audit_event` | PLATFORM | Operator-attributed audit (provisioning). |
+
+**Platform RBAC seed rows** (deployment data, migration-embedded per `DF8-1`):
+| Entity | Key | Seeded by |
+|---|---|---|
+| `permission` | `tenant:provision` | `cef7211ddfe4` |
+| `permission` | `operator:create` | `c8f3a2e91bd5` (UI-F8) |
+| `role` | `provisioner` | `cef7211ddfe4` |
+| `role` | `platform_admin` | `c8f3a2e91bd5` (UI-F8) |
+| `role_permission` | `provisioner` → `tenant:provision` | `cef7211ddfe4` |
+| `role_permission` | `platform_admin` → `tenant:provision` | `c8f3a2e91bd5` (UI-F8) |
+| `role_permission` | `platform_admin` → `operator:create` | `c8f3a2e91bd5` (UI-F8) |
 
 ### Framework-owned
 | Table | Plane | Notes |

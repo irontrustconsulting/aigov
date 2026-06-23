@@ -13,6 +13,7 @@ from app.auth.cognito import CognitoClaims, verify_cognito_token
 from app.config import settings
 from app.db import get_db
 from app.routers.platform import me as platform_me
+from app.routers.platform import operators as platform_operators
 from app.routers.platform import tenants as platform_tenants
 from app.routers.v1 import (
     assessments,
@@ -63,6 +64,7 @@ app.include_router(lifecycle.rollup_router, prefix="/v1")
 app.include_router(coverage.router, prefix="/v1")
 app.include_router(export.router, prefix="/v1")
 app.include_router(platform_me.router, prefix="/platform")
+app.include_router(platform_operators.router, prefix="/platform")
 app.include_router(platform_tenants.router, prefix="/platform")
 
 

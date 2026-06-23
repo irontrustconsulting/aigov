@@ -26,3 +26,27 @@ class TenantListItem(BaseModel):
     name: str
     slug: str
     created_at: datetime
+
+
+class OperatorCreate(BaseModel):
+    email: str = Field(min_length=1, max_length=320)
+    display_name: str = Field(min_length=1, max_length=255)
+    role_key: str = Field(min_length=1, max_length=100)
+
+
+class OperatorCreated(BaseModel):
+    operator_id: uuid.UUID
+    cognito_sub: str
+
+
+class OperatorListItem(BaseModel):
+    id: uuid.UUID
+    email: str
+    display_name: str | None
+    status: str
+    roles: list[str]
+
+
+class RoleListItem(BaseModel):
+    key: str
+    description: str | None

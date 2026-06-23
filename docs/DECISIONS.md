@@ -350,6 +350,24 @@ Operator nav distinguishes two axes: (a) **unbuilt** surfaces render visible-dis
 
 ---
 
+**D-40** · API-ROUTES gate-column annotation for permissions whose key begins with `operator:`
+The `operator:<perm>` shorthand (§1) expands to `require_permission("<perm>")`. For the permission key `operator:create`, the shorthand would render as `operator:operator:create` — a double-prefix that is both confusing and technically incorrect (it implies `require_permission("operator:create")` only if `<perm>` = `operator:create`, not if `<perm>` = `create`). Decision: when a platform permission key already starts with `operator:`, write the bare permission key in the gate column (e.g. `operator:create`), not the double-prefixed shorthand. **Why:** the shorthand's purpose is human legibility — it should not obscure the literal it expands to. **Rejected:** `operator:operator:create` (confusing); stripping the `operator:` prefix from the key (`create` alone — ambiguous with no namespace).
+↳ refs: §3 operators routes, WI-7 (UI-F8) · source: UI-F8-OPERATOR-RBAC V-β/NB5
+
+**DF8-1** · Platform RBAC seed expansion via migration revision, not seed loader
+New permission/role rows for `UI-F8-OPERATOR-RBAC` are inserted in a new Alembic revision (`c8f3a2e91bd5`) following the `cef7211ddfe4` precedent — deployment data lives in the migration chain, not in a separate seed loader. `INV-48` scopes the seed loader to GLOBAL reference data only; PLATFORM-plane RBAC tables are not listed there. **Why:** migrations reproduce atomically in every environment, with full up/down symmetry; a side-channel seed loader creates ordering risk and duplicates the migration boundary.
+↳ refs: INV-48, cef7211ddfe4 · source: UI-F8-OPERATOR-RBAC V-α
+
+**DF8-2** · Shared `operator:create` gate for `GET /platform/operators` and `GET /platform/roles`
+Both list routes share the `operator:create` gate rather than introducing a separate read-only permission. **Why:** there is no "list-but-not-create" operator role today; splitting gates would require a new permission with no holder. The surface branches at the root: without `operator:create` nothing is rendered and no gated call is issued (`DF7-1` pattern). **Rejected:** a separate `operator:read` permission (premature — no use case for a read-only operator manager).
+↳ refs: DF7-1, D-40 · source: UI-F8-OPERATOR-RBAC DF7-1 (shared gate decision)
+
+**DF8-3** · Operator status toggle and role re-grant/revoke deferred
+`UI-F8-OPERATOR-RBAC` creates operators and lists them, but does not implement ACTIVE↔DISABLED status toggle or role re-grant/revoke mutations. **Why:** the operator pool is small at MVP; the genesis bootstrap loop and minting of new provisioners are the critical unblocked paths; the mutations require careful audit and UX design (who can revoke a `platform_admin`?). `INV-49`/`D-36` remain live and continue to govern future operator-management surfaces.
+↳ refs: INV-49, D-36 · source: UI-F8-OPERATOR-RBAC sprint scope
+
+---
+
 ## OPEN — unresolved design questions affecting future work
 
 **OPEN-1** · Worked-state void / withdraw path
