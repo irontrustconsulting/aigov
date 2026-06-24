@@ -32,14 +32,16 @@ export default function DashboardPage() {
 
   if (roleKeys.size === 0) {
     return (
-      <section aria-label="admin-empty-state">
-        <h1>Portfolio</h1>
-        <p>
-          Your account doesn&apos;t hold a governance role yet, so there&apos;s no portfolio to show.
-          Once a governance role is assigned, systems and use cases you&apos;re party to will appear
-          here.
-        </p>
-      </section>
+      <main className="mx-auto max-w-4xl px-6 py-8">
+        <section aria-label="admin-empty-state">
+          <h1 className="mb-4 text-2xl font-semibold">Portfolio</h1>
+          <p className="text-ink-muted text-sm">
+            Your account doesn&apos;t hold a governance role yet, so there&apos;s no portfolio to show.
+            Once a governance role is assigned, systems and use cases you&apos;re party to will appear
+            here.
+          </p>
+        </section>
+      </main>
     );
   }
 
@@ -71,16 +73,25 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
   );
 
   const yourCourtSection = (
-    <section aria-label="your-court">
-      <h2>Your court</h2>
+    <section
+      aria-label="your-court"
+      className="rounded-lg px-4 py-3"
+      style={{ background: "var(--court-yours-fill)", borderLeft: "3px solid var(--court-yours-bar)" }}
+    >
+      <h2 className="mb-2 font-semibold" style={{ color: "var(--court-yours-text)" }}>
+        Your court
+      </h2>
       {yourCourtEntries.length === 0 ? (
-        <p>Nothing is waiting on you right now.</p>
+        <p className="text-ink-muted text-sm">Nothing is waiting on you right now.</p>
       ) : (
-        <ul>
+        <ul className="space-y-2">
           {yourCourtEntries.map(({ system, useCase, court }) => (
-            <li key={useCase.use_case_id}>
-              <Link href={`/systems/${system.system_id}`}>{system.system_name}</Link> —{" "}
-              {useCase.title}: {court?.reason}
+            <li key={useCase.use_case_id} className="flex flex-wrap items-center gap-2 text-sm">
+              <Link href={`/systems/${system.system_id}`} className="font-medium underline">
+                {system.system_name}
+              </Link>
+              <span className="text-ink-muted">—</span>
+              <span>{useCase.title}: {court?.reason}</span>
             </li>
           ))}
         </ul>
@@ -89,22 +100,22 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
   );
 
   const postureSection = (
-    <section aria-label="portfolio-posture">
-      <h2>Portfolio posture</h2>
-      <p>
+    <section aria-label="portfolio-posture" className="border-hairline rounded-lg border p-4">
+      <h2 className="mb-2 font-semibold">Portfolio posture</h2>
+      <p className="text-ink-muted text-sm">
         {portfolio.data.length} system{portfolio.data.length === 1 ? "" : "s"} with at least one use
         case under governance.
       </p>
       {/* Navigation only — no coverage truth rendered here (DF6-9). */}
-      <Link href="/audit" className="text-sm underline">
+      <Link href="/audit" className="mt-2 block text-sm underline">
         View control coverage and audit packs →
       </Link>
     </section>
   );
 
   return (
-    <main>
-      <h1>Portfolio</h1>
+    <main className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+      <h1 className="text-2xl font-semibold">Portfolio</h1>
 
       {isAdoptionFace ? (
         <>
@@ -119,21 +130,28 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
       )}
 
       <section aria-label="systems">
-        <h2>Systems</h2>
-        {roleKeys.has("system_owner") && (
-          <Link href="/systems/new">Register a system →</Link>
-        )}
-        <ul>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Systems</h2>
+          {roleKeys.has("system_owner") && (
+            <Link href="/systems/new" className="text-sm underline">
+              Register a system →
+            </Link>
+          )}
+        </div>
+        <ul className="space-y-3">
           {portfolio.data.map((system) => (
             <SystemCard key={system.system_id} system={system} roleKeys={roleKeys} />
           ))}
           {zeroUseCaseSystems.map((s) => (
-            <li key={s.id} aria-label="zero-use-case-system">
-              <p>{s.name}</p>
-              <p>No use case registered yet for this system.</p>
+            <li key={s.id} aria-label="zero-use-case-system" className="border-hairline rounded-lg border p-4">
+              <p className="font-medium">{s.name}</p>
+              <p className="text-ink-muted text-sm">No use case registered yet for this system.</p>
             </li>
           ))}
         </ul>
+        {portfolio.data.length === 0 && zeroUseCaseSystems.length === 0 && (
+          <p className="text-ink-muted text-sm">No systems registered yet.</p>
+        )}
       </section>
     </main>
   );
@@ -141,31 +159,27 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
 
 function SystemCard({ system, roleKeys }: { system: SystemRollupRead; roleKeys: Set<string> }) {
   return (
-    <li>
-      <Link href={`/systems/${system.system_id}`}>{system.system_name}</Link>
-      <ul>
+    <li className="border-hairline rounded-lg border p-4">
+      <Link href={`/systems/${system.system_id}`} className="font-semibold underline">
+        {system.system_name}
+      </Link>
+      <ul className="mt-3 space-y-2">
         {system.use_cases.map((useCase) => {
           const court = resolveCourt(useCase.blocking);
           return (
-            <li key={useCase.use_case_id}>
-              <Link href={`/use-cases/${useCase.use_case_id}`} className="text-ink font-medium">
+            <li key={useCase.use_case_id} className="flex flex-wrap items-center gap-2 text-sm">
+              <Link href={`/use-cases/${useCase.use_case_id}`} className="text-ink font-medium underline">
                 {useCase.title}
               </Link>
-              <span className="ml-2">
-                <VerdictChip value={useCase.state} />
-              </span>
+              <VerdictChip value={useCase.state} />
               {useCase.eu_tier && (
-                <span className="ml-2">
-                  <TierBadge value={toTierMember(useCase.eu_tier)} variant="compact" />
-                </span>
+                <TierBadge value={toTierMember(useCase.eu_tier)} variant="compact" />
               )}
               {court && (
-                <span className="ml-2">
-                  <WhoseCourtIndicator
-                    partyLabel={court.partyLabel}
-                    isYourCourt={isYourCourt(court, roleKeys)}
-                  />
-                </span>
+                <WhoseCourtIndicator
+                  partyLabel={court.partyLabel}
+                  isYourCourt={isYourCourt(court, roleKeys)}
+                />
               )}
             </li>
           );
