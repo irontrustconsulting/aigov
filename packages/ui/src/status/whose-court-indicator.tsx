@@ -13,13 +13,26 @@ export function WhoseCourtIndicator({
   partyLabel: string;
   isYourCourt: boolean;
 }) {
+  if (isYourCourt) {
+    return (
+      <span
+        data-court="yours"
+        className="inline-flex items-center px-2 py-1 text-xs font-medium"
+        style={{
+          borderLeft: "3px solid var(--color-brand)",
+          borderRadius: "0 var(--radius-sm) var(--radius-sm) 0",
+          backgroundColor: "var(--color-brand-tint)",
+          color: "var(--color-brand-strong)",
+        }}
+      >
+        {partyLabel}
+      </span>
+    );
+  }
   return (
     <span
-      className={
-        isYourCourt
-          ? "bg-accent text-bg border-accent inline-flex items-center rounded-sm border px-2 py-1 text-xs font-medium"
-          : "bg-surface text-text border-border inline-flex items-center rounded-sm border px-2 py-1 text-xs"
-      }
+      data-court="theirs"
+      className="inline-flex items-center rounded-sm border border-hairline bg-surface-sunken px-2 py-1 text-xs text-ink-muted"
     >
       {partyLabel}
     </span>

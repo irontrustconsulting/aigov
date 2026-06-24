@@ -45,10 +45,10 @@ export function PrefillWithBasis({
         <span>{valueLabel}</span>
         <ProvenanceBadge provenance={provenance} />
       </div>
-      <p className="text-text-muted text-sm">{basis}</p>
+      <p className="text-ink-muted text-sm">{basis}</p>
 
       {!overriding && (
-        <Button variant="secondary" type="button" onClick={() => setOverriding(true)}>
+        <Button variant="ghost" type="button" onClick={() => setOverriding(true)}>
           Override
         </Button>
       )}

@@ -39,7 +39,7 @@ export function SodAction({ barred, blockedReason, children }: SodActionProps) {
           "aria-describedby": "sod-blocked-reason",
           title: blockedReason,
         })}
-        <span id="sod-blocked-reason" role="note">
+        <span id="sod-blocked-reason" role="note" className="text-ink-muted text-sm">
           {blockedReason}
         </span>
       </span>

@@ -1,15 +1,34 @@
 /*
- * Operator skin (PLATFORM-UX.md §2): the platform console — denser,
- * utilitarian, no adoption dynamic. Tighter spacing/radius than the tenant
- * skin; a cooler, less "branded" accent. Overrides VALUES only; the variable
- * names are declared once in primitives.css's @theme block.
+ * Operator skin (PLATFORM-UX.md §2, FE-18): the platform console — compact,
+ * tabular-first, mono identifiers prominent. No adoption dynamic. Overrides
+ * VALUES of @theme keys only; never redeclares new keys. The brand-strong
+ * nav rail is the visual correlate of plane separation (INV-1, §3): an
+ * operator never mistakes which plane they are in.
  */
 [data-theme="operator"] {
-  --color-accent: #3b4a63;
-  --spacing-4: 0.875rem;
-  --spacing-6: 1.25rem;
-  --spacing-8: 1.625rem;
-  --radius-sm: 0.1875rem;
-  --radius-md: 0.3125rem;
-  --radius-lg: 0.5rem;
+  /* Compact spacing rhythm: 6–12px anchor points */
+  --spacing-4: 0.5rem;   /* 8px  — compact base */
+  --spacing-6: 0.75rem;  /* 12px — row gap */
+  --spacing-8: 1rem;     /* 16px — section gap */
+
+  /* Operator body: 14px / 400 / 1.5 */
+  --font-size-body: 0.875rem;
+  --line-height-body: 1.5;
+
+  /* Tighter radius for utilitarian posture */
+  --radius-sm: 0.1875rem; /* 3px */
+  --radius-md: 0.3125rem; /* 5px */
+  --radius-lg: 0.5rem;    /* 8px */
+}
+
+/*
+ * Operator chrome rail (INV-1): the nav/sidebar carries --color-brand-strong
+ * so the operator console is visually distinct from the tenant plane.
+ * This is a component-level alias, not a @theme key override, because
+ * rail colour is not a primitive — it is a plane-identity marker.
+ */
+[data-theme="operator"] nav,
+[data-theme="operator"] [data-nav-rail] {
+  --chrome-rail-bg: var(--color-brand-strong);
+  --chrome-rail-text: var(--color-brand-tint);
 }

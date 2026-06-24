@@ -230,3 +230,42 @@ The coverage matrix always renders `not_an_obligation_set` prominently and prese
 **INV-53** · CONVENTION · export/ATO-document hooks fire only on explicit user action
 The client issues an export/audit-pack or ATO-document fetch only on explicit user action, never as an eager mount/focus fetch. Hooks must carry `enabled: false`, `staleTime: Infinity`, `refetchOnWindowFocus: false`, `refetchOnMount: false`. Coverage reads are exempt (no audit staging). The staging fact for export reads lives in INV-42, not restated here.
 ↳ origin: UI-F6-AUDITPACK · refs: INV-42, PAT-10, D-35, DF6-2
+**INV-54** · CONVENTION · presentational boundary — zero backend/schema/route/enum/contract delta
+`UI-V0-VISUAL-FOUNDATION` is visual-layer-only. No backend route, DB schema, enum label, or API contract was added, changed, or removed. Any change to `packages/tokens` or `packages/ui` that also touches a non-CSS/TSX file outside those packages is a boundary violation.
+↳ origin: UI-V0-VISUAL-FOUNDATION · refs: D-22, FE-14
+
+**INV-55** · CONVENTION · provenance stays server-derived; no component authors a `provenance` value
+No component in `packages/ui`, `apps/tenant`, or `apps/operator` ever constructs or sends a `provenance` field to the API. Provenance is set exclusively by the server on write (PAT-8). The `PrefillWithBasis.onOverride` callback signature carries no provenance parameter — tested by `prefill-with-basis.test.tsx`.
+↳ origin: UI-V0-VISUAL-FOUNDATION · refs: INV-13, PAT-8, FE-15
+
+**INV-56** · CONVENTION · SoD and permission enforcement remain server-side; UI absence is non-disclosure
+`SodAction` and `RequirePermission` remove controls from the DOM as a usability / non-disclosure choice. Both are presentational only. The backend `apply_transition` / `require_permission` guards reject barred or unauthorised requests regardless of the UI state.
+↳ origin: UI-V0-VISUAL-FOUNDATION · refs: FE-8, FE-13, INV-28, INV-8, D-4, D-24
+
+**INV-57** · CONVENTION · live-state refetch discipline untouched by visual layer
+No chip in `packages/ui` renders a cached verdict as settled. `VerdictChip` is a pure display component that receives a server-computed value; the `staleTime: 0` / refetch-on-mutation contract (FE-7) is owned by each surface's query hook, not by the chip.
+↳ origin: UI-V0-VISUAL-FOUNDATION · refs: FE-7, INV-25, INV-32
+
+**INV-58** · CONVENTION · no token in the browser; BFF custody preserved
+The visual-layer tokens are CSS custom properties compiled into the Next.js build. No Cognito token, session token, or other auth secret is exposed to the browser through the token layer. `FE-2` / `INV-50` are unchanged.
+↳ origin: UI-V0-VISUAL-FOUNDATION · refs: INV-50, FE-2
+
+**INV-59** · CONVENTION · `tenant_id` never client-supplied
+The visual layer introduces no mechanism by which a client could supply `tenant_id`. No CSS variable, data attribute, or component prop carries or exposes tenant identity. INV-3 is unchanged.
+↳ origin: UI-V0-VISUAL-FOUNDATION · refs: INV-3
+
+**INV-60** · CONVENTION · plane chrome never bleeds; operator rail is the visual correlate of plane separation
+The `[data-theme="operator"] nav` selector carries `--chrome-rail-bg: var(--color-brand-strong)`. The tenant skin carries no rail token. An operator can never be shown the tenant chrome, and a tenant user can never see the operator rail. INV-1 is unchanged.
+↳ origin: UI-V0-VISUAL-FOUNDATION · refs: INV-1, FE-18
+
+**INV-61** · CONVENTION · evidence is never inline-rendered; the visual layer introduces no inline byte path
+No component in the visual-layer track renders evidence bytes inline. `EvidenceTable` and related components link to download endpoints; no blob URL, base64 embed, or inline `<img src="...">` from evidence bytes is introduced.
+↳ origin: UI-V0-VISUAL-FOUNDATION · refs: INV-22
+
+**INV-62** · CODE · every intended text pairing meets WCAG 2.1 AA; enforced by contrast gate test
+Every text foreground/background pairing in `packages/tokens/src/primitives.css` must clear 4.5:1 (normal) or 3:1 (large) per WCAG 2.1 §1.4.3. Every meaningful-graphical pairing must clear 3:1 per §1.4.11. Hairlines (structural separators) are exempt. Enforced by `packages/tokens/src/__tests__/contrast.test.ts` which fails the build on any regression.
+↳ origin: UI-V0-VISUAL-FOUNDATION · refs: FE-14, SV-7, D-41, V-7
+
+**INV-63** · CONVENTION · components carry no literal colour or spacing values
+Every colour and spacing value used in `packages/ui` components must reference a design token via a Tailwind utility class or `var(--token-name)` inline style. Literal hex, pixel, or RGB values in `className` strings are prohibited and enforced by `eslint-plugin-irontrust/no-literal-token-value`.
+↳ origin: UI-V0-VISUAL-FOUNDATION · refs: FE-3, FE-14, V-4

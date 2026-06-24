@@ -1,22 +1,21 @@
 /*
- * Tenant skin (UX.md §2): the adoption face — friendlier, more spacious.
- * Overrides VALUES only; the variable names are declared once in
- * primitives.css's @theme block. Mirrors skin-operator.css's differentiation
- * (which tightens spacing/radius for density) in the opposite direction:
- * roomier spacing and a softer, rounder radius read as more approachable to
- * a non-governance user doing a familiar adoption action (UX.md §2), while
- * the colour tokens stay AA-checked (contrast.test.ts) against this skin.
+ * Tenant skin (UX.md §2, FE-18): the adoption face — comfortable density,
+ * reasoning-first cards, generous leading. Overrides VALUES of @theme keys
+ * only; never redeclares new keys (the naming contract lives in
+ * primitives.css). Adoption vs assurance is spacing/component-default
+ * driven within this skin, not a third theme (VDD-5).
  */
 [data-theme="tenant"] {
-  --color-accent: #2455e6;
+  /* Comfortable spacing rhythm: 16–24px anchor points */
+  --spacing-4: 1rem;    /* 16px — base comfortable unit */
+  --spacing-6: 1.5rem;  /* 24px — section gap */
+  --spacing-8: 2rem;    /* 32px — card padding */
 
-  --spacing-4: 1.125rem;
-  --spacing-6: 1.75rem;
-  --spacing-8: 2.5rem;
+  /* Tenant body: 15px / 400 / 1.55 */
+  --font-size-body: 0.9375rem;
+  --line-height-body: 1.55;
 
-  --font-size-base: 1.0625rem;
-  --font-size-lg: 1.1875rem;
-
-  --radius-md: 0.625rem;
-  --radius-lg: 1rem;
+  /* Slightly rounder radius reads as more approachable */
+  --radius-md: 0.5rem;  /* 8px buttons */
+  --radius-lg: 0.75rem; /* 12px cards */
 }

@@ -388,3 +388,61 @@ Path A confirmed (coverage shipped first, applicability next). Open forks: EU/IS
 **OPEN-4** · Genesis governance role bootstrap gap
 When a tenant is first provisioned, the owner is the only member and holds the `ADMIN` administrative role with zero governance roles. D-5 blocks self-assignment — the acting admin cannot assign governance roles to their own membership. In a single-member or newly-provisioned tenant this means no one can assign the owner a governance role via the API; the owner is stranded at the "no portfolio to show" empty state. Current dev workaround: direct DB insert into `governance_role_assignment`. Path to resolution: (a) `provision_tenant` accepts an optional initial governance role and seeds the assignment at creation time, bypassing the self-assignment gate (provisioner is the granting actor); or (b) explicit grace exception for the membership created during `provision_tenant` in `assert_governance_assignable`. Not built; blocks real single-person onboarding.
 ↳ refs: D-5, INV-7; discovered: genesis bootstrap test 2026-06-24
+---
+
+## UI-V0-VISUAL-FOUNDATION decisions
+
+**D-41** · Design-system foundation first: V0 core → V1 tenant skin → V2 operator skin (VDD-1)
+Three-phase rollout. V0 installs the token core, two skins, and component treatments without committing to per-surface visual specifics that belong to V1/V2. This avoids speculative surface-level design before real usage is observed.
+**Rejected:** combined restyle sprint per surface (no shared token foundation; visual drift inevitable); big-bang V0+V1+V2 (blocks shipping on unresolved per-surface design).
+↳ refs: FE-14, INV-54
+
+**D-42** · Neutral-evidentiary palette; chromatic colour reserved for semantic channels only (VDD-2)
+The neutral ramp is grey-white with a single deep petrol-slate brand accent. Chromatic colour (`--prov-*`, `--verdict-*`, `--sev-*`) is rationed to its semantic channel and never used decoratively. This prevents colour inflation where meaning is diffused.
+**Rejected:** branded chromatic identity (saturated greens/ambers/reds across the chrome → dilutes the signal meaning of verdict/severity tones).
+↳ refs: FE-15, FE-16, INV-63
+
+**D-43** · IBM Plex open-source type stack; self-hosted OFL (VDD-3)
+IBM Plex Sans (UI), Mono (identifiers), Serif (export document face). OFL licence, self-hosted via `@fontsource`, no runtime CDN dependency. Mono carries `lock_version` and SHA-256 digests — critical for audit legibility.
+**Rejected:** licensed type (ongoing cost, IP risk for EU buyers); Google Fonts CDN (CSP/privacy boundary issue for enterprise procurement); system-ui stack (no Mono for identifier legibility).
+↳ refs: FE-17, INV-58, V-6
+
+**D-44** · Light-first; dark slot reserved per token (VDD-4)
+Every primitive and semantic token has an empty dark-mode comment slot (`/* dark: TBD */`). Dark ships as a skin override, not a rework. This makes V0 the complete contract for dark without building it yet.
+**Rejected:** defer dark entirely (forces a rework of every token file when dark lands); build both now (unblocks V0 shipment on unresolved dark-mode UX research).
+↳ refs: FE-14, OPEN-V1
+
+**D-45** · Two skins = tenant vs operator; adoption/assurance is density within the tenant skin (VDD-5)
+One token core, two `[data-theme]` overrides. The operator skin is the plane-separation marker (INV-1 / INV-60); the tenant skin is the adoption face. Adoption vs assurance posture is spacing- and component-default-driven inside the tenant skin, not a third theme.
+**Rejected:** third adoption theme (explosion of skin maintenance overhead); no skins, single stylesheet (impossible to achieve plane-distinct rail without a scoping mechanism).
+↳ refs: FE-18, INV-60, D-22
+
+**D-46** · Brand accent deep petrol-slate `#1E4651` (VDD-6)
+Primary action, focus ring, brand mark, your-court edge-bar. 9.30:1 on `--paper`, 10.24:1 on `--surface` — well above AA text threshold. The evidentiary governance context calls for a serious, trustworthy hue rather than a consumer-product accent.
+**Rejected:** lighter accent (WCAG failure on light surfaces); saturated blue/teal (reads as software-generic rather than governance-specific).
+↳ refs: FE-14, INV-62
+
+**D-47** · Contrast gate test as build-blocking CI check (WCAG enforcement hook, SV-7)
+`packages/tokens/src/__tests__/contrast.test.ts` computes the WCAG 2.1 relative-luminance formula directly against token values and fails the build on any text pairing under 4.5:1 or graphical pairing under 3:1. This is the executable form of INV-62. Rationale: invariant 9 (now INV-62) must be verified, not merely asserted — a future token edit that silently breaks contrast is a regression the human eye would not catch without a CI gate.
+**Rejected:** relying on jest-axe colour-contrast (jsdom has no real layout, so `getComputedStyle` on elements with no real paint reports "incomplete" rather than pass/fail — an unreliable signal).
+↳ refs: INV-62, FE-14, V-7
+
+**OPEN-V1** · Dark skin timing
+Token layer reserves dark slots now. Dark skin ships as a later `skin-dark.css` override, not a rework. No timeline set; deferred until user research on operator console use in low-light environments.
+↳ refs: D-44, FE-14
+
+**OPEN-V2** · Lucide icon set selected (ISC) — resolved at V0 implementation
+Lucide (ISC, outline-first, outline-only) selected over Phosphor (MIT) and Tabler-outline (MIT) for ecosystem traction and outline-default posture. `lucide-react` installed in `apps/tenant` and `apps/operator`. V-6 confirmed ISC is within the permissive gate. Specific icon assignments per surface deferred to V1/V2.
+↳ refs: V-6, D-43
+
+**OPEN-V3** · Whether adoption density mode needs named sub-tokens or is purely spacing-driven
+Resolve at V1 against the real adoption surfaces (`systems/new`, `dashboard`). Current implementation is spacing-default-driven within the tenant skin.
+↳ refs: FE-18, D-45
+
+**OPEN-V4** · Per-surface visual specifics for F1–F8
+Just-in-time at V1/V2. `UX §5` will be populated per surface as visual design is validated.
+↳ refs: FE-14, UX §5
+
+**OPEN-V5** · `--brand` vs `--verdict-positive` isoluminance (1.36:1) on a yours-and-approved row; `--brand`-token co-occurrence
+OPEN per design doc N-2 / N-5. V1 usability check. Split or nudge the hue only if testing shows confusion. Current mitigation: form separation (edge-bar vs chip-on-tint).
+↳ refs: FE-15, FE-16, FE-18

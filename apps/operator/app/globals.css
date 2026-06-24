@@ -1,3 +1,12 @@
+/* IBM Plex — self-hosted OFL fonts, no runtime CDN (V-6) */
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "@fontsource/ibm-plex-serif/latin-400.css";
+@import "@fontsource/ibm-plex-serif/latin-600.css";
+
 @import "@irontrust/tokens/primitives.css";
 @import "@irontrust/tokens/skin-tenant.css";
 @import "@irontrust/tokens/skin-operator.css";

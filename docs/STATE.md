@@ -4,7 +4,7 @@
 **Purpose:** What is implemented and what must not be reinvented, at the level of *what exists · what shape · which gate*. It points outward for depth and never restates the detail.
 **Lanes:** constraints → `INVARIANTS.md` (`INV-n`); schema (tables/enums/indexes) → `DATA-MODEL.md`; auth / identity / RLS / session mechanics → `ARCHITECTURE.md`; implementation shapes → `PATTERNS.md` (`PAT-n`); decisions/rationale → `DECISIONS.md` (`D-n`); conceptual model → `DOMAIN.md`.
 
-**Current through:** UI-F6-AUDITPACK (audit/coverage capstone — control-coverage view, export/audit pack, ATO document). Sprints 1–7b + UI-F1..F6 built (tenant UI plane complete).
+**Current through:** UI-V0-VISUAL-FOUNDATION (design-system token core, two skins, component treatments). Sprints 1–7b + UI-F1..F8 + UI-V0 built (tenant UI plane complete; operator UI plane F7+F8 shipped; visual foundation installed).
 
 ---
 
@@ -187,6 +187,41 @@ Tested: `tests/platform/test_operators_create.py` (5 assertions: 201 + invite; 4
 **FE-13 primitive** (`RequirePermission`): renders children only when the named permission is held; absent (not disabled) when not held. Operator-plane analogue of `FE-8` (`SodAction`); grounded on `INV-8`/`D-24`. Presentational only; backend `require_permission` remains authz authority.
 
 Tested: `tests/platform/test_platform_me.py` (backend); `apps/operator/app/(console)/provisioning/__tests__/page.test.tsx` (6 frontend assertions covering B1 guard, list+form render, 201 path, 409 slug/email conflicts, 403 refetch).
+
+---
+
+### Design-system visual foundation (`UI-V0-VISUAL-FOUNDATION`)
+
+**Delta:** presentational only — 0 backend / 0 schema / 0 route / 0 enum / 0 contract.
+
+**Token core (`packages/tokens/src/`):**
+- `primitives.css` — full 3-layer token architecture (FE-14): primitive colour ramp (`--color-paper`, `--color-ink`, `--color-brand`, etc. in `@theme`), semantic channels (`--prov-*`, `--verdict-*`, `--court-*`, `--sev-*` in `:root`), component aliases (`--color-danger`). Motion durations (120/180/240ms). `prefers-reduced-motion` block (FE-19).
+- `skin-tenant.css` — comfortable density (16–24px rhythm), 15px body, slightly rounder radius.
+- `skin-operator.css` — compact density (6–12px), 14px body, tighter radius, `--chrome-rail-bg: var(--color-brand-strong)` operator plane-identity rail (INV-60).
+
+**IBM Plex fonts:** `@fontsource/ibm-plex-sans/mono/serif` (latin, 400/500/600) installed in `apps/tenant` and `apps/operator`; imported in each `globals.css`. Self-hosted OFL, no runtime CDN (V-6).
+
+**Icon set:** `lucide-react` 1.21.0 (ISC) installed. Per-surface icon assignments deferred to V1/V2 (OPEN-V2).
+
+**`packages/ui` component treatments (FE-15/16):**
+- `ProvenanceBadge` — border in provenance hue (`var(--prov-*)`) via inline style; ai_suggested dashed; label always `text-ink`. 4-value, no USER_PROVIDED (V-2).
+- `VerdictChip` — NEW shared component (`status/verdict-chip.tsx`); 6 verdict tones; maps all 34 live V-5 enum members; `data-tone` attribute for test isolation; replaces local chip in `coverage-matrix.tsx`.
+- `WhoseCourtIndicator` — brand left edge-bar (yours) via `data-court="yours"` + inline style; neutral pill (theirs).
+- `StaleLockBanner` — amber left edge-bar (`--verdict-attention`), `data-concurrency="412"`, Reload button.
+- `BadFromStateBanner` — ink left edge-bar (`--color-ink`), `data-concurrency="409"`, no retry.
+- `SodAction` — blocked-reason caption styled `text-ink-muted`.
+- `PrefillWithBasis` — Override button updated to `variant="ghost"`.
+- `Button` — token classes updated to new names; `ghost` variant added.
+- `Table`/`TableHeaderRow`/`TableHeaderCell`/`TableCell` — new token classes; `density` prop (comfortable/compact).
+- `QueueRow` — `density` prop; new token classes.
+
+**Tests added:** `tokens.test.ts` (70 assertions), `contrast.test.ts` (26 gate assertions), `skins.test.ts` (7), `provenance-badge.test.tsx`, `verdict-chip.test.tsx`, `whose-court.test.tsx`, `concurrency-surfaces.test.tsx`, `require-permission.test.tsx`.
+
+**WCAG gate:** all 20 §4 pairings pass V-7; `contrast.test.ts` locks them in CI (INV-62, D-47).
+
+**eu_ai_act_tier escalation (V-5):** HIGH/LIMITED/MINIMAL not in design doc §2.2 mapping. Implementation tones: HIGH→attention, LIMITED→neutral, MINIMAL→neutral. Herbert to confirm at V1 before the tier chip is used in production surfaces.
+
+**Next visual tracks:** UI-V1-TENANT-SKIN (per-surface adoption/assurance visual specifics), UI-V2-OPERATOR-SKIN (compact surface visual specifics).
 
 ---
 

@@ -1,8 +1,15 @@
 export { Button, type ButtonProps, type ButtonVariant } from "./primitives/button";
 export { Select } from "./primitives/select";
 export { Dialog } from "./primitives/dialog";
-export { Table, TableHeaderRow, TableRow, TableCell } from "./primitives/table";
-export { QueueRow } from "./primitives/queue-row";
+export {
+  Table,
+  TableHeaderRow,
+  TableRow,
+  TableCell,
+  TableHeaderCell,
+  type TableDensity,
+} from "./primitives/table";
+export { QueueRow, type QueueRowDensity } from "./primitives/queue-row";
 
 export { PrefilledConfirm } from "./structured-input/prefilled-confirm";
 export { SingleSelect, type SelectOption } from "./structured-input/single-select";
@@ -26,6 +33,7 @@ export { StaleLockBanner } from "./concurrency/stale-lock-banner";
 export { BadFromStateBanner } from "./concurrency/bad-from-state-banner";
 
 export { WhoseCourtIndicator } from "./status/whose-court-indicator";
+export { VerdictChip, type VerdictTone } from "./status/verdict-chip";
 
 export { EvidenceTable, type EvidenceRow } from "./evidence/evidence-table";
 export { EvidenceUploadControl } from "./evidence/evidence-upload-control";

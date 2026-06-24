@@ -1,29 +1,7 @@
 import type { CoverageMatrixRead } from "@irontrust/api-client";
 import { NotAnObligationSetBanner } from "./not-an-obligation-set-banner";
-import { Table, TableHeaderRow, TableRow, TableCell } from "../primitives/table";
-
-interface Props {
-  matrix: CoverageMatrixRead;
-  /** Label shown above the table (e.g. "Interactive posture" vs "Audit-grade coverage"). */
-  label?: string;
-}
-
-/** Verdict chip colours — UNADDRESSED is neutral; never merged with PARTIAL (INV-51, DF6-3). */
-function VerdictChip({ verdict }: { verdict: string }) {
-  const v = verdict.toUpperCase();
-  const classMap: Record<string, string> = {
-    SATISFIED: "bg-success-subtle text-success-fg border-success",
-    PARTIAL: "bg-warning-subtle text-warning-fg border-warning",
-    OPEN: "bg-error-subtle text-error-fg border-error",
-    UNADDRESSED: "bg-surface-subtle text-text-muted border-border",
-  };
-  const cls = classMap[v] ?? classMap.UNADDRESSED;
-  return (
-    <span className={`rounded border px-2 py-0.5 text-xs font-medium ${cls}`}>
-      {v}
-    </span>
-  );
-}
+import { Table, TableHeaderRow, TableRow, TableCell, TableHeaderCell } from "../primitives/table";
+import { VerdictChip } from "../status/verdict-chip";
 
 function formatBytes(bytes: number | null): string {
   if (bytes === null) return "—";
@@ -42,7 +20,7 @@ function formatBytes(bytes: number | null): string {
 export function CoverageMatrix({ matrix, label }: Props) {
   return (
     <section aria-label={label ?? "coverage-matrix"}>
-      {label && <h3 className="text-text mb-2 font-semibold">{label}</h3>}
+      {label && <h3 className="text-ink mb-2 font-semibold">{label}</h3>}
 
       {matrix.not_an_obligation_set && (
         <div className="mb-3">
@@ -51,14 +29,14 @@ export function CoverageMatrix({ matrix, label }: Props) {
       )}
 
       {matrix.controls.length === 0 ? (
-        <p className="text-text-muted text-sm">No controls in scope.</p>
+        <p className="text-ink-muted text-sm">No controls in scope.</p>
       ) : (
         <Table>
           <TableHeaderRow>
-            <th className="px-3 py-2 text-left font-medium">Code</th>
-            <th className="px-3 py-2 text-left font-medium">Control</th>
-            <th className="px-3 py-2 text-left font-medium">Verdict</th>
-            <th className="px-3 py-2 text-left font-medium">Breakdown</th>
+            <TableHeaderCell>Code</TableHeaderCell>
+            <TableHeaderCell>Control</TableHeaderCell>
+            <TableHeaderCell>Verdict</TableHeaderCell>
+            <TableHeaderCell>Breakdown</TableHeaderCell>
           </TableHeaderRow>
           {matrix.controls.map((ctrl) => (
             <TableRow key={ctrl.control_id}>
@@ -67,14 +45,14 @@ export function CoverageMatrix({ matrix, label }: Props) {
               </TableCell>
               <TableCell>{ctrl.title}</TableCell>
               <TableCell>
-                <VerdictChip verdict={ctrl.verdict} />
+                <VerdictChip value={ctrl.verdict} />
               </TableCell>
               <TableCell>
                 <details>
-                  <summary className="cursor-pointer text-xs">
+                  <summary className="cursor-pointer text-xs text-ink-muted">
                     ✓{ctrl.breakdown.satisfied} ~{ctrl.breakdown.partial} ✗{ctrl.breakdown.open}
                     {ctrl.breakdown.downgraded_unsubstantiated > 0 && (
-                      <span className="text-warning-fg ml-1">
+                      <span className="ml-1" style={{ color: "var(--verdict-attention)" }}>
                         ↓{ctrl.breakdown.downgraded_unsubstantiated} downgraded
                       </span>
                     )}
@@ -91,10 +69,13 @@ export function CoverageMatrix({ matrix, label }: Props) {
                     {ctrl.breakdown.downgraded_unsubstantiated > 0 && (
                       <>
                         <br />
-                        <dt className="text-warning-fg inline font-medium">
+                        <dt
+                          className="inline font-medium"
+                          style={{ color: "var(--verdict-attention)" }}
+                        >
                           Downgraded (unsubstantiated):
                         </dt>{" "}
-                        <dd className="text-warning-fg inline">
+                        <dd className="inline" style={{ color: "var(--verdict-attention)" }}>
                           {ctrl.breakdown.downgraded_unsubstantiated}
                         </dd>
                       </>
@@ -109,10 +90,10 @@ export function CoverageMatrix({ matrix, label }: Props) {
 
       {!matrix.not_an_obligation_set && matrix.unaddressed_controls.length > 0 && (
         <div className="mt-3">
-          <p className="text-text-muted text-sm font-medium">
+          <p className="text-ink-muted text-sm font-medium">
             Controls not yet addressed ({matrix.unaddressed_controls.length}):
           </p>
-          <ul className="text-text-muted mt-1 list-disc pl-5 text-xs">
+          <ul className="text-ink-muted mt-1 list-disc pl-5 text-xs">
             {matrix.unaddressed_controls.map((c) => (
               <li key={c.control_id}>
                 <span className="font-mono">{c.code}</span> — {c.title}
@@ -122,7 +103,7 @@ export function CoverageMatrix({ matrix, label }: Props) {
         </div>
       )}
 
-      <p className="text-text-muted mt-2 text-xs">
+      <p className="text-ink-muted mt-2 text-xs">
         Generated {new Date(matrix.generated_at).toLocaleString()}
         {matrix.framework_filter && ` · Framework: ${matrix.framework_filter}`}
         {matrix.include_unapproved && " · Includes in-progress (not audit-grade)"}

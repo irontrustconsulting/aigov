@@ -1,47 +1,126 @@
 /*
- * FE-3: the one primitive token layer. Declared inside @theme so Tailwind v4
- * derives utility classes directly from these custom properties (e.g.
- * --color-accent -> bg-accent/text-accent/border-accent) — there is no
- * separate JS preset to keep in sync with this file.
+ * FE-14: the three-layer token architecture. Tailwind v4 derives utility
+ * classes from @theme variables by stripping the --color- / --spacing- /
+ * --radius- / --font- / --shadow- / --duration- prefix (e.g. --color-ink
+ * → bg-ink / text-ink / border-ink). Semantic-channel tokens live in :root
+ * below; components reference them via Tailwind arbitrary-value syntax
+ * (bg-[var(--prov-ai-suggested)]) — they are NOT in @theme so they don't
+ * generate hundreds of unused utility classes.
  *
- * Two skins (skin-tenant.css, skin-operator.css) override the VALUES of
- * these same variable names, scoped under [data-theme="..."] — they never
- * redeclare new theme keys, only swap what a given key resolves to.
+ * Light-first; every token reserves a dark slot (VDD-4) left empty this
+ * track — the dark skin lands as a later skin, not a rework.
+ *
+ * Two skins (skin-tenant.css, skin-operator.css) override the VALUES of the
+ * @theme keys under [data-theme="..."]; they never redeclare new keys.
  */
+
 @theme {
-  /* colour */
-  --color-bg: #ffffff;
-  --color-surface: #f4f5f7;
-  --color-text: #14181f;
-  --color-text-muted: #5a6472;
-  --color-accent: #2455e6;
-  --color-border: #d8dce3;
-  --color-danger: #c0294a;
-  --color-warning: #b5790a;
-  --color-success: #1c8a52;
+  /* ── Primitive: neutral ramp ──────────────────────────────────────────── */
+  --color-paper: #F4F4F1;           /* dark: TBD */
+  --color-surface: #FFFFFF;         /* dark: TBD */
+  --color-surface-sunken: #FAFAF8;  /* dark: TBD */
+  --color-hairline: #E5E5E0;        /* dark: TBD */
+  --color-hairline-strong: #D3D4CE; /* dark: TBD */
+  --color-ink-muted: #696E75;       /* dark: TBD — B-1 cleared: 4.66/5.14/4.92 on paper/surface/sunken */
+  --color-ink-secondary: #4A4F55;   /* dark: TBD */
+  --color-ink: #1B1D1E;             /* dark: TBD */
 
-  /* spacing */
-  --spacing-1: 0.25rem;
-  --spacing-2: 0.5rem;
-  --spacing-3: 0.75rem;
-  --spacing-4: 1rem;
-  --spacing-6: 1.5rem;
-  --spacing-8: 2rem;
+  /* ── Primitive: brand accent ──────────────────────────────────────────── */
+  --color-brand: #1E4651;           /* dark: TBD — primary action, focus ring, your-court edge-bar */
+  --color-brand-strong: #123338;    /* dark: TBD — text on brand-tint; operator nav rail */
+  --color-brand-tint: #E7F0F0;      /* dark: TBD — brand fills, progress verdict background */
 
-  /* type scale */
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.5rem;
+  /* ── Type ─────────────────────────────────────────────────────────────── */
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-serif: "IBM Plex Serif", Georgia, serif;
 
-  /* elevation */
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06);
-  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.10);
-  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.14);
+  /* ── Spacing (4px base: 2/4/8/12/16/20/24/32/40/48) ─────────────────── */
+  --spacing-0-5: 0.125rem;   /* 2px  */
+  --spacing-1: 0.25rem;      /* 4px  */
+  --spacing-2: 0.5rem;       /* 8px  */
+  --spacing-3: 0.75rem;      /* 12px */
+  --spacing-4: 1rem;         /* 16px */
+  --spacing-5: 1.25rem;      /* 20px */
+  --spacing-6: 1.5rem;       /* 24px */
+  --spacing-8: 2rem;         /* 32px */
+  --spacing-10: 2.5rem;      /* 40px */
+  --spacing-12: 3rem;        /* 48px */
 
-  /* radius */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  /* ── Radius ───────────────────────────────────────────────────────────── */
+  --radius-sm: 0.25rem;  /* 4px  — badges, chips, inputs */
+  --radius-md: 0.375rem; /* 6px  — buttons */
+  --radius-lg: 0.5rem;   /* 8px  — cards */
+  /* 0 is mandatory on single-sided border accents (no --radius-none token) */
+
+  /* ── Elevation ─────────────────────────────────────────────────────────── */
+  --shadow-e1: none;                                   /* border only */
+  --shadow-e2: 0 1px 2px rgba(0, 0, 0, 0.06);         /* menus/overlays + hairline */
+  --shadow-focus: 0 0 0 2px var(--color-brand-tint), 0 0 0 0.5px var(--color-brand);
+
+  /* ── Component aliases (third layer) ─────────────────────────────────── */
+  /* These go in @theme so Tailwind derives utility classes (bg-danger etc) */
+  --color-danger: #872B22;     /* halt / destructive actions = halt-fill */
+
+  /* ── Motion ───────────────────────────────────────────────────────────── */
+  --duration-quick: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 240ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/*
+ * Semantic channel tokens. FE-15: provenance; FE-16: verdict; court; severity.
+ * Components reference these via arbitrary-value Tailwind classes or direct
+ * var() — the lint rule (V-4) catches any attempt to use literal hex/px
+ * instead of a token reference. Orthogonality rule (FE-16): each channel's
+ * visual slot is reserved; hues are never borrowed across channels.
+ */
+:root {
+  /* ── Provenance channel (FE-15, PAT-8) ─────────────────────────────── */
+  /* Hue is on the dot / dashed border only; label is always --color-ink   */
+  /* (graphical floor 3:1; see V-7 in V0-PREFLIGHT.md)                    */
+  --prov-ai-suggested: #6E5A8E;        /* dark: TBD — dashed border; confirm/amend gate */
+  --prov-catalogue-curated: #2E4257;   /* dark: TBD — solid dot; curated source */
+  --prov-user-confirmed: #5A6068;      /* dark: TBD — solid dot; accepted default */
+  --prov-user-amended: #9A5A48;        /* dark: TBD — solid dot; tracked override */
+
+  /* ── Verdict tones (FE-16, FE-7) ───────────────────────────────────── */
+  /* Six meaning-class tones; chip label carries the specific member.      */
+  --verdict-neutral: #696E75;          /* dark: TBD — grey outline */
+  --verdict-progress-fill: #E7F0F0;    /* dark: TBD — brand-tint, in motion */
+  --verdict-progress-text: #123338;    /* dark: TBD — 11.64:1 on fill (N-3 fix) */
+  --verdict-positive-fill: #E7F0EC;    /* dark: TBD — earned green */
+  --verdict-positive-text: #2F5D4A;    /* dark: TBD — 6.49:1 on fill */
+  --verdict-attention: #8A6A2E;        /* dark: TBD — amber outline */
+  --verdict-halt-fill: #872B22;        /* dark: TBD — oxblood solid */
+  --verdict-halt-text: #FFFFFF;        /* dark: TBD — 8.75:1 on fill */
+  --verdict-terminal: #696E75;         /* dark: TBD — muted, struck-through */
+
+  /* ── Whose-court channel (FE-11) ─────────────────────────────────── */
+  /* brand edge-bar + brand-tint pill = yours; neutral pill = theirs      */
+  --court-yours-bar: var(--color-brand);
+  --court-yours-fill: var(--color-brand-tint);
+  --court-yours-text: var(--color-brand-strong);
+
+  /* ── Severity channel ────────────────────────────────────────────── */
+  /* Saturation rationed: high/critical only at the top of the scale.    */
+  --sev-low: var(--color-ink-muted);    /* dark: TBD */
+  --sev-medium-ink: #8A6A2E;           /* dark: TBD — shares value with --verdict-attention; two tokens, one hue (FE-16) */
+  --sev-high-ink: #A84B36;             /* dark: TBD — 4.87:1 on tint (N-1 fix: text not icon) */
+  --sev-high-bg: #F8ECE8;             /* dark: TBD */
+  --sev-critical-ink: #FFFFFF;         /* dark: TBD */
+  --sev-critical-bg: #872B22;         /* dark: TBD */
+}
+
+/* ── Motion: honour prefers-reduced-motion (FE-19) ────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
