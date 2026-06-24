@@ -50,6 +50,7 @@ const classification: ClassificationRead = {
 
 describe("WI-11 axe pass — wizard screens", () => {
   test("DrillDownStep", async () => {
+    // Empty taxonomy — mock returns [] for all product-category requests
     global.fetch = jest.fn(() => jsonResponse([])) as jest.Mock;
     const { container, getByText } = render(<DrillDownStep onComplete={jest.fn()} />, { wrapper });
     await waitFor(() => getByText(/no categories available/i));

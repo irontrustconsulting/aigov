@@ -11,20 +11,32 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
+/**
+ * Mock that routes by URL path + query:
+ *   product-categories (no parent_id)  → top-level categories
+ *   product-categories?parent_id=xxx   → sub-categories
+ *   {catId}/vendors                    → vendors
+ *   {catId}/products                   → products
+ *   products/{id}                      → product detail
+ */
 function mockFetchByPath(map: Record<string, unknown>) {
   global.fetch = jest.fn((input: RequestInfo | URL) => {
-    const url = String(input);
-    const pathname = url.split("?")[0] ?? "";
+    const full = String(input);
+    const [pathname, queryStr = ""] = full.split("?");
+    const params = new URLSearchParams(queryStr);
     const segments = pathname.split("/").filter(Boolean);
     const last = segments[segments.length - 1];
     const v1At = segments.indexOf("v1");
-    const resource = segments[v1At + 2]; // segments: [..., "v1", "reference", <resource>, ...]
+    const resource = segments[v1At + 2];
 
     let key: string | undefined;
     if (last === "vendors") key = "vendors";
-    else if (last === "products") key = "products";
-    else if (resource === "products") key = `products/${last}`; // product detail
-    else if (resource === "product-categories") key = "product-categories";
+    else if (last === "products" && resource !== "products") key = "products";
+    else if (resource === "products") key = `products/${last}`; // detail
+    else if (resource === "product-categories") {
+      const parentId = params.get("parent_id");
+      key = parentId ? `sub-categories:${parentId}` : "top-categories";
+    }
 
     return Promise.resolve({
       ok: true,
@@ -40,7 +52,7 @@ afterEach(() => {
 
 describe("DrillDownStep", () => {
   test("renders cleanly with an empty taxonomy and offers the custom exit", async () => {
-    mockFetchByPath({ "product-categories": [] });
+    mockFetchByPath({ "top-categories": [] });
     const onComplete = jest.fn();
 
     render(<DrillDownStep onComplete={onComplete} />, { wrapper });
@@ -52,7 +64,7 @@ describe("DrillDownStep", () => {
   });
 
   test("the custom branch carries is_custom=true and no product forward", async () => {
-    mockFetchByPath({ "product-categories": [] });
+    mockFetchByPath({ "top-categories": [] });
     const onComplete = jest.fn<void, [DrillDownResult]>();
 
     render(<DrillDownStep onComplete={onComplete} />, { wrapper });
@@ -67,9 +79,14 @@ describe("DrillDownStep", () => {
     });
   });
 
-  test("drilling to a product and confirming carries the product forward", async () => {
+  test("drilling through top → sub-category → product → confirm", async () => {
     mockFetchByPath({
-      "product-categories": [{ id: "cat-1", code: "c1", name: "Chatbots", description: null, parent_id: null }],
+      "top-categories": [
+        { id: "top-1", code: "COMMS", name: "Communications", description: null, parent_id: null },
+      ],
+      "sub-categories:top-1": [
+        { id: "sub-1", code: "COMMS_BOT", name: "Chatbots", description: null, parent_id: "top-1" },
+      ],
       vendors: [{ id: "v1", name: "Acme", logo_url: null }],
       products: [{ id: "p1", name: "Acme Bot", vendor_id: "v1", logo_url: null }],
       "products/p1": {
@@ -84,12 +101,19 @@ describe("DrillDownStep", () => {
 
     render(<DrillDownStep onComplete={onComplete} />, { wrapper });
 
+    // Stage 1: top-level category
+    await waitFor(() => screen.getByText("Communications"));
+    fireEvent.click(screen.getByRole("button", { name: /communications/i }));
+
+    // Stage 2: sub-category
     await waitFor(() => screen.getByText("Chatbots"));
     fireEvent.click(screen.getByRole("button", { name: /chatbots/i }));
 
+    // Stage 3: product list
     await waitFor(() => screen.getByText("Acme Bot"));
     fireEvent.click(screen.getByRole("button", { name: /Acme Bot/i }));
 
+    // Stage 4: confirmation
     await waitFor(() => screen.getByRole("button", { name: /use this product/i }));
     fireEvent.click(screen.getByRole("button", { name: /use this product/i }));
 
@@ -98,5 +122,30 @@ describe("DrillDownStep", () => {
       catalogueProductId: "p1",
       catalogueProductName: "Acme Bot",
     });
+  });
+
+  test("back buttons return to the previous stage", async () => {
+    mockFetchByPath({
+      "top-categories": [
+        { id: "top-1", code: "COMMS", name: "Communications", description: null, parent_id: null },
+      ],
+      "sub-categories:top-1": [
+        { id: "sub-1", code: "COMMS_BOT", name: "Chatbots", description: null, parent_id: "top-1" },
+      ],
+      products: [],
+      vendors: [],
+    });
+
+    render(<DrillDownStep onComplete={jest.fn()} />, { wrapper });
+
+    // Enter sub-categories
+    await waitFor(() => screen.getByText("Communications"));
+    fireEvent.click(screen.getByRole("button", { name: /communications/i }));
+    await waitFor(() => screen.getByText("Chatbots"));
+
+    // Back to top-level
+    fireEvent.click(screen.getByRole("button", { name: /← back/i }));
+    await waitFor(() => screen.getByText("Communications"));
+    expect(screen.queryByText("Chatbots")).not.toBeInTheDocument();
   });
 });

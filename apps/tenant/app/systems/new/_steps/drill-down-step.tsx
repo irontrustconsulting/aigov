@@ -16,32 +16,31 @@ export interface DrillDownResult {
 }
 
 /**
- * WI-4: category list -> vendor/product browse -> product detail confirm.
- * "Not in catalogue / in-house" is always reachable (CAT-8 miss signal
- * is out of F1 scope — no event emitted here).
+ * WI-4: top-level category → sub-category → products → confirm.
+ * Products live on sub-categories, not top-level, so two levels of
+ * category selection are required before products appear.
+ * "Not in catalogue / in-house" exits from any level.
  */
 export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownResult) => void }) {
-  const [browsingCategoryId, setBrowsingCategoryId] = useState<string | null>(null);
+  // topLevelId: the selected top-level category (null = stage 1)
+  // subCategoryId: the selected sub-category (null = stage 1/2, set = stage 3)
+  const [topLevelId, setTopLevelId] = useState<string | null>(null);
+  const [subCategoryId, setSubCategoryId] = useState<string | null>(null);
   const [vendorId, setVendorId] = useState<string | undefined>(undefined);
   const [productId, setProductId] = useState<string | null>(null);
 
-  const categories = useProductCategories();
-  const vendors = useVendorsInCategory(browsingCategoryId ?? "");
-  const products = useProductsInCategory(browsingCategoryId ?? "", vendorId);
+  const topCategories = useProductCategories();
+  const subCategories = useProductCategories(topLevelId ?? undefined);
+  const vendors = useVendorsInCategory(subCategoryId ?? "");
+  const products = useProductsInCategory(subCategoryId ?? "", vendorId);
   const productDetail = useProductDetail(productId ?? undefined);
 
   function exitCustom() {
     onComplete({ isCustom: true, catalogueProductId: null, catalogueProductName: null });
   }
 
-  function backToCategories() {
-    setBrowsingCategoryId(null);
-    setVendorId(undefined);
-    setProductId(null);
-  }
-
   // -------------------------------------------------------------------
-  // Product detail confirmation
+  // Stage 4: product detail confirmation
   // -------------------------------------------------------------------
   if (productId) {
     if (productDetail.isLoading) return <p>Loading product…</p>;
@@ -54,42 +53,49 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
         <h2 className="text-lg font-semibold">{product.name}</h2>
         <p className="text-ink-muted text-sm">Vendor: {product.vendor.name}</p>
         {product.categories.length > 0 && (
-          <p className="text-ink-muted text-sm">Categories: {product.categories.map((c) => c.name).join(", ")}</p>
+          <p className="text-ink-muted text-sm">
+            Categories: {product.categories.map((c) => c.name).join(", ")}
+          </p>
         )}
-        <Button type="button" onClick={() => setProductId(null)} variant="secondary">
-          Back
-        </Button>
-        <Button
-          type="button"
-          onClick={() =>
-            onComplete({
-              isCustom: false,
-              catalogueProductId: product.id,
-              catalogueProductName: product.name,
-            })
-          }
-        >
-          Use this product
-        </Button>
+        <div className="flex gap-2">
+          <Button type="button" onClick={() => setProductId(null)} variant="secondary">
+            ← Back
+          </Button>
+          <Button
+            type="button"
+            onClick={() =>
+              onComplete({
+                isCustom: false,
+                catalogueProductId: product.id,
+                catalogueProductName: product.name,
+              })
+            }
+          >
+            Use this product
+          </Button>
+        </div>
       </section>
     );
   }
 
   // -------------------------------------------------------------------
-  // Vendor / product browsing within a chosen category
+  // Stage 3: products within the chosen sub-category
   // -------------------------------------------------------------------
-  if (browsingCategoryId) {
+  if (subCategoryId) {
     const vendorList = vendors.data ?? [];
     const productList = products.data ?? [];
     const selectedVendorName = vendorList.find((v) => v.id === vendorId)?.name;
 
     return (
       <section aria-label="vendor-product-browse" className="mx-auto max-w-4xl space-y-6 px-6 py-8">
-        <Button type="button" variant="secondary" onClick={backToCategories}>
-          ← Back to categories
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => { setSubCategoryId(null); setVendorId(undefined); }}
+        >
+          ← Back
         </Button>
 
-        {/* Vendor filter — only shown when there are multiple vendors */}
         {vendorList.length > 1 && (
           <div>
             <p className="text-ink-muted mb-2 text-sm font-medium">Filter by vendor</p>
@@ -100,9 +106,7 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
                   type="button"
                   aria-pressed={vendorId === v.id}
                   className={`border-hairline rounded-full border px-3 py-1 text-sm transition-colors ${
-                    vendorId === v.id
-                      ? "bg-ink text-surface"
-                      : "hover:bg-surface-sunken"
+                    vendorId === v.id ? "bg-ink text-surface" : "hover:bg-surface-sunken"
                   }`}
                   onClick={() => setVendorId(vendorId === v.id ? undefined : v.id)}
                 >
@@ -113,7 +117,6 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
           </div>
         )}
 
-        {/* Product list */}
         <div>
           <p className="text-ink-muted mb-2 text-sm font-medium">
             {selectedVendorName ? `Products by ${selectedVendorName}` : "Products"}
@@ -153,7 +156,50 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
   }
 
   // -------------------------------------------------------------------
-  // Category list — clicking goes directly to vendor/product browse
+  // Stage 2: sub-categories of the chosen top-level category
+  // -------------------------------------------------------------------
+  if (topLevelId) {
+    return (
+      <section aria-label="sub-category-list" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
+        <Button type="button" variant="secondary" onClick={() => setTopLevelId(null)}>
+          ← Back
+        </Button>
+        <h2 className="text-lg font-semibold">Select a sub-category</h2>
+
+        {subCategories.isLoading && <p>Loading…</p>}
+        {subCategories.isError && <p role="alert">Could not load categories.</p>}
+        {subCategories.data && subCategories.data.length === 0 && (
+          <p className="text-ink-muted text-sm">No sub-categories available here.</p>
+        )}
+
+        {subCategories.data && subCategories.data.length > 0 && (
+          <ul className="space-y-2">
+            {subCategories.data.map((cat) => (
+              <li key={cat.id}>
+                <button
+                  type="button"
+                  className="border-hairline hover:bg-surface-sunken w-full rounded-lg border px-4 py-3 text-left"
+                  onClick={() => setSubCategoryId(cat.id)}
+                >
+                  <span className="font-medium">{cat.name}</span>
+                  {cat.description && (
+                    <span className="text-ink-muted mt-0.5 block text-sm">{cat.description}</span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <Button type="button" variant="secondary" onClick={exitCustom}>
+          Not in catalogue / in-house
+        </Button>
+      </section>
+    );
+  }
+
+  // -------------------------------------------------------------------
+  // Stage 1: top-level categories
   // -------------------------------------------------------------------
   return (
     <section aria-label="category-drill-down" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
@@ -162,22 +208,22 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
         Choose the category that best describes your AI product.
       </p>
 
-      {categories.isLoading && <p>Loading categories…</p>}
-      {categories.isError && <p role="alert">Could not load categories.</p>}
-      {categories.data && categories.data.length === 0 && (
-        <p className="text-ink-muted text-sm">
+      {topCategories.isLoading && <p>Loading…</p>}
+      {topCategories.isError && <p role="alert">Could not load categories.</p>}
+      {topCategories.data && topCategories.data.length === 0 && (
+        <p className="text-ink-muted text-sm" aria-label="no-categories">
           No categories available — use the option below to register a custom or in-house system.
         </p>
       )}
 
-      {categories.data && categories.data.length > 0 && (
+      {topCategories.data && topCategories.data.length > 0 && (
         <ul className="space-y-2">
-          {categories.data.map((cat) => (
+          {topCategories.data.map((cat) => (
             <li key={cat.id}>
               <button
                 type="button"
                 className="border-hairline hover:bg-surface-sunken w-full rounded-lg border px-4 py-3 text-left"
-                onClick={() => setBrowsingCategoryId(cat.id)}
+                onClick={() => setTopLevelId(cat.id)}
               >
                 <span className="font-medium">{cat.name}</span>
                 {cat.description && (
