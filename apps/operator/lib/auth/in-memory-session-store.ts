@@ -37,6 +37,13 @@ class InMemorySessionStore implements SessionStore {
   }
 }
 
-// Module-scoped singleton — survives across requests within one Node
-// process, per the dev-only tradeoff documented above.
-export const sessionStore: SessionStore = new InMemorySessionStore();
+// Pin to globalThis so Next.js HMR module re-instantiation in dev doesn't
+// wipe the Map. In production there is no HMR; this is a no-op there.
+declare global {
+  // eslint-disable-next-line no-var
+  var __irontrustSessionStore: InMemorySessionStore | undefined;
+}
+
+export const sessionStore: SessionStore =
+  globalThis.__irontrustSessionStore ??
+  (globalThis.__irontrustSessionStore = new InMemorySessionStore());

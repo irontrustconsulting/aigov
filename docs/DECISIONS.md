@@ -384,3 +384,7 @@ The re-run cycle — detect material change → re-snapshot → flag `needs_refr
 - **ISO 42001 — declared, tenant-level:** a Statement of Applicability, default all-applicable, every exclusion justified and audited.
 Path A confirmed (coverage shipped first, applicability next). Open forks: EU/ISO split granularity (tier×role minimum vs +subcategory). Not built.
 ↳ refs: D-27, D-28; CLS-6
+
+**OPEN-4** · Genesis governance role bootstrap gap
+When a tenant is first provisioned, the owner is the only member and holds the `ADMIN` administrative role with zero governance roles. D-5 blocks self-assignment — the acting admin cannot assign governance roles to their own membership. In a single-member or newly-provisioned tenant this means no one can assign the owner a governance role via the API; the owner is stranded at the "no portfolio to show" empty state. Current dev workaround: direct DB insert into `governance_role_assignment`. Path to resolution: (a) `provision_tenant` accepts an optional initial governance role and seeds the assignment at creation time, bypassing the self-assignment gate (provisioner is the granting actor); or (b) explicit grace exception for the membership created during `provision_tenant` in `assert_governance_assignable`. Not built; blocks real single-person onboarding.
+↳ refs: D-5, INV-7; discovered: genesis bootstrap test 2026-06-24

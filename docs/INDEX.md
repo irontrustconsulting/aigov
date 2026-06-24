@@ -62,7 +62,7 @@
 
 - **Requirements:** `LFC` `IXN` `APR` `REG` `CAT` `CLS` `AIIA` `CTL` `RSK` `EVD` `WKF` `EXP` · cross-cutting `XCUT-1` · non-functional `NFR-1..7`.
 - **Invariants:** `INV-1..53`, each tagged `DB` (structurally unviolable) / `CODE` (one routed locus) / `CONVENTION` (discipline only — review must catch).
-- **Decisions:** `D-1..40` (+ sprint-local `DF1-3..9`, `DF3-1..7`, `DF4-1..6`, `DF5-1..11`, `DF6-1..10`, `DF7-1..3`, `DF8-1..3`); open questions `OPEN-1..3`.
+- **Decisions:** `D-1..40` (+ sprint-local `DF1-3..9`, `DF3-1..7`, `DF4-1..6`, `DF5-1..11`, `DF6-1..10`, `DF7-1..3`, `DF8-1..3`); open questions `OPEN-1..4`.
 - **Patterns:** `PAT-1..10`.
 - **UX principles:** `UX-1..6` (`UX.md`).
 - **Frontend conventions:** `FE-1..13` (`FRONTEND.md`).

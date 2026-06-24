@@ -131,6 +131,10 @@ function ProvisionForm({
       } else if (response.status === 403) {
         qc.invalidateQueries({ queryKey: ["platform-me"] });
         onPermissionLost();
+      } else if (response.status === 401) {
+        window.location.href = "/api/auth/login";
+      } else {
+        setConflict("An unexpected error occurred. Please try again.");
       }
     },
   });

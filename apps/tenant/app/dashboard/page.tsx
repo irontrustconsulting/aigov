@@ -120,6 +120,9 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
 
       <section aria-label="systems">
         <h2>Systems</h2>
+        {roleKeys.has("system_owner") && (
+          <Link href="/systems/new">Register a system →</Link>
+        )}
         <ul>
           {portfolio.data.map((system) => (
             <SystemCard key={system.system_id} system={system} roleKeys={roleKeys} />

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -24,12 +24,16 @@ const UNBUILT: { label: string }[] = [
 
 export default function ConsoleLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { data: me } = useQuery({
+  const meQuery = useQuery({
     queryKey: ["platform-me"],
     queryFn: () => api.get<PlatformMe>("/platform/me"),
   });
 
-  const permissions = me?.permissions ?? [];
+  useEffect(() => {
+    if (meQuery.isError) window.location.href = "/api/auth/login";
+  }, [meQuery.isError]);
+
+  const permissions = meQuery.data?.permissions ?? [];
 
   return (
     <div className="console-layout">

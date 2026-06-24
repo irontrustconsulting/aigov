@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     userSub: decodeSub(tokens.id_token),
   });
 
-  const response = NextResponse.redirect(authEnv.appOrigin);
+  const response = NextResponse.redirect(new URL("/dashboard", authEnv.appOrigin));
   response.cookies.delete(PKCE_COOKIE_NAME);
   response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
     httpOnly: true,
