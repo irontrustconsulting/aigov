@@ -1,17 +1,16 @@
 /**
- * FE-16: VerdictChip — maps live enum members to one of six meaning-class
- * verdict tones. The chip label carries the specific member; the tone carries
- * the meaning-class. One tone family serves assessment_status,
- * lifecycle_state, classification_status, coverage_status, approval_status,
- * and eu_ai_act_tier (V-5 confirmed exhaustive).
+ * FE-16 (as amended D-48): VerdictChip — maps live enum members to one of six
+ * meaning-class verdict tones. The chip label carries the specific member; the
+ * tone carries the meaning-class. Serves five enums: assessment_status,
+ * lifecycle_state, classification_status, coverage_status, approval_status.
+ *
+ * eu_ai_act_tier is NOT handled here — it renders via TierBadge on the
+ * dedicated --tier-* channel (INV-64). Tier members return data-tone=unknown
+ * if passed to VerdictChip (graceful fallback, not a throw).
  *
  * Orthogonality: the verdict channel never borrows a provenance hue and vice
  * versa. Where a shared hue appears (--brand in court + progress; --verdict-
  * attention in severity medium), the component form disambiguates.
- *
- * eu_ai_act_tier ESCALATION NOTE (V-5): HIGH/LIMITED/MINIMAL are not named
- * in design doc §2.2; implementation tones (HIGH→attention, LIMITED→neutral,
- * MINIMAL→neutral) are flagged for Herbert to confirm at V1.
  */
 
 export type VerdictTone =
@@ -62,13 +61,6 @@ const TONE_MAP: Record<string, VerdictTone> = {
   EXPIRED: "terminal",
   /* APPROVED already mapped above */
 
-  /* eu_ai_act_tier */
-  UNCLASSIFIED: "neutral",
-  MINIMAL: "neutral",   /* not in §2.2; implementation tone — escalated (V-5) */
-  LIMITED: "neutral",   /* not in §2.2; implementation tone — escalated (V-5) */
-  REQUIRES_CONTEXT: "attention",
-  HIGH: "attention",    /* not in §2.2; implementation tone — escalated (V-5) */
-  PROHIBITED: "halt",
 };
 
 type ToneStyle = {

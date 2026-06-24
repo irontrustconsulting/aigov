@@ -4,7 +4,7 @@
 **Purpose:** What is implemented and what must not be reinvented, at the level of *what exists · what shape · which gate*. It points outward for depth and never restates the detail.
 **Lanes:** constraints → `INVARIANTS.md` (`INV-n`); schema (tables/enums/indexes) → `DATA-MODEL.md`; auth / identity / RLS / session mechanics → `ARCHITECTURE.md`; implementation shapes → `PATTERNS.md` (`PAT-n`); decisions/rationale → `DECISIONS.md` (`D-n`); conceptual model → `DOMAIN.md`.
 
-**Current through:** UI-V0-VISUAL-FOUNDATION (design-system token core, two skins, component treatments). Sprints 1–7b + UI-F1..F8 + UI-V0 built (tenant UI plane complete; operator UI plane F7+F8 shipped; visual foundation installed).
+**Current through:** UI-V1-TENANT-SKIN (--tier-* channel, TierBadge, VerdictChip trim, F1–F6 surface visual treatments). Sprints 1–7b + UI-F1..F8 + UI-V0 + UI-V1 built (tenant UI plane complete with full visual system; operator UI plane F7+F8 shipped).
 
 ---
 
@@ -221,7 +221,20 @@ Tested: `tests/platform/test_platform_me.py` (backend); `apps/operator/app/(cons
 
 **eu_ai_act_tier escalation (V-5):** HIGH/LIMITED/MINIMAL not in design doc §2.2 mapping. Implementation tones: HIGH→attention, LIMITED→neutral, MINIMAL→neutral. Herbert to confirm at V1 before the tier chip is used in production surfaces.
 
-**Next visual tracks:** UI-V1-TENANT-SKIN (per-surface adoption/assurance visual specifics), UI-V2-OPERATOR-SKIN (compact surface visual specifics).
+**Next visual tracks:** UI-V2-OPERATOR-SKIN (compact surface visual specifics for operator console).
+
+### Visual layer — tenant skin (`UI-V1-TENANT-SKIN`)
+
+`--tier-*` magnitude channel (4 fill/text pairs: PROHIBITED/HIGH/LIMITED/MINIMAL, navy-slate family) added to `packages/tokens/src/primitives.css`. Contrast gate extended from 26 → 30 pairings (+4 tier text). `VerdictChip` trimmed from 6 enums/34 members to 5 enums/28 members (eu_ai_act_tier branch removed, INV-64). `TierBadge` new component (compact + card variants, `toTierMember()` wire-format bridge from DB snake_case to display TierMember). Density modes confirmed as composition-only via `QueueRow`/`Table` `density` prop — no `--density-*` CSS variables (D-45 guards confirmed).
+
+**F1 resolved-tier step:** TierBadge card variant with basis + overrideLadder slot; override gate (`SodAction barred={!isSystemOwner}`) inside ladder.  
+**F2 dashboard:** compact TierBadge per use-case row; VerdictChip for lifecycle state; section-order face branch (adoption face leads with whose-court, assurance face leads with portfolio-posture).  
+**F3 assessment header:** compact TierBadge alongside whose-court indicator.  
+**F4 review queue:** QueueRow density="compact" per entry; compact TierBadge; navigation via router.push.  
+**F5 evidence:** EvidenceManifestTable stale class fixed (text-text-muted → text-ink-muted); EvidenceTable stale class fixed; AI_SUGGESTED link control verified blocked-with-reason.  
+**F6 audit pack:** AuditPackView + AtoDocumentView root `<article>` serif (font-serif, INV-65); NotAnObligationSetBanner + ATO drift caveat converted to V0 edge-bar pattern (no warning-* Tailwind classes); CoverageMatrix renders `downgraded_unsubstantiated` as PARTIAL chip + `data-verdict="downgraded"` inline tag (DF-V1-1). Stale classes (`text-text-muted`, `border-border`, `border-border-subtle`) replaced with V0 equivalents (`text-ink-muted`, `border-hairline`) across audit components.
+
+**Zero backend/schema/route/enum/contract change** (INV-54).
 
 ---
 

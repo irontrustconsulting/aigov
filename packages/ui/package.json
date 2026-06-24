@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",
-    "@radix-ui/react-select": "^2.1.4"
+    "@radix-ui/react-select": "^2.1.4",
+    "lucide-react": "^1.21.0"
   },
   "devDependencies": {
     "@irontrust/eslint-plugin-irontrust": "workspace:*",

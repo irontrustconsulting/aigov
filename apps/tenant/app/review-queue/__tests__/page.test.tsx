@@ -59,17 +59,16 @@ function mockFetch(meBody: MeRead, queue: ReviewQueueEntryRead[] = []) {
 afterEach(() => jest.restoreAllMocks());
 
 describe("ReviewQueueClient (UI-F4-ASSURE WI-1)", () => {
-  test("reviewer: renders queue entries with links to /use-cases/{id}", async () => {
+  test("reviewer: renders queue entries as clickable rows", async () => {
     mockFetch(me(["reviewer"]), queueEntries);
 
     render(<ReviewQueueClient />, { wrapper });
 
+    // QueueRow renders role="button" for each entry (navigation via onClick → router.push)
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: /review use case/i })).toBeInTheDocument()
+      expect(screen.getByRole("button")).toBeInTheDocument()
     );
 
-    const link = screen.getByRole("link", { name: /review use case/i });
-    expect(link).toHaveAttribute("href", `/use-cases/${queueEntries[0].use_case_id}`);
     expect(screen.getByText(/alice owner/i)).toBeInTheDocument();
   });
 

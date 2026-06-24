@@ -10,6 +10,11 @@ function formatBytes(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+interface Props {
+  matrix: CoverageMatrixRead;
+  label?: string;
+}
+
 /**
  * CoverageMatrix — renders a CoverageMatrixRead with:
  * - NotAnObligationSetBanner when not_an_obligation_set
@@ -45,7 +50,19 @@ export function CoverageMatrix({ matrix, label }: Props) {
               </TableCell>
               <TableCell>{ctrl.title}</TableCell>
               <TableCell>
-                <VerdictChip value={ctrl.verdict} />
+                {ctrl.verdict === "downgraded_unsubstantiated" ? (
+                  <>
+                    <VerdictChip value="PARTIAL" />
+                    <span
+                      data-verdict="downgraded"
+                      className="ml-1 text-xs text-ink-muted"
+                    >
+                      downgraded
+                    </span>
+                  </>
+                ) : (
+                  <VerdictChip value={ctrl.verdict} />
+                )}
               </TableCell>
               <TableCell>
                 <details>

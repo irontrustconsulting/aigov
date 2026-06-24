@@ -116,3 +116,17 @@ describe("Focus ring visibility — must clear 3:1 against adjacent backgrounds"
     expect(contrastRatio("color-brand", "color-surface")).toBeGreaterThanOrEqual(AA_LARGE);
   });
 });
+
+describe("Tier-magnitude pairings — must clear 4.5:1 (WCAG AA, D-48/VV-8)", () => {
+  const pairs: [string, string][] = [
+    ["tier-prohibited-text", "tier-prohibited-fill"],
+    ["tier-high-text",       "tier-high-fill"],
+    ["tier-limited-text",    "tier-limited-fill"],
+    ["tier-minimal-text",    "tier-minimal-fill"],
+  ];
+  for (const [fg, bg] of pairs) {
+    test(`--${fg} on --${bg} ≥ ${AA_TEXT}:1`, () => {
+      expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(AA_TEXT);
+    });
+  }
+});

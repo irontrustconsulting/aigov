@@ -27,7 +27,7 @@ function renderActor(actor: ActorRef | null | undefined): string {
 }
 
 function LifecycleTrailSection({ entries }: { entries: LifecycleTrailEntryRead[] }) {
-  if (entries.length === 0) return <p className="text-text-muted text-sm">No lifecycle trail.</p>;
+  if (entries.length === 0) return <p className="text-ink-muted text-sm">No lifecycle trail.</p>;
   return (
     <Table>
       <TableHeaderRow>
@@ -51,7 +51,7 @@ function LifecycleTrailSection({ entries }: { entries: LifecycleTrailEntryRead[]
 }
 
 function AuditTrailSection({ entries }: { entries: AuditTrailEntryRead[] }) {
-  if (entries.length === 0) return <p className="text-text-muted text-sm">No audit trail.</p>;
+  if (entries.length === 0) return <p className="text-ink-muted text-sm">No audit trail.</p>;
   return (
     <Table>
       <TableHeaderRow>
@@ -73,7 +73,7 @@ function AuditTrailSection({ entries }: { entries: AuditTrailEntryRead[] }) {
 }
 
 function ClassificationHistorySection({ entries }: { entries: ClassificationHistoryEntryRead[] }) {
-  if (entries.length === 0) return <p className="text-text-muted text-sm">No classification history.</p>;
+  if (entries.length === 0) return <p className="text-ink-muted text-sm">No classification history.</p>;
   return (
     <Table>
       <TableHeaderRow>
@@ -114,7 +114,7 @@ function UseCaseSections({
         <h4 className="mb-2 font-semibold">Assessment</h4>
         {sections.assessment.aiia_id ? (
           <>
-            <p className="text-text-muted mb-2 text-sm">
+            <p className="text-ink-muted mb-2 text-sm">
               AIIA status: {sections.assessment.status ?? "—"} · Items:{" "}
               {sections.assessment.native_items.length} native
               {sections.assessment.feeders.length > 0
@@ -126,7 +126,7 @@ function UseCaseSections({
                 <summary className="cursor-pointer text-sm">
                   Feeder: {f.type} ({f.status})
                 </summary>
-                <p className="text-text-muted mt-1 pl-4 text-xs">
+                <p className="text-ink-muted mt-1 pl-4 text-xs">
                   {f.items.length} items
                   {f.items.some((i) => i.surfaces_into) &&
                     ` (some surface into AIIA)`}
@@ -135,7 +135,7 @@ function UseCaseSections({
             ))}
           </>
         ) : (
-          <p className="text-text-muted text-sm">No AIIA on record.</p>
+          <p className="text-ink-muted text-sm">No AIIA on record.</p>
         )}
       </section>
 
@@ -162,11 +162,11 @@ function UseCaseSections({
           ATOs ({sections.atos.length})
         </h4>
         {sections.atos.length === 0 ? (
-          <p className="text-text-muted text-sm">No ATOs on record.</p>
+          <p className="text-ink-muted text-sm">No ATOs on record.</p>
         ) : (
           <ul className="space-y-2 text-sm">
             {sections.atos.map((ato) => (
-              <li key={ato.id} className="border-border rounded border px-3 py-2">
+              <li key={ato.id} className="border-hairline rounded border px-3 py-2">
                 Round {ato.submission_round} · {ato.tier} · authorised by{" "}
                 {ato.authorised_by_name ?? "—"} on{" "}
                 {new Date(ato.authorised_at).toLocaleDateString()}
@@ -190,12 +190,12 @@ export function AuditPackView({ pack, onDownloadEvidence }: Props) {
   const isUseCase = !isFramework && !isSystem && "use_case_id" in pack;
 
   return (
-    <article aria-label="audit-pack-view" className="space-y-6">
+    <article aria-label="audit-pack-view" className="font-serif space-y-6">
       {/* Print trigger (DF6-6) */}
       <div className="flex justify-end print:hidden">
         <button
           type="button"
-          className="border-border rounded border px-3 py-1.5 text-sm"
+          className="border-hairline rounded border px-3 py-1.5 text-sm"
           onClick={() => window.print()}
         >
           Print / Save as PDF
@@ -230,7 +230,7 @@ export function AuditPackView({ pack, onDownloadEvidence }: Props) {
           <>
             <section aria-label="system-context">
               <h3 className="mb-1 font-semibold">{s.system.name}</h3>
-              <p className="text-text-muted text-sm">
+              <p className="text-ink-muted text-sm">
                 {s.system.use_case_count} use case
                 {s.system.use_case_count === 1 ? "" : "s"}
               </p>
@@ -241,7 +241,7 @@ export function AuditPackView({ pack, onDownloadEvidence }: Props) {
               <CoverageMatrix matrix={s.system_coverage} label="Audit-grade coverage" />
             </section>
             {s.use_cases.map((uc) => (
-              <section key={uc.use_case_id} aria-label={`use-case-${uc.use_case_id}`} className="border-border rounded border p-4">
+              <section key={uc.use_case_id} aria-label={`use-case-${uc.use_case_id}`} className="border-hairline rounded border p-4">
                 <h3 className="mb-4 font-semibold">Use case: {uc.use_case_id}</h3>
                 <UseCaseSections sections={uc} onDownloadEvidence={onDownloadEvidence} />
               </section>
@@ -274,7 +274,7 @@ export function AuditPackView({ pack, onDownloadEvidence }: Props) {
       {"content_hash" in pack && (
         <footer
           aria-label="pack-footer"
-          className="border-border-subtle text-text-muted border-t pt-4 text-xs"
+          className="border-hairline text-ink-muted border-t pt-4 text-xs"
         >
           <p>
             Generated: {new Date((pack as { generated_at: string }).generated_at).toLocaleString()}

@@ -269,3 +269,11 @@ Every text foreground/background pairing in `packages/tokens/src/primitives.css`
 **INV-63** · CONVENTION · components carry no literal colour or spacing values
 Every colour and spacing value used in `packages/ui` components must reference a design token via a Tailwind utility class or `var(--token-name)` inline style. Literal hex, pixel, or RGB values in `className` strings are prohibited and enforced by `eslint-plugin-irontrust/no-literal-token-value`.
 ↳ origin: UI-V0-VISUAL-FOUNDATION · refs: FE-3, FE-14, V-4
+
+**INV-64** · CONVENTION · `eu_ai_act_tier` renders only via `TierBadge`; `VerdictChip` renders no tier member
+`eu_ai_act_tier` values (`prohibited`, `high_risk`, `limited_risk`, `minimal_risk`, `unclassified`, `requires_context`) must be converted via `toTierMember()` and displayed exclusively with `<TierBadge>`. `VerdictChip` must not receive any of these values (they no longer appear in its `TONE_MAP`). Violations would merge two orthogonal channels — the tier-magnitude channel (`--tier-*`) and the verdict-tone channel (`--verdict-*`) — breaking the channel-orthogonality rule from FE-16.
+↳ origin: UI-V1-TENANT-SKIN · locus: `packages/ui/src/status/` · refs: FE-16, D-48, INV-56
+
+**INV-65** · CONVENTION · IBM Plex Serif confined to `AuditPackView` and `AtoDocumentView` root wrappers
+The serif face (`font-serif` / IBM Plex Serif) must only appear on the root `<article>` of `AuditPackView` and `AtoDocumentView`. No other tenant surface uses serif. The font-face signals "exported document / archival artefact", not UI. Using it in interactive surfaces (forms, lists, dashboards) violates the reading-mode distinction.
+↳ origin: UI-V1-TENANT-SKIN · locus: `packages/ui/src/audit/` · refs: FE-17, D-44

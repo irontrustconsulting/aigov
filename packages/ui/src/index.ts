@@ -34,6 +34,7 @@ export { BadFromStateBanner } from "./concurrency/bad-from-state-banner";
 
 export { WhoseCourtIndicator } from "./status/whose-court-indicator";
 export { VerdictChip, type VerdictTone } from "./status/verdict-chip";
+export { TierBadge, toTierMember, type TierMember, type TierBadgeProps } from "./status/tier-badge";
 
 export { EvidenceTable, type EvidenceRow } from "./evidence/evidence-table";
 export { EvidenceUploadControl } from "./evidence/evidence-upload-control";

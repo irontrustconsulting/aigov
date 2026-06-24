@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMe } from "@/lib/intake";
 import { isYourCourt, resolveCourt, useSystems, usePortfolio } from "@/lib/portfolio";
-import { WhoseCourtIndicator } from "@irontrust/ui";
+import { WhoseCourtIndicator, VerdictChip, TierBadge, toTierMember } from "@irontrust/ui";
 import type { SystemRollupRead } from "@irontrust/api-client";
 
 // 1st-line roles lead with your-court; 2nd/3rd-line (assurance face) lead
@@ -148,12 +148,24 @@ function SystemCard({ system, roleKeys }: { system: SystemRollupRead; roleKeys: 
           const court = resolveCourt(useCase.blocking);
           return (
             <li key={useCase.use_case_id}>
-              {useCase.title} ({useCase.state})
+              <Link href={`/use-cases/${useCase.use_case_id}`} className="text-ink font-medium">
+                {useCase.title}
+              </Link>
+              <span className="ml-2">
+                <VerdictChip value={useCase.state} />
+              </span>
+              {useCase.eu_tier && (
+                <span className="ml-2">
+                  <TierBadge value={toTierMember(useCase.eu_tier)} variant="compact" />
+                </span>
+              )}
               {court && (
-                <WhoseCourtIndicator
-                  partyLabel={court.partyLabel}
-                  isYourCourt={isYourCourt(court, roleKeys)}
-                />
+                <span className="ml-2">
+                  <WhoseCourtIndicator
+                    partyLabel={court.partyLabel}
+                    isYourCourt={isYourCourt(court, roleKeys)}
+                  />
+                </span>
               )}
             </li>
           );

@@ -21,7 +21,7 @@ function formatBytes(bytes: number | null): string {
  */
 export function EvidenceManifestTable({ entries, onDownload }: Props) {
   if (entries.length === 0) {
-    return <p className="text-text-muted text-sm">No evidence in this manifest.</p>;
+    return <p className="text-ink-muted text-sm">No evidence in this manifest.</p>;
   }
 
   return (

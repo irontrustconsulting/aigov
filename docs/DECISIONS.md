@@ -423,26 +423,49 @@ Primary action, focus ring, brand mark, your-court edge-bar. 9.30:1 on `--paper`
 ↳ refs: FE-14, INV-62
 
 **D-47** · Contrast gate test as build-blocking CI check (WCAG enforcement hook, SV-7)
+
 `packages/tokens/src/__tests__/contrast.test.ts` computes the WCAG 2.1 relative-luminance formula directly against token values and fails the build on any text pairing under 4.5:1 or graphical pairing under 3:1. This is the executable form of INV-62. Rationale: invariant 9 (now INV-62) must be verified, not merely asserted — a future token edit that silently breaks contrast is a regression the human eye would not catch without a CI gate.
 **Rejected:** relying on jest-axe colour-contrast (jsdom has no real layout, so `getComputedStyle` on elements with no real paint reports "incomplete" rather than pass/fail — an unreliable signal).
 ↳ refs: INV-62, FE-14, V-7
+
+**D-48** · Tier-magnitude channel (`--tier-*`) is a fifth semantic channel, orthogonal to verdict-tone (amends FE-16)
+`eu_ai_act_tier` has four magnitude tiers (PROHIBITED → MINIMAL) and two resolution states (UNCLASSIFIED, REQUIRES_CONTEXT). The magnitude tiers need a dedicated `--tier-*` channel (navy-slate family, four fill/text pairs) because their semantics are ordinal risk magnitude, not verdict classification. The resolution states (inherently verdict-class: "not yet known") re-use `--verdict-neutral` and `--verdict-attention` — the `--verdict-*` channel already covers "unknown / needs action" semantics. `VerdictChip` drops the tier branch (WI-3): mixing magnitude display into the verdict chip would violate channel orthogonality and confuse the two distinct meaning spaces.
+**Rejected:** routing all six tier values through `VerdictChip` on `--verdict-*` (blurs magnitude-vs-verdict distinction; no four-step magnitude ladder available in six verdict tones); reusing `--sev-*` (severity is a future-facing channel with no current referent per SV-1 — borrowing it prematurely would collide when `--sev-*` ships).
+**toTierMember() wire-format bridge:** The DB enum (`high_risk`, `limited_risk`, etc.) is snake_case, while the display type `TierMember` uses magnitude words (`HIGH`, `LIMITED`). The `toTierMember()` utility in `tier-badge.tsx` owns this mapping; callers must use it rather than `.toUpperCase()`.
+↳ origin: UI-V1-TENANT-SKIN · refs: FE-16, INV-64, INV-56
 
 **OPEN-V1** · Dark skin timing
 Token layer reserves dark slots now. Dark skin ships as a later `skin-dark.css` override, not a rework. No timeline set; deferred until user research on operator console use in low-light environments.
 ↳ refs: D-44, FE-14
 
-**OPEN-V2** · Lucide icon set selected (ISC) — resolved at V0 implementation
-Lucide (ISC, outline-first, outline-only) selected over Phosphor (MIT) and Tabler-outline (MIT) for ecosystem traction and outline-default posture. `lucide-react` installed in `apps/tenant` and `apps/operator`. V-6 confirmed ISC is within the permissive gate. Specific icon assignments per surface deferred to V1/V2.
+**OPEN-V2** · Lucide icon set selected (ISC) — resolved at V0 implementation ✅ CLOSED
+Lucide (ISC, outline-first, outline-only) selected over Phosphor (MIT) and Tabler-outline (MIT) for ecosystem traction and outline-default posture. `lucide-react` installed in `apps/tenant`, `apps/operator`, and `packages/ui` (added at V1 for TierBadge `Ban` icon). V-6 confirmed ISC is within the permissive gate. Icon assignments per surface finalised at V1: `Ban` for PROHIBITED tier, `QueueRow` for review-queue entries.
 ↳ refs: V-6, D-43
 
-**OPEN-V3** · Whether adoption density mode needs named sub-tokens or is purely spacing-driven
-Resolve at V1 against the real adoption surfaces (`systems/new`, `dashboard`). Current implementation is spacing-default-driven within the tenant skin.
+**OPEN-V3** · Adoption density mode is purely composition-driven — no named sub-tokens needed ✅ CLOSED
+Resolved at V1 against adoption surfaces (`systems/new`, `dashboard`, `review-queue`). `QueueRow density="compact"` / `density="comfortable"` props deliver both modes via class composition; no `--density-*` CSS variable is declared in `skin-tenant.css`. Guard added to `skins.test.ts` (V1DD-3).
 ↳ refs: FE-18, D-45
 
 **OPEN-V4** · Per-surface visual specifics for F1–F8
 Just-in-time at V1/V2. `UX §5` will be populated per surface as visual design is validated.
 ↳ refs: FE-14, UX §5
 
-**OPEN-V5** · `--brand` vs `--verdict-positive` isoluminance (1.36:1) on a yours-and-approved row; `--brand`-token co-occurrence
-OPEN per design doc N-2 / N-5. V1 usability check. Split or nudge the hue only if testing shows confusion. Current mitigation: form separation (edge-bar vs chip-on-tint).
+**OPEN-V5** · `--brand` vs `--verdict-positive` isoluminance — resolved at V1 ✅ CLOSED
+VV-7 confirms 1.30:1 ratio between `--brand` (#1E4651) and `--verdict-positive` (#2F5D4A). Form differentiation is the mitigation: `WhoseCourtIndicator` uses a left edge-bar while `VerdictChip` is a rounded badge — two distinct visual affordances, not just colour. No token split or nudge at this time. Reopens only if user testing on the portfolio hub or review queue shows confusion.
 ↳ refs: FE-15, FE-16, FE-18
+
+**DF-V1-1** · `downgraded_unsubstantiated` distinct marker = inline "downgraded" tag (resolves OPEN-V6)
+Coverage matrix verdict `downgraded_unsubstantiated` renders as `<VerdictChip value="PARTIAL">` (attention tone) plus `<span data-verdict="downgraded">downgraded</span>`. Rationale: shares the PARTIAL attention signal (accurate — the control IS partially covered) while providing a distinct text tag for the downgrade reason. Rejected: hatched/diagonal fill (CSS-only, inaccessible without extra ARIA; brittle across printers); separate "DOWNGRADED" chip member (would require new VerdictChip key for a coverage-specific concept).
+↳ origin: UI-V1-TENANT-SKIN · refs: INV-51, FE-16
+
+**DF-V1-2** · `--sev-*` channel deferred (OPEN-V7 opened)
+The severity channel (`--sev-*`) was reserved at V0 but has no current referent (no severity field in any schema at HEAD). Deferred until a severity concept materialises in the data model. Do not borrow `--sev-*` for tier or any other purpose while its semantics are unresolved.
+↳ origin: UI-V1-TENANT-SKIN · refs: D-48, SV-1
+
+**OPEN-V6** · `downgraded_unsubstantiated` distinct marker — resolved at V1 ✅ CLOSED
+See DF-V1-1.
+↳ refs: INV-51, FE-16
+
+**OPEN-V7** · `--sev-*` severity channel — no current data-model referent; deferred
+Reserved in the token layer at V0. No severity field exists in any schema at HEAD. Deferred until a severity concept materialises. Open until a schema change introduces a severity dimension.
+↳ refs: D-48, SV-1

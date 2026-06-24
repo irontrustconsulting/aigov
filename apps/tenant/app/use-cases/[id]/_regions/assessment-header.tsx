@@ -1,6 +1,6 @@
 "use client";
 
-import { SodAction, WhoseCourtIndicator } from "@irontrust/ui";
+import { SodAction, WhoseCourtIndicator, TierBadge, toTierMember } from "@irontrust/ui";
 import { useReEvaluate } from "@/lib/assess";
 import { isYourCourt, type ResolvedCourt } from "@/lib/portfolio";
 import type { EUAIActTier } from "@irontrust/api-client";
@@ -40,7 +40,7 @@ export function AssessmentHeader({
       <h1>{useCaseTitle}</h1>
       {euTier && (
         <p aria-label="eu-tier">
-          EU AI Act tier: <strong>{euTier}</strong>
+          <TierBadge value={toTierMember(euTier)} variant="compact" />
         </p>
       )}
 

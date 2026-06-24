@@ -108,3 +108,27 @@ describe("primitives.css — radius tokens", () => {
   test("--radius-md = 0.375rem (6px)", () => expect(vars["radius-md"]).toBe("0.375rem"));
   test("--radius-lg = 0.5rem (8px)", () => expect(vars["radius-lg"]).toBe("0.5rem"));
 });
+
+describe("primitives.css — tier-magnitude channel tokens (FE-16 amended D-48)", () => {
+  const expected: Record<string, string> = {
+    "tier-prohibited-fill": "#1C2A4F",
+    "tier-prohibited-text": "#FFFFFF",
+    "tier-high-fill": "#2E4A78",
+    "tier-high-text": "#FFFFFF",
+    "tier-limited-fill": "#E7ECF5",
+    "tier-limited-text": "#36507D",
+    "tier-minimal-fill": "#EDEFF4",
+    "tier-minimal-text": "#4A5878",
+  };
+  for (const [token, value] of Object.entries(expected)) {
+    test(`--${token} = ${value}`, () => {
+      expect(vars[token]).toBe(value);
+    });
+  }
+  test("exactly 4 tier magnitudes (fill+text pairs)", () => {
+    const tierFills = Object.keys(vars).filter((k) => k.startsWith("tier-") && k.endsWith("-fill"));
+    const tierTexts = Object.keys(vars).filter((k) => k.startsWith("tier-") && k.endsWith("-text"));
+    expect(tierFills).toHaveLength(4);
+    expect(tierTexts).toHaveLength(4);
+  });
+});

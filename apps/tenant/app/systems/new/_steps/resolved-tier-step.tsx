@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Button, FreeText, SingleSelect, SodAction, type SelectOption } from "@irontrust/ui";
+import { Button, FreeText, SingleSelect, SodAction, TierBadge, toTierMember, type SelectOption } from "@irontrust/ui";
 import type { ClassificationRead, EUAIActTier } from "@irontrust/api-client";
 import { useEUSubcategories, useMe, useOverrideClassification } from "@/lib/intake";
 
@@ -27,6 +27,7 @@ export interface ResolvedTierStepProps {
  *
  * The override control is wrapped in SodAction, barred for anyone who
  * isn't system_owner (FE-8) — structural, not a transient block.
+ * TierBadge card variant: tier hero, basis, override ladder (INV-64).
  */
 export function ResolvedTierStep({
   useCaseId,
@@ -58,52 +59,66 @@ export function ResolvedTierStep({
     );
   }
 
+  const tierBasis = (
+    <>
+      {classification.rationale && <p>{classification.rationale}</p>}
+      {classification.basis_subcategory_code && (
+        <p>Subcategory: {classification.basis_subcategory_code}</p>
+      )}
+      {classification.basis_legal_ref && (
+        <p>Legal basis: {classification.basis_legal_ref}</p>
+      )}
+    </>
+  );
+
+  const overrideForm = !overriding ? (
+    <Button type="button" variant="secondary" onClick={() => setOverriding(true)}>
+      Override classification
+    </Button>
+  ) : (
+    <form aria-label="override-form" onSubmit={submitOverride}>
+      <SingleSelect
+        id="override-tier"
+        label="Tier"
+        value={tier}
+        options={TIER_OPTIONS}
+        onChange={(v) => {
+          setTier(v as EUAIActTier);
+          setSubcategoryCode("");
+        }}
+      />
+      <SingleSelect
+        id="override-subcategory"
+        label="Subcategory"
+        value={subcategoryCode}
+        options={subcategoryOptions}
+        onChange={setSubcategoryCode}
+      />
+      <FreeText
+        id="override-justification"
+        label="Justification (optional)"
+        value={justification}
+        onChange={setJustification}
+      />
+      {overrideMutation.isError && (
+        <p role="alert">Could not apply the override. Check the tier/subcategory pair and try again.</p>
+      )}
+      <Button type="submit" disabled={!subcategoryCode || overrideMutation.isPending}>
+        Confirm override
+      </Button>
+    </form>
+  );
+
   return (
     <section aria-label="resolved-tier">
-      <h2>Tier: {classification.tier}</h2>
-      <p>{classification.rationale}</p>
-      {classification.basis_subcategory_code && <p>Subcategory: {classification.basis_subcategory_code}</p>}
-      {classification.basis_legal_ref && <p>Legal basis: {classification.basis_legal_ref}</p>}
-
-      <SodAction barred={!isSystemOwner}>
-        {!overriding ? (
-          <Button type="button" variant="secondary" onClick={() => setOverriding(true)}>
-            Override classification
-          </Button>
-        ) : (
-          <form aria-label="override-form" onSubmit={submitOverride}>
-            <SingleSelect
-              id="override-tier"
-              label="Tier"
-              value={tier}
-              options={TIER_OPTIONS}
-              onChange={(v) => {
-                setTier(v as EUAIActTier);
-                setSubcategoryCode("");
-              }}
-            />
-            <SingleSelect
-              id="override-subcategory"
-              label="Subcategory"
-              value={subcategoryCode}
-              options={subcategoryOptions}
-              onChange={setSubcategoryCode}
-            />
-            <FreeText
-              id="override-justification"
-              label="Justification (optional)"
-              value={justification}
-              onChange={setJustification}
-            />
-            {overrideMutation.isError && (
-              <p role="alert">Could not apply the override. Check the tier/subcategory pair and try again.</p>
-            )}
-            <Button type="submit" disabled={!subcategoryCode || overrideMutation.isPending}>
-              Confirm override
-            </Button>
-          </form>
-        )}
-      </SodAction>
+      <TierBadge
+        value={toTierMember(classification.tier)}
+        variant="card"
+        basis={tierBasis}
+        overrideLadder={
+          <SodAction barred={!isSystemOwner}>{overrideForm}</SodAction>
+        }
+      />
 
       <Button type="button" onClick={onContinue}>
         Continue

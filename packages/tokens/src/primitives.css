@@ -111,6 +111,18 @@
   --sev-high-bg: #F8ECE8;             /* dark: TBD */
   --sev-critical-ink: #FFFFFF;         /* dark: TBD */
   --sev-critical-bg: #872B22;         /* dark: TBD */
+
+  /* ── Tier-magnitude channel (FE-16 amended D-48) ────────────────────── */
+  /* PROHIBITED/HIGH: solid fill. LIMITED/MINIMAL: tint + outline.         */
+  /* Navy-slate family — stays distinct from warm --sev-* (OPEN-V7).       */
+  --tier-prohibited-fill: #1C2A4F;   /* dark: TBD — deepest; supreme (D-7, INV-64) */
+  --tier-prohibited-text: #FFFFFF;   /* dark: TBD */
+  --tier-high-fill: #2E4A78;         /* dark: TBD — filled magnitude */
+  --tier-high-text: #FFFFFF;         /* dark: TBD */
+  --tier-limited-fill: #E7ECF5;      /* dark: TBD — outline variant; tint fill */
+  --tier-limited-text: #36507D;      /* dark: TBD */
+  --tier-minimal-fill: #EDEFF4;      /* dark: TBD — affirmative only (INV-12) */
+  --tier-minimal-text: #4A5878;      /* dark: TBD */
 }
 
 /* ── Motion: honour prefers-reduced-motion (FE-19) ────────────────────── */

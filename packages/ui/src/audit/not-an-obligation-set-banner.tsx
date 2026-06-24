@@ -13,7 +13,11 @@ export function NotAnObligationSetBanner({ unaddressedControls }: Props) {
     <div
       role="note"
       aria-label="not-an-obligation-set-banner"
-      className="bg-warning-subtle border-warning text-warning-fg rounded border px-4 py-3 text-sm"
+      className="bg-surface px-4 py-3 text-sm"
+      style={{
+        borderLeft: "3px solid var(--verdict-attention)",
+        color: "var(--verdict-attention)",
+      }}
     >
       <p className="font-medium">
         Coverage gaps shown — not an obligation set (applicability layer pending).

@@ -2,8 +2,10 @@ import { render } from "@testing-library/react";
 import { VerdictChip, TONE_MAP } from "../verdict-chip";
 import { expectNoAxeViolations } from "../../../test-utils/axe";
 
-/** Live members per V-5 pg_enum dump. Any new member added to the DB must
- * appear here and in TONE_MAP — the test will catch the gap. */
+/**
+ * Live members per V-5 pg_enum dump (5 enums — eu_ai_act_tier removed at
+ * V1, migrated to TierBadge per D-48/INV-64). 28 enum members across 5 enums.
+ */
 const LIVE_MEMBERS: Record<string, string[]> = {
   assessment_status: ["APPROVED", "DRAFT", "IN_REVIEW", "NEEDS_REFRESH"],
   lifecycle_state: [
@@ -11,7 +13,6 @@ const LIVE_MEMBERS: Record<string, string[]> = {
     "PENDING_AUTHORISATION", "PRODUCT_CHECK", "REQUESTED", "RETIRED",
     "TREATMENT_PENDING", "UNDER_ASSESSMENT", "VENDOR_CHECK",
   ],
-  eu_ai_act_tier: ["HIGH", "LIMITED", "MINIMAL", "PROHIBITED", "REQUIRES_CONTEXT", "UNCLASSIFIED"],
   approval_status: ["APPROVED", "EXPIRED", "NOT_STARTED", "REJECTED", "UNDER_REVIEW"],
   coverage_status: ["OPEN", "PARTIAL", "SATISFIED"],
   classification_status: ["APPROVED", "CHANGES_REQUESTED", "NEEDS_REFRESH", "PENDING_REVIEW"],
@@ -76,6 +77,14 @@ describe("VerdictChip — renders chip per tone (via data-tone attribute)", () =
 
   test("unknown member renders fallback chip with data-tone=unknown (no throw)", () => {
     const { container } = render(<VerdictChip value="UNKNOWN_FUTURE_STATE" />);
+    expect((container.firstChild as HTMLElement).dataset.tone).toBe("unknown");
+  });
+});
+
+describe("VerdictChip — eu_ai_act_tier members render unknown fallback (D-48/INV-64)", () => {
+  const TIER_MEMBERS = ["UNCLASSIFIED", "HIGH", "LIMITED", "MINIMAL", "REQUIRES_CONTEXT", "PROHIBITED"];
+  test.each(TIER_MEMBERS)("%s renders data-tone=unknown (not mapped in VerdictChip)", (member) => {
+    const { container } = render(<VerdictChip value={member} />);
     expect((container.firstChild as HTMLElement).dataset.tone).toBe("unknown");
   });
 });

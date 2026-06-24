@@ -71,3 +71,9 @@ describe("neither skin introduces new @theme keys (additive-only contract, FE-14
     expect(operatorCss).not.toMatch(/@theme\s*\{/);
   });
 });
+
+describe("skin-tenant.css — density is composition, not tokens (V1DD-3/D-45)", () => {
+  test("tenant skin declares no --density-* CSS variable", () => {
+    expect(tenantCss).not.toMatch(/--density-/);
+  });
+});

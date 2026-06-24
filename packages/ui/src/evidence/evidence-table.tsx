@@ -32,7 +32,7 @@ interface Props {
  */
 export function EvidenceTable({ items, onDownload, onDelete }: Props) {
   if (items.length === 0) {
-    return <p className="text-text-muted text-sm">No evidence uploaded yet.</p>;
+    return <p className="text-ink-muted text-sm">No evidence uploaded yet.</p>;
   }
 
   return (

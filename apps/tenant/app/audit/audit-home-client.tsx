@@ -113,7 +113,7 @@ function AuditHome() {
               setFrameworkFilter(e.target.value as Framework | "");
               setFrameworkExportEnabled(false);
             }}
-            className="border-border rounded border px-2 py-1 text-sm"
+            className="border-hairline rounded border px-2 py-1 text-sm"
           >
             <option value="">— Select framework —</option>
             {FRAMEWORKS.map((f) => (
@@ -126,7 +126,7 @@ function AuditHome() {
           <button
             type="button"
             disabled={!frameworkFilter || exportQuery.isFetching}
-            className="border-border rounded border px-3 py-1 text-sm disabled:opacity-50"
+            className="border-hairline rounded border px-3 py-1 text-sm disabled:opacity-50"
             onClick={() => setFrameworkExportEnabled(true)}
           >
             {exportQuery.isFetching ? "Generating…" : "Generate framework audit pack"}
@@ -154,7 +154,7 @@ function AuditHome() {
             <Link href="/systems" className="underline">
               System audit packs →
             </Link>
-            <span className="text-text-muted ml-2">
+            <span className="text-ink-muted ml-2">
               (navigate to a system to generate its pack)
             </span>
           </li>
@@ -162,7 +162,7 @@ function AuditHome() {
             <Link href="/use-cases" className="underline">
               Use-case audit packs →
             </Link>
-            <span className="text-text-muted ml-2">
+            <span className="text-ink-muted ml-2">
               (navigate to a use case to generate its pack)
             </span>
           </li>

@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMe, useReviewQueue } from "@/lib/assess";
+import { QueueRow, TierBadge, toTierMember } from "@irontrust/ui";
 
 /**
  * Reviewer AIIA review queue (UI-F4-ASSURE WI-1).
@@ -33,6 +34,7 @@ export function ReviewQueueClient() {
 
 function ReviewQueueList() {
   const queue = useReviewQueue();
+  const router = useRouter();
 
   if (queue.isLoading) return <p>Loading review queue…</p>;
   if (queue.isError) return <p role="alert">Could not load the review queue.</p>;
@@ -52,23 +54,32 @@ function ReviewQueueList() {
     <main aria-label="review-queue">
       <h1>Review queue</h1>
       <p>{entries.length} assessment{entries.length !== 1 ? "s" : ""} awaiting review.</p>
-      <ol aria-label="review-queue-entries">
+      <div aria-label="review-queue-entries" role="list">
         {entries.map((entry) => (
-          <li key={entry.assessment_id} aria-label="queue-entry">
-            <Link href={`/use-cases/${entry.use_case_id}`} aria-label={`Review use case`}>
-              <span aria-label="tier">{entry.tier_snapshot}</span>
-            </Link>
-            {entry.submitted_by_name && (
-              <span aria-label="submitted-by">Submitted by {entry.submitted_by_name}</span>
-            )}
+          <QueueRow
+            key={entry.assessment_id}
+            density="compact"
+            onClick={() => router.push(`/use-cases/${entry.use_case_id}`)}
+          >
+            <span aria-label="queue-entry" className="flex items-center gap-2">
+              <TierBadge
+                value={toTierMember(entry.tier_snapshot)}
+                variant="compact"
+              />
+              {entry.submitted_by_name && (
+                <span aria-label="submitted-by" className="text-ink-muted">
+                  {entry.submitted_by_name}
+                </span>
+              )}
+            </span>
             {entry.submitted_at && (
-              <time dateTime={entry.submitted_at} aria-label="submitted-at">
+              <time dateTime={entry.submitted_at} aria-label="submitted-at" className="text-ink-muted">
                 {new Date(entry.submitted_at).toLocaleDateString()}
               </time>
             )}
-          </li>
+          </QueueRow>
         ))}
-      </ol>
+      </div>
     </main>
   );
 }

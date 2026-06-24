@@ -82,7 +82,9 @@ describe("ResolvedTierStep", () => {
       { wrapper }
     );
 
-    expect(screen.getByText(/tier: high_risk/i)).toBeInTheDocument();
+    // TierBadge card renders the display label, not the raw DB tier string
+    // toTierMember("high_risk") → "HIGH" → data-tier="high"
+    expect(document.querySelector("[data-tier='high'][data-variant='card']")).not.toBeNull();
     expect(screen.getByText("Mapped via product category")).toBeInTheDocument();
     expect(screen.getByText(/Art\. 6\(2\)/)).toBeInTheDocument();
 
@@ -103,7 +105,9 @@ describe("ResolvedTierStep", () => {
       { wrapper }
     );
 
-    await waitFor(() => expect(screen.getByText(/tier: high_risk/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(document.querySelector("[data-tier='high'][data-variant='card']")).not.toBeNull()
+    );
     expect(screen.queryByRole("button", { name: /override classification/i })).not.toBeInTheDocument();
   });
 
