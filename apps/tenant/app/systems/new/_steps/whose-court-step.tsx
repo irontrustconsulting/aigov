@@ -25,8 +25,8 @@ export function WhoseCourtStep({ useCaseId }: { useCaseId: string }) {
 
   if (!blocking) {
     return (
-      <section aria-label="whose-court">
-        <p>Nothing is blocking this use case right now.</p>
+      <section aria-label="whose-court" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
+        <p className="text-ink-muted text-sm">Nothing is blocking this use case right now.</p>
       </section>
     );
   }
@@ -35,9 +35,9 @@ export function WhoseCourtStep({ useCaseId }: { useCaseId: string }) {
     RESPONSIBLE_PARTY_COPY[blocking.responsible_party] ?? `With ${blocking.responsible_party}.`;
 
   return (
-    <section aria-label="whose-court">
-      <p>{headline}</p>
-      <p className="text-text-muted text-sm">{blocking.reason}</p>
+    <section aria-label="whose-court" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
+      <p className="text-sm">{headline}</p>
+      <p className="text-ink-muted text-sm">{blocking.reason}</p>
     </section>
   );
 }

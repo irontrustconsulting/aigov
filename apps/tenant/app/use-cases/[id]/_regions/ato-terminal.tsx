@@ -26,35 +26,35 @@ export function AtoTerminal({ useCaseId }: Props) {
   const isDrifted = ato.live_state !== "authorised";
 
   return (
-    <section aria-label="ato-terminal">
-      <h2>Authority to Operate</h2>
+    <section aria-label="ato-terminal" className="border-hairline rounded-lg border p-4 space-y-4">
+      <h2 className="text-lg font-semibold">Authority to Operate</h2>
 
       {isDrifted && (
-        <p role="alert" aria-label="ato-drift-caveat">
+        <p role="alert" aria-label="ato-drift-caveat" className="text-sm">
           Note: the deployment status has changed since this ATO was issued
           (current state: <strong>{ato.live_state}</strong>). Review the
           current lifecycle status before relying on this record.
         </p>
       )}
 
-      <dl>
-        <dt>Tier</dt>
-        <dd>{ato.tier}</dd>
+      <dl className="space-y-2 text-sm">
+        <dt className="font-medium">Tier</dt>
+        <dd className="text-ink-muted">{ato.tier}</dd>
 
-        <dt>Authorised by</dt>
-        <dd>{ato.authorised_by_name ?? "Unknown"}</dd>
+        <dt className="font-medium">Authorised by</dt>
+        <dd className="text-ink-muted">{ato.authorised_by_name ?? "Unknown"}</dd>
 
-        <dt>Authorised at</dt>
-        <dd>{new Date(ato.authorised_at).toLocaleString()}</dd>
+        <dt className="font-medium">Authorised at</dt>
+        <dd className="text-ink-muted">{new Date(ato.authorised_at).toLocaleString()}</dd>
 
-        <dt>Residual risk</dt>
-        <dd>{ato.residual_risk_statement}</dd>
+        <dt className="font-medium">Residual risk</dt>
+        <dd className="text-ink-muted">{ato.residual_risk_statement}</dd>
 
-        <dt>Assessment version</dt>
-        <dd>{ato.assessment_version}</dd>
+        <dt className="font-medium">Assessment version</dt>
+        <dd className="text-ink-muted">{ato.assessment_version}</dd>
 
-        <dt>Submission round</dt>
-        <dd>{ato.submission_round}</dd>
+        <dt className="font-medium">Submission round</dt>
+        <dd className="text-ink-muted">{ato.submission_round}</dd>
       </dl>
     </section>
   );

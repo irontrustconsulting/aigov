@@ -23,31 +23,31 @@ export function SignOffPanel({ useCaseId, classification }: Props) {
   const signOff = useSignOff(useCaseId);
 
   return (
-    <section aria-label="sign-off-panel">
-      <h2>Classification sign-off</h2>
+    <section aria-label="sign-off-panel" className="border-hairline rounded-lg border p-4 space-y-4">
+      <h2 className="text-lg font-semibold">Classification sign-off</h2>
 
-      <dl>
-        <dt>Proposed tier</dt>
-        <dd>{classification.tier}</dd>
+      <dl className="space-y-2 text-sm">
+        <dt className="font-medium">Proposed tier</dt>
+        <dd className="text-ink-muted">{classification.tier}</dd>
 
         {classification.rationale && (
           <>
-            <dt>Rationale</dt>
-            <dd>{classification.rationale}</dd>
+            <dt className="font-medium">Rationale</dt>
+            <dd className="text-ink-muted">{classification.rationale}</dd>
           </>
         )}
 
         {classification.basis_subcategory_code && (
           <>
-            <dt>Basis</dt>
-            <dd>{classification.basis_subcategory_code}</dd>
+            <dt className="font-medium">Basis</dt>
+            <dd className="text-ink-muted">{classification.basis_subcategory_code}</dd>
           </>
         )}
 
         {classification.overridden && (
           <>
-            <dt>Override</dt>
-            <dd>This classification has been manually overridden.</dd>
+            <dt className="font-medium">Override</dt>
+            <dd className="text-ink-muted">This classification has been manually overridden.</dd>
           </>
         )}
       </dl>
@@ -63,6 +63,8 @@ export function SignOffPanel({ useCaseId, classification }: Props) {
         }}
         disabled={signOff.isPending}
         aria-busy={signOff.isPending}
+        className="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        style={{ background: "var(--color-brand)" }}
       >
         {signOff.isPending ? "Signing off…" : "Sign off classification"}
       </button>

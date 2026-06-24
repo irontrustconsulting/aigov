@@ -46,16 +46,16 @@ export function ReviewPanel({ useCaseId, assessmentId, assessmentLockVersion }: 
   }
 
   return (
-    <section aria-label="review-panel">
-      <h2>Review assessment</h2>
+    <section aria-label="review-panel" className="border-hairline rounded-lg border p-4 space-y-4">
+      <h2 className="text-lg font-semibold">Review assessment</h2>
 
       {error === "stale" && <StaleLockBanner onReload={() => setError(null)} />}
       {error === "bad_state" && <BadFromStateBanner />}
 
-      <fieldset>
-        <legend>Decision</legend>
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Decision</legend>
 
-        <label>
+        <label className="flex items-center gap-2 text-sm">
           <input
             type="radio"
             name="review-decision"
@@ -66,7 +66,7 @@ export function ReviewPanel({ useCaseId, assessmentId, assessmentLockVersion }: 
           Approve
         </label>
 
-        <label>
+        <label className="flex items-center gap-2 text-sm">
           <input
             type="radio"
             name="review-decision"
@@ -79,13 +79,14 @@ export function ReviewPanel({ useCaseId, assessmentId, assessmentLockVersion }: 
       </fieldset>
 
       {requiresNote && (
-        <label>
-          <span>Note (required when requesting changes)</span>
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">Note (required when requesting changes)</span>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={4}
             aria-required="true"
+            className="border-hairline w-full rounded border px-3 py-2 text-sm"
           />
         </label>
       )}
@@ -94,6 +95,8 @@ export function ReviewPanel({ useCaseId, assessmentId, assessmentLockVersion }: 
         onClick={handleSubmit}
         disabled={!canSubmit || review.isPending}
         aria-busy={review.isPending}
+        className="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        style={{ background: "var(--color-brand)" }}
       >
         {review.isPending ? "Submitting…" : "Submit review"}
       </button>

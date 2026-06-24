@@ -39,7 +39,7 @@ export function PrefillStep({ systemId, onContinue }: PrefillStepProps) {
     // aid, not a gate (UX-1: a gate surfaces only when the owner's action
     // is required).
     return (
-      <section aria-label="prefill-confirm">
+      <section aria-label="prefill-confirm" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
         <Button type="button" onClick={onContinue}>
           Continue
         </Button>
@@ -50,11 +50,11 @@ export function PrefillStep({ systemId, onContinue }: PrefillStepProps) {
   const facts = prefill.data?.facts ?? [];
 
   return (
-    <section aria-label="prefill-confirm">
+    <section aria-label="prefill-confirm" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
       {facts.length > 0 && (
-        <ul>
+        <ul className="space-y-3">
           {facts.map((fact: CatalogueFactOut) => (
-            <li key={fact.key}>
+            <li key={fact.key} className="border-hairline rounded-lg border p-4">
               <PrefillWithBasis
                 valueLabel={amended[fact.key] ?? factValueLabel(fact.value)}
                 basis={

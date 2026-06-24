@@ -39,21 +39,21 @@ export function AiiaBody({ assessmentId, assessmentStatus, branch }: Props) {
   }
 
   return (
-    <section aria-label="assessment-body">
+    <section aria-label="assessment-body" className="space-y-8">
       {sections.map((section) => {
         const sectionItems = itemsBySection.get(section.section_key) ?? [];
         return (
           <div key={section.section_key} aria-label={`section-${section.section_key}`}>
-            <h2>
+            <h2 className="mb-2 text-lg font-semibold">
               {section.title}
               <span aria-label="applicability"> [{section.applicability}]</span>
             </h2>
-            {section.prompt && <p>{section.prompt}</p>}
+            {section.prompt && <p className="text-ink-muted mb-3 text-sm">{section.prompt}</p>}
 
             {sectionItems.length === 0 ? (
-              <p>No items in this section yet.</p>
+              <p className="text-ink-muted text-sm">No items in this section yet.</p>
             ) : (
-              <ul>
+              <ul className="space-y-3">
                 {sectionItems.map((item) => (
                   <li key={item.id}>
                     <ItemCard
@@ -74,8 +74,8 @@ export function AiiaBody({ assessmentId, assessmentStatus, branch }: Props) {
       {/* Items with no section_key (register facts etc.) */}
       {(itemsBySection.get(null) ?? []).length > 0 && (
         <div aria-label="section-unsectioned">
-          <h2>Other items</h2>
-          <ul>
+          <h2 className="mb-2 text-lg font-semibold">Other items</h2>
+          <ul className="space-y-3">
             {(itemsBySection.get(null) ?? []).map((item) => (
               <li key={item.id}>
                 <ItemCard

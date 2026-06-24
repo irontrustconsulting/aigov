@@ -32,9 +32,9 @@ export function EvidenceHomeClient() {
 
   if (!hasGovRole) {
     return (
-      <main aria-label="evidence-repository">
-        <h1>Evidence repository</h1>
-        <p>Evidence is not available for your current role.</p>
+      <main aria-label="evidence-repository" className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+        <h1 className="text-2xl font-semibold">Evidence repository</h1>
+        <p className="text-ink-muted text-sm">Evidence is not available for your current role.</p>
       </main>
     );
   }
@@ -85,12 +85,12 @@ function EvidenceRepository({ canWrite }: { canWrite: boolean }) {
   }));
 
   return (
-    <main aria-label="evidence-repository">
-      <h1>Evidence repository</h1>
+    <main aria-label="evidence-repository" className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+      <h1 className="text-2xl font-semibold">Evidence repository</h1>
 
       {canWrite && (
-        <section aria-label="upload-evidence">
-          <h2>Upload evidence</h2>
+        <section aria-label="upload-evidence" className="border-hairline rounded-lg border p-4">
+          <h2 className="mb-2 text-lg font-semibold">Upload evidence</h2>
           <EvidenceUploadControl
             onUpload={handleUpload}
             isPending={uploadMutation.isPending}
@@ -99,8 +99,8 @@ function EvidenceRepository({ canWrite }: { canWrite: boolean }) {
         </section>
       )}
 
-      <section aria-label="evidence-list">
-        <h2>All evidence</h2>
+      <section aria-label="evidence-list" className="mt-6">
+        <h2 className="mb-2 text-lg font-semibold">All evidence</h2>
         <EvidenceTable
           items={items}
           onDownload={(id) => setPendingDownloadId(id)}

@@ -110,7 +110,8 @@ export function ResolvedTierStep({
   );
 
   return (
-    <section aria-label="resolved-tier">
+    <section aria-label="resolved-tier" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
+      <h2 className="text-lg font-semibold">Classification result</h2>
       <TierBadge
         value={toTierMember(classification.tier)}
         variant="card"

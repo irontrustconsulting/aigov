@@ -33,9 +33,9 @@ export function AuditHomeClient() {
 
   if (roleKeys.length === 0) {
     return (
-      <main aria-label="audit-home">
-        <h1>Audit programme</h1>
-        <p>
+      <main aria-label="audit-home" className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+        <h1 className="text-2xl font-semibold">Audit programme</h1>
+        <p className="text-ink-muted text-sm">
           Your account doesn&apos;t hold a governance role. Control coverage and audit packs are not
           available. Contact a tenant admin to be assigned a governance role.
         </p>
@@ -65,13 +65,13 @@ function AuditHome() {
   }, [pendingDownloadId, detailQuery.data]);
 
   return (
-    <main aria-label="audit-home">
-      <h1>Audit programme</h1>
+    <main aria-label="audit-home" className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+      <h1 className="text-2xl font-semibold">Audit programme</h1>
 
       {/* ----------------------------------------------------------------- */}
       {/* Tenant coverage matrix                                              */}
       {/* ----------------------------------------------------------------- */}
-      <section aria-label="tenant-coverage" className="mb-8">
+      <section aria-label="tenant-coverage">
         <h2 className="mb-2 text-lg font-semibold">Tenant coverage</h2>
 
         <label className="mb-3 flex items-center gap-2 text-sm">
@@ -102,7 +102,7 @@ function AuditHome() {
       {/* ----------------------------------------------------------------- */}
       {/* Framework export                                                    */}
       {/* ----------------------------------------------------------------- */}
-      <section aria-label="framework-export" className="mb-8">
+      <section aria-label="framework-export">
         <h2 className="mb-2 text-lg font-semibold">Framework audit pack</h2>
 
         <div className="mb-3 flex gap-3">
@@ -147,7 +147,7 @@ function AuditHome() {
       {/* ----------------------------------------------------------------- */}
       {/* Pack index — navigation only, no coverage truth (DF6-9)            */}
       {/* ----------------------------------------------------------------- */}
-      <section aria-label="pack-index" className="mb-8">
+      <section aria-label="pack-index">
         <h2 className="mb-2 text-lg font-semibold">Pack index</h2>
         <ul className="space-y-1 text-sm">
           <li>

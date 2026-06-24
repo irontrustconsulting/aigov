@@ -96,9 +96,9 @@ export function AssessmentPageClient({ useCaseId }: Props) {
   // Admin gets an empty state; no gov:ALL call issued (DF2-5).
   if (branch === "admin") {
     return (
-      <section aria-label="admin-empty-state">
-        <h1>Use Case Assessment</h1>
-        <p>
+      <section aria-label="admin-empty-state" className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+        <h1 className="mb-2 text-2xl font-semibold">Use Case Assessment</h1>
+        <p className="text-ink-muted text-sm">
           Your account doesn&apos;t hold a governance role, so the assessment is not accessible.
           Contact a tenant admin to be assigned a governance role.
         </p>
@@ -157,7 +157,7 @@ function AssessmentSurface({
   const aiia = (assessmentsQuery.data ?? []).find((a) => a.type === "aiia" && a.is_current) ?? null;
 
   return (
-    <main>
+    <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <AssessmentHeader
         useCaseId={useCaseId}
         useCaseTitle={useCase.title}
@@ -261,7 +261,7 @@ function SubmitSection({
   if (!canSubmit) return null;
 
   return (
-    <section aria-label="submit-section">
+    <section aria-label="submit-section" className="border-hairline mt-6 rounded-lg border p-4">
       {submitError === "stale" && (
         <StaleLockBanner onReload={() => setSubmitError(null)} />
       )}
@@ -281,6 +281,8 @@ function SubmitSection({
           }}
           disabled={submit.isPending}
           aria-busy={submit.isPending}
+          className="rounded px-4 py-2 text-sm font-medium text-white"
+          style={{ background: "var(--color-brand)" }}
         >
           {submit.isPending ? "Submitting…" : "Submit for review"}
         </button>
@@ -313,7 +315,7 @@ function ReopenSection({
   if (branch !== "system_owner" || assessmentStatus !== "approved") return null;
 
   return (
-    <section aria-label="reopen-section">
+    <section aria-label="reopen-section" className="border-hairline mt-6 rounded-lg border p-4">
       {reopenError === "stale" && (
         <StaleLockBanner onReload={() => setReopenError(null)} />
       )}
@@ -331,6 +333,7 @@ function ReopenSection({
         }}
         disabled={reopen.isPending}
         aria-busy={reopen.isPending}
+        className="border-hairline rounded border px-3 py-1.5 text-sm"
       >
         {reopen.isPending ? "Reopening…" : "Reopen for revision"}
       </button>
@@ -353,7 +356,7 @@ function NoAssessmentState({
   if (branch === "contributor") {
     return (
       <section aria-label="assessment-empty-state">
-        <p>A system owner must start the assessment for this use case.</p>
+        <p className="text-ink-muted text-sm">A system owner must start the assessment for this use case.</p>
       </section>
     );
   }
@@ -367,7 +370,7 @@ function NoAssessmentState({
     }
     return (
       <section aria-label="assessment-empty-state">
-        <p>No assessment has been started for this use case yet.</p>
+        <p className="text-ink-muted text-sm">No assessment has been started for this use case yet.</p>
       </section>
     );
   }
@@ -375,7 +378,7 @@ function NoAssessmentState({
   if (branch === "authoriser" || branch === "auditor") {
     return (
       <section aria-label="assessment-empty-state">
-        <p>No assessment has been started for this use case yet.</p>
+        <p className="text-ink-muted text-sm">No assessment has been started for this use case yet.</p>
       </section>
     );
   }
@@ -387,7 +390,7 @@ function NoAssessmentState({
         <p role="alert">{blockedReason}</p>
       ) : (
         <>
-          <p>No assessment has been started for this use case.</p>
+          <p className="text-ink-muted text-sm">No assessment has been started for this use case.</p>
           <button
             onClick={() =>
               bootstrap.mutate(undefined, {
@@ -405,6 +408,8 @@ function NoAssessmentState({
             }
             disabled={bootstrap.isPending}
             aria-busy={bootstrap.isPending}
+            className="rounded px-4 py-2 text-sm font-medium text-white"
+            style={{ background: "var(--color-brand)" }}
           >
             {bootstrap.isPending ? "Starting…" : "Start assessment"}
           </button>

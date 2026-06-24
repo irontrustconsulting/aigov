@@ -22,9 +22,9 @@ export function ReviewQueueClient() {
 
   if (!isReviewer) {
     return (
-      <main aria-label="review-queue">
-        <h1>Review queue</h1>
-        <p>You don&apos;t have reviewer access to this queue.</p>
+      <main aria-label="review-queue" className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+        <h1 className="text-2xl font-semibold">Review queue</h1>
+        <p className="text-ink-muted text-sm">You don&apos;t have reviewer access to this queue.</p>
       </main>
     );
   }
@@ -43,18 +43,18 @@ function ReviewQueueList() {
 
   if (entries.length === 0) {
     return (
-      <main aria-label="review-queue">
-        <h1>Review queue</h1>
-        <p>No assessments are awaiting your review.</p>
+      <main aria-label="review-queue" className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+        <h1 className="text-2xl font-semibold">Review queue</h1>
+        <p className="text-ink-muted text-sm">No assessments are awaiting your review.</p>
       </main>
     );
   }
 
   return (
-    <main aria-label="review-queue">
-      <h1>Review queue</h1>
-      <p>{entries.length} assessment{entries.length !== 1 ? "s" : ""} awaiting review.</p>
-      <div aria-label="review-queue-entries" role="list">
+    <main aria-label="review-queue" className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+      <h1 className="text-2xl font-semibold">Review queue</h1>
+      <p className="text-ink-muted text-sm">{entries.length} assessment{entries.length !== 1 ? "s" : ""} awaiting review.</p>
+      <div aria-label="review-queue-entries" role="list" className="border-hairline mt-4 overflow-hidden rounded-lg border">
         {entries.map((entry) => (
           <QueueRow
             key={entry.assessment_id}

@@ -27,26 +27,26 @@ export function SystemDetailClient({ systemId }: { systemId: string }) {
   const hasGovRole = roleKeys.size > 0;
 
   return (
-    <main>
-      <h1>{rollup.data.system_name}</h1>
-      <p>
+    <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+      <h1 className="text-2xl font-semibold">{rollup.data.system_name}</h1>
+      <p className="text-ink-muted text-sm">
         {rollup.data.use_case_count} use case{rollup.data.use_case_count === 1 ? "" : "s"}
         {rollup.data.highest_tier && <> · highest tier: {rollup.data.highest_tier}</>}
       </p>
 
-      <ul aria-label="use-cases">
+      <ul aria-label="use-cases" className="space-y-3">
         {rollup.data.use_cases.map((useCase) => {
           const court = resolveCourt(useCase.blocking);
           return (
-            <li key={useCase.use_case_id}>
-              <h2>
+            <li key={useCase.use_case_id} className="border-hairline rounded-lg border p-4">
+              <h2 className="font-semibold">
                 <Link href={`/use-cases/${useCase.use_case_id}`}>{useCase.title}</Link>
               </h2>
-              <p>
+              <p className="text-ink-muted mt-1 text-sm">
                 State: {useCase.state} · EU tier: {useCase.eu_tier}
               </p>
               {court ? (
-                <p>
+                <p className="mt-1 text-sm">
                   <WhoseCourtIndicator
                     partyLabel={court.partyLabel}
                     isYourCourt={isYourCourt(court, roleKeys)}
@@ -54,7 +54,7 @@ export function SystemDetailClient({ systemId }: { systemId: string }) {
                   {court.reason}
                 </p>
               ) : (
-                <p>Nothing is blocking this use case right now.</p>
+                <p className="mt-1 text-sm">Nothing is blocking this use case right now.</p>
               )}
             </li>
           );
@@ -96,7 +96,7 @@ function SystemAuditPanels({ systemId }: { systemId: string }) {
         <button
           type="button"
           disabled={exportQuery.isFetching}
-          className="border-border rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+          className="border-hairline rounded border px-3 py-1.5 text-sm disabled:opacity-50"
           onClick={() => setExportEnabled(true)}
         >
           {exportQuery.isFetching ? "Generating…" : "Generate system audit pack"}

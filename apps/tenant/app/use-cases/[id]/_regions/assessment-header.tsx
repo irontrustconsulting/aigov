@@ -36,10 +36,10 @@ export function AssessmentHeader({
 
   return (
     <header>
-      {systemName && <p aria-label="system-name">{systemName}</p>}
-      <h1>{useCaseTitle}</h1>
+      {systemName && <p aria-label="system-name" className="text-ink-muted text-sm">{systemName}</p>}
+      <h1 className="text-2xl font-semibold">{useCaseTitle}</h1>
       {euTier && (
-        <p aria-label="eu-tier">
+        <p aria-label="eu-tier" className="flex flex-wrap items-center gap-2 text-sm mt-1">
           <TierBadge value={toTierMember(euTier)} variant="compact" />
         </p>
       )}
@@ -47,7 +47,7 @@ export function AssessmentHeader({
       {/* Auditor has no court row — they observe, not act (UI-F4-ASSURE WI-8) */}
       {branch !== "auditor" && (
         court ? (
-          <p>
+          <p className="flex flex-wrap items-center gap-2 text-sm mt-1">
             <WhoseCourtIndicator
               partyLabel={court.partyLabel}
               isYourCourt={isYourCourt(court, roleKeys)}
@@ -55,7 +55,7 @@ export function AssessmentHeader({
             {court.reason}
           </p>
         ) : (
-          <p aria-label="court-status">No blocking gate at this time.</p>
+          <p aria-label="court-status" className="text-ink-muted text-sm mt-1">No blocking gate at this time.</p>
         )
       )}
 
@@ -65,6 +65,7 @@ export function AssessmentHeader({
           onClick={() => reEvaluate.mutate()}
           disabled={reEvaluate.isPending}
           aria-busy={reEvaluate.isPending}
+          className="border-hairline rounded border px-3 py-1.5 text-sm disabled:opacity-50 mt-2"
         >
           {reEvaluate.isPending ? "Re-evaluating…" : "Re-evaluate"}
         </button>

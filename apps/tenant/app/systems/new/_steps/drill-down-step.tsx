@@ -67,11 +67,11 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
     }
     const product = productDetail.data;
     return (
-      <section aria-label="product-confirm">
-        <h2>{product.name}</h2>
-        <p>Vendor: {product.vendor.name}</p>
+      <section aria-label="product-confirm" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
+        <h2 className="text-lg font-semibold">{product.name}</h2>
+        <p className="text-ink-muted text-sm">Vendor: {product.vendor.name}</p>
         {product.categories.length > 0 && (
-          <p>Categories: {product.categories.map((c) => c.name).join(", ")}</p>
+          <p className="text-ink-muted text-sm">Categories: {product.categories.map((c) => c.name).join(", ")}</p>
         )}
         <Button type="button" onClick={() => setProductId(null)} variant="secondary">
           Back
@@ -97,12 +97,12 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
   // -------------------------------------------------------------------
   if (browsingCategoryId) {
     return (
-      <section aria-label="vendor-product-browse">
+      <section aria-label="vendor-product-browse" className="mx-auto max-w-4xl space-y-6 px-6 py-8">
         <Button type="button" variant="secondary" onClick={backOneLevel}>
           Back to categories
         </Button>
 
-        <h3>Vendors</h3>
+        <h3 className="font-semibold mb-1">Vendors</h3>
         {vendors.isLoading && <p>Loading vendors…</p>}
         {vendors.data && vendors.data.length === 0 && <p>No vendors in this category yet.</p>}
         <Table>
@@ -123,7 +123,7 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
           </TableBody>
         </Table>
 
-        <h3>Products</h3>
+        <h3 className="font-semibold mb-1">Products</h3>
         {products.isLoading && <p>Loading products…</p>}
         {products.data && products.data.length === 0 && <p>No products found.</p>}
         <Table>
@@ -151,8 +151,9 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
   // Category tree
   // -------------------------------------------------------------------
   return (
-    <section aria-label="category-drill-down">
-      <nav aria-label="breadcrumb">
+    <section aria-label="category-drill-down" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
+      <h2 className="text-lg font-semibold">Select a product category</h2>
+      <nav aria-label="breadcrumb" className="text-ink-muted text-sm">
         {breadcrumb.map((c, i) => (
           <span key={c.id ?? "root"}>
             {i > 0 && " / "}

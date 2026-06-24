@@ -6,8 +6,8 @@
  */
 export function AssuranceReadOnly() {
   return (
-    <section aria-label="assurance-read-only">
-      <p>
+    <section aria-label="assurance-read-only" className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+      <p className="text-ink-muted text-sm">
         This is a capture surface for registering a new system. There is nothing for your role to
         review here yet — assessments you review will appear in the review queue once one exists.
       </p>

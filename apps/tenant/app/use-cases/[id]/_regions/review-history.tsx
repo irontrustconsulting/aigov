@@ -22,25 +22,24 @@ export function ReviewHistory({ assessmentId }: Props) {
 
   return (
     <section aria-label="review-history">
-      <h3>Review history</h3>
-      <ol>
+      <h3 className="font-semibold mb-2">Review history</h3>
+      <ol className="space-y-3">
         {detail.data.reviews.map((r) => (
-          <li key={r.id}>
-            <span aria-label="reviewer">
-              {r.reviewer_display_name ?? "Reviewer"}
-            </span>
-            {" — "}
-            <span aria-label="decision">
-              {r.decision === "approved" ? "Approved" : "Requested changes"}
-            </span>
-            {" · "}
-            <span aria-label="submission-round">Round {r.submission_round}</span>
-            {" · "}
-            <time dateTime={r.created_at}>
-              {new Date(r.created_at).toLocaleDateString()}
-            </time>
+          <li key={r.id} className="border-hairline rounded-lg border p-4 text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span aria-label="reviewer" className="font-medium">
+                {r.reviewer_display_name ?? "Reviewer"}
+              </span>
+              <span aria-label="decision" className="text-ink-muted">
+                {r.decision === "approved" ? "Approved" : "Requested changes"}
+              </span>
+              <span aria-label="submission-round" className="text-ink-muted">Round {r.submission_round}</span>
+              <time dateTime={r.created_at} className="text-ink-muted">
+                {new Date(r.created_at).toLocaleDateString()}
+              </time>
+            </div>
             {r.note && (
-              <blockquote aria-label="review-note">{r.note}</blockquote>
+              <blockquote aria-label="review-note" className="text-ink-muted mt-2 border-l-2 pl-3 text-sm">{r.note}</blockquote>
             )}
           </li>
         ))}

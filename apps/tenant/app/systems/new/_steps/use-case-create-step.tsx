@@ -33,10 +33,10 @@ export function UseCaseCreateStep({ systemId, onCreated }: UseCaseCreateStepProp
   }
 
   return (
-    <form aria-label="use-case-create" onSubmit={handleSubmit}>
-      <div>
-        <label htmlFor="use-case-title">What are you using this for?</label>
-        <input id="use-case-title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+    <form aria-label="use-case-create" onSubmit={handleSubmit} className="border-hairline mx-auto max-w-4xl space-y-4 rounded-lg border p-4">
+      <div className="space-y-1">
+        <label htmlFor="use-case-title" className="text-sm font-medium">What are you using this for?</label>
+        <input id="use-case-title" value={title} onChange={(e) => setTitle(e.target.value)} required className="border-hairline w-full rounded border px-3 py-1.5 text-sm" />
       </div>
       <FreeText id="use-case-purpose" label="Purpose (optional)" value={purpose} onChange={setPurpose} />
 

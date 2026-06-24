@@ -79,9 +79,9 @@ function AuditPanelsInner({
       {/* Coverage panel — APPROVED AIIA only                                */}
       {/* ----------------------------------------------------------------- */}
       <section aria-label="use-case-coverage">
-        <h2 className="mb-2 font-semibold">Control coverage</h2>
+        <h2 className="mb-2 text-lg font-semibold">Control coverage</h2>
         {!isApproved || !assessmentId ? (
-          <p className="text-text-muted text-sm">
+          <p className="text-ink-muted text-sm">
             Coverage available after AIIA approval.
           </p>
         ) : (
@@ -97,11 +97,11 @@ function AuditPanelsInner({
       {/* Use-case export                                                     */}
       {/* ----------------------------------------------------------------- */}
       <section aria-label="use-case-export">
-        <h2 className="mb-2 font-semibold">Use-case audit pack</h2>
+        <h2 className="mb-2 text-lg font-semibold">Use-case audit pack</h2>
         <button
           type="button"
           disabled={exportQuery.isFetching}
-          className="border-border rounded border px-3 py-1.5 text-sm disabled:opacity-50"
+          className="border-hairline rounded border px-3 py-1.5 text-sm disabled:opacity-50"
           onClick={() => setExportEnabled(true)}
         >
           {exportQuery.isFetching ? "Generating…" : "Generate use-case audit pack"}
@@ -121,13 +121,13 @@ function AuditPanelsInner({
       {/* ATO document                                                        */}
       {/* ----------------------------------------------------------------- */}
       <section aria-label="ato-document-section">
-        <h2 className="mb-2 font-semibold">
+        <h2 className="mb-2 text-lg font-semibold">
           ATO document{round !== undefined ? ` (round ${round})` : " (latest)"}
         </h2>
         {!atoEnabled ? (
           <button
             type="button"
-            className="border-border rounded border px-3 py-1.5 text-sm"
+            className="border-hairline rounded border px-3 py-1.5 text-sm"
             onClick={() => setAtoEnabled(true)}
           >
             View ATO document
@@ -137,7 +137,7 @@ function AuditPanelsInner({
             {atoQuery.isLoading && <p>Loading ATO document…</p>}
             {atoQuery.isError &&
               ((atoQuery.error as { status?: number })?.status === 404 ? (
-                <p className="text-text-muted text-sm">
+                <p className="text-ink-muted text-sm">
                   This use case has never been authorised.
                 </p>
               ) : (

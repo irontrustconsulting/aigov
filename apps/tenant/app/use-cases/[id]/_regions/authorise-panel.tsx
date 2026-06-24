@@ -24,23 +24,24 @@ export function AuthorisePanel({ useCaseId }: Props) {
   const canSubmit = residualRisk.trim().length > 0;
 
   return (
-    <section aria-label="authorise-panel">
-      <h2>Grant deployment authorisation</h2>
-      <p>
+    <section aria-label="authorise-panel" className="border-hairline rounded-lg border p-4 space-y-4">
+      <h2 className="text-lg font-semibold">Grant deployment authorisation</h2>
+      <p className="text-ink-muted text-sm">
         Review the assembled AIIA and approved classification above. Record the residual
         risk statement before granting the Authority to Operate (ATO).
       </p>
 
       {blocked && <BadFromStateBanner />}
 
-      <label>
-        <span>Residual risk statement</span>
+      <label className="block space-y-1">
+        <span className="text-sm font-medium">Residual risk statement</span>
         <textarea
           value={residualRisk}
           onChange={(e) => setResidualRisk(e.target.value)}
           rows={4}
           aria-required="true"
           placeholder="Describe residual risks accepted under this authorisation…"
+          className="border-hairline w-full rounded border px-3 py-2 text-sm"
         />
       </label>
 
@@ -54,6 +55,8 @@ export function AuthorisePanel({ useCaseId }: Props) {
         }}
         disabled={!canSubmit || authorise.isPending}
         aria-busy={authorise.isPending}
+        className="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        style={{ background: "var(--color-brand)" }}
       >
         {authorise.isPending ? "Authorising…" : "Grant authorisation"}
       </button>

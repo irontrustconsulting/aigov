@@ -84,8 +84,9 @@ export function ContextGateStep({ useCaseId, onResolved, onProhibitedHalt }: Con
   }
 
   return (
-    <section aria-label="context-gate">
-      <form aria-label="context-questions" onSubmit={handlePreview}>
+    <section aria-label="context-gate" className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+      <h2 className="text-lg font-semibold">Classification questions</h2>
+      <form aria-label="context-questions" onSubmit={handlePreview} className="space-y-4">
         {questions.map((q) => (
           <div key={q.code}>
             <SingleSelect

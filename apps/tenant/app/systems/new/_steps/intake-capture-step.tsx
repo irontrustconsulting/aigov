@@ -80,10 +80,10 @@ export function IntakeCaptureStep({ isCustom, catalogueProductId, onSubmit }: In
   }
 
   return (
-    <form aria-label="intake-capture" onSubmit={handleSubmit}>
-      <div>
-        <label htmlFor="system-name">System name</label>
-        <input id="system-name" value={name} onChange={(e) => setName(e.target.value)} required />
+    <form aria-label="intake-capture" onSubmit={handleSubmit} className="border-hairline mx-auto max-w-4xl space-y-4 rounded-lg border p-4">
+      <div className="space-y-1">
+        <label htmlFor="system-name" className="text-sm font-medium">System name</label>
+        <input id="system-name" value={name} onChange={(e) => setName(e.target.value)} required className="border-hairline w-full rounded border px-3 py-1.5 text-sm" />
       </div>
 
       <SingleSelect

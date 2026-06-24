@@ -28,15 +28,17 @@ export function FeederRecs({ assessmentId }: Props) {
 
   return (
     <section aria-label="feeder-recommendations">
-      <h2>Supplementary assessments</h2>
-      <ul>
+      <h2 className="mb-2 text-lg font-semibold">Supplementary assessments</h2>
+      <ul className="space-y-3">
         {recs.map((rec) => (
-          <li key={rec.type}>
-            <strong>{rec.type.toUpperCase()}</strong>
-            {" — "}
-            {APPLICABILITY_LABEL[rec.applicability]}
-            {rec.exists ? " (started)" : " (not yet started)"}
-            <p>{rec.basis}</p>
+          <li key={rec.type} className="border-hairline rounded-lg border p-4">
+            <strong className="text-sm">{rec.type.toUpperCase()}</strong>
+            <span className="text-ink-muted text-sm">
+              {" — "}
+              {APPLICABILITY_LABEL[rec.applicability]}
+              {rec.exists ? " (started)" : " (not yet started)"}
+            </span>
+            <p className="text-ink-muted mt-1 text-sm">{rec.basis}</p>
           </li>
         ))}
       </ul>

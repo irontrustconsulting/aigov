@@ -77,7 +77,7 @@ export function ItemCard({ item, assessmentId, isLocked, canWrite, isFederSurfac
   const readOnly = isLocked || isFederSurfaced || !canWrite;
 
   return (
-    <article aria-label={`item-${item.id}`}>
+    <article aria-label={`item-${item.id}`} className="border-hairline rounded-lg border p-4 space-y-3">
       <ProvenanceBadge provenance={item.provenance} />
 
       {concurrencyError === "stale" && (
@@ -86,22 +86,23 @@ export function ItemCard({ item, assessmentId, isLocked, canWrite, isFederSurfac
       {concurrencyError === "bad_state" && <BadFromStateBanner />}
 
       {/* Prompt / section context */}
-      {item.prompt && <p>{item.prompt}</p>}
+      {item.prompt && <p className="text-ink-muted text-sm">{item.prompt}</p>}
 
       {/* Source ref (register facts, evidence manifest) — read-only display, no bytes */}
       {item.source_ref && (
-        <p aria-label="source-ref">
+        <p aria-label="source-ref" className="text-ink-muted text-sm">
           <em>Source: {item.source_ref}</em>
         </p>
       )}
 
       {/* Response field */}
-      <div>
-        <label htmlFor={`response-${item.id}`}>Response</label>
+      <div className="space-y-1">
+        <label htmlFor={`response-${item.id}`} className="text-sm font-medium">Response</label>
         <textarea
           id={`response-${item.id}`}
           defaultValue={item.response ?? ""}
           disabled={readOnly || authoringBlocked}
+          className="border-hairline w-full rounded border px-3 py-2 text-sm disabled:opacity-50"
           onBlur={(e) => {
             if (!readOnly && !authoringBlocked && e.target.value !== (item.response ?? "")) {
               handleAmend({ response: e.target.value || null });
@@ -111,12 +112,13 @@ export function ItemCard({ item, assessmentId, isLocked, canWrite, isFederSurfac
       </div>
 
       {/* Treatment decision */}
-      <div>
-        <label htmlFor={`treatment-${item.id}`}>Treatment</label>
+      <div className="space-y-1">
+        <label htmlFor={`treatment-${item.id}`} className="text-sm font-medium">Treatment</label>
         <select
           id={`treatment-${item.id}`}
           defaultValue={item.treatment_decision ?? ""}
           disabled={readOnly}
+          className="border-hairline rounded border px-3 py-1.5 text-sm disabled:opacity-50"
           onChange={(e) => {
             if (!readOnly) {
               const val = e.target.value as TreatmentDecision | "";
@@ -138,6 +140,7 @@ export function ItemCard({ item, assessmentId, isLocked, canWrite, isFederSurfac
           onClick={handleConfirm}
           disabled={confirmMutation.isPending}
           aria-busy={confirmMutation.isPending}
+          className="border-hairline rounded border px-3 py-1.5 text-sm disabled:opacity-50"
         >
           {confirmMutation.isPending ? "Confirming…" : "Confirm"}
         </button>
@@ -164,6 +167,7 @@ export function ItemCard({ item, assessmentId, isLocked, canWrite, isFederSurfac
             onClick={handleDelete}
             disabled={deleteMutation.isPending}
             aria-busy={deleteMutation.isPending}
+            className="border-hairline rounded border px-3 py-1.5 text-sm disabled:opacity-50"
           >
             {deleteMutation.isPending ? "Deleting…" : "Delete item"}
           </button>
