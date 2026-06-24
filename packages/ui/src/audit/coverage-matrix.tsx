@@ -1,6 +1,6 @@
 import type { CoverageMatrixRead } from "@irontrust/api-client";
 import { NotAnObligationSetBanner } from "./not-an-obligation-set-banner";
-import { Table, TableHeaderRow, TableRow, TableCell, TableHeaderCell } from "../primitives/table";
+import { Table, TableBody, TableHeaderRow, TableRow, TableCell, TableHeaderCell } from "../primitives/table";
 import { VerdictChip } from "../status/verdict-chip";
 
 function formatBytes(bytes: number | null): string {
@@ -43,6 +43,7 @@ export function CoverageMatrix({ matrix, label }: Props) {
             <TableHeaderCell>Verdict</TableHeaderCell>
             <TableHeaderCell>Breakdown</TableHeaderCell>
           </TableHeaderRow>
+          <TableBody>
           {matrix.controls.map((ctrl) => (
             <TableRow key={ctrl.control_id}>
               <TableCell>
@@ -102,6 +103,7 @@ export function CoverageMatrix({ matrix, label }: Props) {
               </TableCell>
             </TableRow>
           ))}
+          </TableBody>
         </Table>
       )}
 

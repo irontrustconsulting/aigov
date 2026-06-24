@@ -3,6 +3,7 @@ export { Select } from "./primitives/select";
 export { Dialog } from "./primitives/dialog";
 export {
   Table,
+  TableBody,
   TableHeaderRow,
   TableRow,
   TableCell,

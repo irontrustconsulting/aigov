@@ -1,5 +1,5 @@
 import { SodAction } from "../sod-wrapper/sod-action";
-import { Table, TableHeaderRow, TableRow, TableCell } from "../primitives/table";
+import { Table, TableBody, TableHeaderRow, TableRow, TableCell } from "../primitives/table";
 
 function formatBytes(bytes: number | null): string {
   if (bytes === null) return "—";
@@ -46,6 +46,7 @@ export function EvidenceTable({ items, onDownload, onDelete }: Props) {
         <th className="px-3 py-2 text-left font-medium">Links</th>
         <th className="px-3 py-2 text-left font-medium">Actions</th>
       </TableHeaderRow>
+      <TableBody>
       {items.map((item) => (
         <TableRow key={item.id}>
           <TableCell>{item.title}</TableCell>
@@ -83,6 +84,7 @@ export function EvidenceTable({ items, onDownload, onDelete }: Props) {
           </TableCell>
         </TableRow>
       ))}
+      </TableBody>
     </Table>
   );
 }

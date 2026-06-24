@@ -1,5 +1,5 @@
 import type { EvidenceManifestEntryRead } from "@irontrust/api-client";
-import { Table, TableHeaderRow, TableRow, TableCell } from "../primitives/table";
+import { Table, TableBody, TableHeaderRow, TableRow, TableCell } from "../primitives/table";
 
 interface Props {
   entries: EvidenceManifestEntryRead[];
@@ -34,6 +34,7 @@ export function EvidenceManifestTable({ entries, onDownload }: Props) {
         <th className="px-3 py-2 text-left font-medium">References</th>
         <th className="px-3 py-2 text-left font-medium">Download</th>
       </TableHeaderRow>
+      <TableBody>
       {entries.map((entry) => (
         <TableRow key={entry.id}>
           <TableCell>{entry.title}</TableCell>
@@ -56,6 +57,7 @@ export function EvidenceManifestTable({ entries, onDownload }: Props) {
           </TableCell>
         </TableRow>
       ))}
+      </TableBody>
     </Table>
   );
 }

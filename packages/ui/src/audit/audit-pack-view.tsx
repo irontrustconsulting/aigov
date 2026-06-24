@@ -11,7 +11,7 @@ import type {
 import { CoverageMatrix } from "./coverage-matrix";
 import { AuditGradeDivider } from "./audit-grade-divider";
 import { EvidenceManifestTable } from "./evidence-manifest-table";
-import { Table, TableHeaderRow, TableRow, TableCell } from "../primitives/table";
+import { Table, TableBody, TableHeaderRow, TableRow, TableCell } from "../primitives/table";
 
 interface Props {
   pack: UseCaseExportRead | SystemExportRead | FrameworkExportRead;
@@ -37,15 +37,17 @@ function LifecycleTrailSection({ entries }: { entries: LifecycleTrailEntryRead[]
         <th className="px-3 py-2 text-left font-medium">Actor</th>
         <th className="px-3 py-2 text-left font-medium">Reason</th>
       </TableHeaderRow>
-      {entries.map((e, i) => (
-        <TableRow key={i}>
-          <TableCell>{e.from_state ?? "—"}</TableCell>
-          <TableCell>{e.to_state}</TableCell>
-          <TableCell>{new Date(e.occurred_at).toLocaleString()}</TableCell>
-          <TableCell>{renderActor(e.actor)}</TableCell>
-          <TableCell>{e.reason ?? "—"}</TableCell>
-        </TableRow>
-      ))}
+      <TableBody>
+        {entries.map((e, i) => (
+          <TableRow key={i}>
+            <TableCell>{e.from_state ?? "—"}</TableCell>
+            <TableCell>{e.to_state}</TableCell>
+            <TableCell>{new Date(e.occurred_at).toLocaleString()}</TableCell>
+            <TableCell>{renderActor(e.actor)}</TableCell>
+            <TableCell>{e.reason ?? "—"}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
     </Table>
   );
 }
@@ -60,14 +62,16 @@ function AuditTrailSection({ entries }: { entries: AuditTrailEntryRead[] }) {
         <th className="px-3 py-2 text-left font-medium">Actor</th>
         <th className="px-3 py-2 text-left font-medium">Entity type</th>
       </TableHeaderRow>
-      {entries.map((e, i) => (
-        <TableRow key={i}>
-          <TableCell><span className="font-mono text-xs">{e.action}</span></TableCell>
-          <TableCell>{new Date(e.occurred_at).toLocaleString()}</TableCell>
-          <TableCell>{renderActor(e.actor)}</TableCell>
-          <TableCell>{e.entity_type}</TableCell>
-        </TableRow>
-      ))}
+      <TableBody>
+        {entries.map((e, i) => (
+          <TableRow key={i}>
+            <TableCell><span className="font-mono text-xs">{e.action}</span></TableCell>
+            <TableCell>{new Date(e.occurred_at).toLocaleString()}</TableCell>
+            <TableCell>{renderActor(e.actor)}</TableCell>
+            <TableCell>{e.entity_type}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
     </Table>
   );
 }
@@ -83,15 +87,17 @@ function ClassificationHistorySection({ entries }: { entries: ClassificationHist
         <th className="px-3 py-2 text-left font-medium">Overridden</th>
         <th className="px-3 py-2 text-left font-medium">Signed off by</th>
       </TableHeaderRow>
-      {entries.map((e, i) => (
-        <TableRow key={i}>
-          <TableCell>{e.version}</TableCell>
-          <TableCell>{e.tier}</TableCell>
-          <TableCell>{e.status}</TableCell>
-          <TableCell>{e.overridden ? "Yes" : "No"}</TableCell>
-          <TableCell>{e.signed_off_by ? renderActor(e.signed_off_by) : "—"}</TableCell>
-        </TableRow>
-      ))}
+      <TableBody>
+        {entries.map((e, i) => (
+          <TableRow key={i}>
+            <TableCell>{e.version}</TableCell>
+            <TableCell>{e.tier}</TableCell>
+            <TableCell>{e.status}</TableCell>
+            <TableCell>{e.overridden ? "Yes" : "No"}</TableCell>
+            <TableCell>{e.signed_off_by ? renderActor(e.signed_off_by) : "—"}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
     </Table>
   );
 }

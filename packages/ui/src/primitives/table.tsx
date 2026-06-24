@@ -21,6 +21,10 @@ export function Table({
   );
 }
 
+export function TableBody({ children }: { children: ReactNode }) {
+  return <tbody>{children}</tbody>;
+}
+
 export function TableHeaderRow({
   children,
   density = "comfortable",

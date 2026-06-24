@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Table, TableRow, TableCell } from "@irontrust/ui";
+import { Button, Table, TableBody, TableRow, TableCell } from "@irontrust/ui";
 import {
   useProductCategories,
   useProductDetail,
@@ -106,34 +106,38 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
         {vendors.isLoading && <p>Loading vendors…</p>}
         {vendors.data && vendors.data.length === 0 && <p>No vendors in this category yet.</p>}
         <Table>
-          {vendors.data?.map((v) => (
-            <TableRow key={v.id}>
-              <TableCell>
-                <button
-                  type="button"
-                  aria-pressed={vendorId === v.id}
-                  onClick={() => setVendorId(vendorId === v.id ? undefined : v.id)}
-                >
-                  {v.name}
-                </button>
-              </TableCell>
-            </TableRow>
-          ))}
+          <TableBody>
+            {vendors.data?.map((v) => (
+              <TableRow key={v.id}>
+                <TableCell>
+                  <button
+                    type="button"
+                    aria-pressed={vendorId === v.id}
+                    onClick={() => setVendorId(vendorId === v.id ? undefined : v.id)}
+                  >
+                    {v.name}
+                  </button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
         </Table>
 
         <h3>Products</h3>
         {products.isLoading && <p>Loading products…</p>}
         {products.data && products.data.length === 0 && <p>No products found.</p>}
         <Table>
-          {products.data?.map((p) => (
-            <TableRow key={p.id}>
-              <TableCell>
-                <button type="button" onClick={() => setProductId(p.id)}>
-                  {p.name}
-                </button>
-              </TableCell>
-            </TableRow>
-          ))}
+          <TableBody>
+            {products.data?.map((p) => (
+              <TableRow key={p.id}>
+                <TableCell>
+                  <button type="button" onClick={() => setProductId(p.id)}>
+                    {p.name}
+                  </button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
         </Table>
 
         <Button type="button" variant="secondary" onClick={exitCustom}>
@@ -170,20 +174,22 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
       )}
 
       <Table>
-        {categories.data?.map((cat) => (
-          <TableRow key={cat.id}>
-            <TableCell>
-              <button type="button" onClick={() => chooseCategory(cat.id, cat.name)}>
-                {cat.name}
-              </button>
-            </TableCell>
-            <TableCell>
-              <button type="button" onClick={() => setBrowsingCategoryId(cat.id)}>
-                Browse vendors/products
-              </button>
-            </TableCell>
-          </TableRow>
-        ))}
+        <TableBody>
+          {categories.data?.map((cat) => (
+            <TableRow key={cat.id}>
+              <TableCell>
+                <button type="button" onClick={() => chooseCategory(cat.id, cat.name)}>
+                  {cat.name}
+                </button>
+              </TableCell>
+              <TableCell>
+                <button type="button" onClick={() => setBrowsingCategoryId(cat.id)}>
+                  Browse vendors/products
+                </button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
       </Table>
 
       <Button type="button" variant="secondary" onClick={exitCustom}>
