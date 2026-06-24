@@ -48,7 +48,7 @@ export function EvidenceManifestTable({ entries, onDownload }: Props) {
           <TableCell>
             <button
               type="button"
-              className="text-link text-sm underline"
+              className="text-brand text-sm underline"
               onClick={() => onDownload(entry.id)}
             >
               Download

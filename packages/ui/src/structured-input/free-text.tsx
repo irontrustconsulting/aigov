@@ -17,7 +17,7 @@ export function FreeText({
       <label htmlFor={id}>{label}</label>
       <textarea
         id={id}
-        className="text-text-muted"
+        className="text-ink-muted"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />

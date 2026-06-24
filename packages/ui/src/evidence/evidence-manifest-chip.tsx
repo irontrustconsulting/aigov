@@ -18,20 +18,20 @@ interface Props {
  */
 export function EvidenceManifestChip({ link, onUnlink }: Props) {
   return (
-    <span className="border-border inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs">
+    <span className="border-hairline inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs">
       <span className="font-medium">{link.title}</span>
       {link.sha256 && (
-        <span className="text-text-muted font-mono">{link.sha256.slice(0, 8)}…</span>
+        <span className="text-ink-muted font-mono">{link.sha256.slice(0, 8)}…</span>
       )}
       {link.content_type && (
-        <span className="text-text-muted">{link.content_type}</span>
+        <span className="text-ink-muted">{link.content_type}</span>
       )}
       {onUnlink && (
         <button
           type="button"
           onClick={() => onUnlink(link.evidence_id)}
           aria-label={`Unlink ${link.title}`}
-          className="hover:text-text ml-0.5"
+          className="hover:text-ink ml-0.5"
         >
           ×
         </button>

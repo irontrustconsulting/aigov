@@ -10,4 +10,5 @@
 @import "@irontrust/tokens/primitives.css";
 @import "@irontrust/tokens/skin-tenant.css";
 @import "@irontrust/tokens/skin-operator.css";
+@source "../../../packages/ui/src";
 @import "tailwindcss";

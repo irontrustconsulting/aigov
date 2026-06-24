@@ -41,7 +41,7 @@ export function EvidenceUploadControl({ onUpload, isPending, error }: Props) {
           type="text"
           placeholder="Title (optional)"
           disabled={isPending}
-          className="border-border rounded border px-2 py-1 text-sm"
+          className="border-hairline rounded border px-2 py-1 text-sm"
           aria-label="Evidence title"
         />
         <button
@@ -55,7 +55,7 @@ export function EvidenceUploadControl({ onUpload, isPending, error }: Props) {
         </button>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}

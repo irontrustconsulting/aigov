@@ -15,8 +15,8 @@ export function Dialog({
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="bg-text/40 fixed inset-0" />
-        <RadixDialog.Content className="bg-bg border-border fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg border p-6 shadow-lg">
+        <RadixDialog.Overlay className="bg-ink/40 fixed inset-0" />
+        <RadixDialog.Content className="bg-surface border-hairline fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg border p-6 shadow-lg">
           <RadixDialog.Title className="text-lg font-medium">{title}</RadixDialog.Title>
           {children}
         </RadixDialog.Content>

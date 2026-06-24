@@ -22,18 +22,18 @@ export function Select({
 }) {
   return (
     <RadixSelect.Root value={value} onValueChange={onValueChange}>
-      <RadixSelect.Trigger className="border-border bg-bg text-text inline-flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+      <RadixSelect.Trigger className="border-hairline bg-surface text-ink inline-flex items-center justify-between rounded-md border px-3 py-2 text-sm">
         <RadixSelect.Value placeholder={placeholder} />
         <RadixSelect.Icon>▾</RadixSelect.Icon>
       </RadixSelect.Trigger>
       <RadixSelect.Portal>
-        <RadixSelect.Content className="border-border bg-bg rounded-md border shadow-md">
+        <RadixSelect.Content className="border-hairline bg-surface rounded-md border shadow-md">
           <RadixSelect.Viewport>
             {options.map((opt) => (
               <RadixSelect.Item
                 key={opt.value}
                 value={opt.value}
-                className="text-text px-3 py-2 text-sm"
+                className="text-ink px-3 py-2 text-sm"
               >
                 <RadixSelect.ItemText>{opt.label}</RadixSelect.ItemText>
               </RadixSelect.Item>

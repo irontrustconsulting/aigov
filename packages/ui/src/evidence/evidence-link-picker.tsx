@@ -46,13 +46,13 @@ export function EvidenceLinkPicker({ items, isLoading, onLink, isPending }: Prop
             placeholder="Filter by title…"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="border-border rounded border px-2 py-1 text-sm"
+            className="border-hairline rounded border px-2 py-1 text-sm"
             aria-label="Filter evidence"
           />
           {isLoading ? (
-            <p className="text-text-muted text-sm">Loading…</p>
+            <p className="text-ink-muted text-sm">Loading…</p>
           ) : visible.length === 0 ? (
-            <p className="text-text-muted text-sm">No evidence matches.</p>
+            <p className="text-ink-muted text-sm">No evidence matches.</p>
           ) : (
             <ul className="max-h-64 overflow-y-auto" role="listbox" aria-label="Evidence items">
               {visible.map((ev) => (
@@ -67,11 +67,11 @@ export function EvidenceLinkPicker({ items, isLoading, onLink, isPending }: Prop
                       setFilter("");
                     }}
                     disabled={isPending}
-                    className="hover:bg-surface w-full px-2 py-1.5 text-left text-sm"
+                    className="hover:bg-surface-sunken w-full px-2 py-1.5 text-left text-sm"
                   >
                     <span className="font-medium">{ev.title}</span>
                     {ev.sha256 && (
-                      <span className="text-text-muted ml-2 font-mono text-xs">
+                      <span className="text-ink-muted ml-2 font-mono text-xs">
                         {ev.sha256.slice(0, 10)}…
                       </span>
                     )}

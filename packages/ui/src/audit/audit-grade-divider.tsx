@@ -14,13 +14,13 @@ export function AuditGradeDivider({
     <div
       role="region"
       aria-label="audit-grade-divider"
-      className="border-border-strong bg-surface-subtle my-4 flex items-center gap-3 rounded border px-4 py-2"
+      className="border-hairline-strong bg-surface-sunken my-4 flex items-center gap-3 rounded border px-4 py-2"
     >
-      <div className="bg-border-strong h-px flex-1" />
-      <span className="text-text-muted text-xs font-semibold uppercase tracking-wide">
+      <div className="bg-hairline-strong h-px flex-1" />
+      <span className="text-ink-muted text-xs font-semibold uppercase tracking-wide">
         {label}
       </span>
-      <div className="bg-border-strong h-px flex-1" />
+      <div className="bg-hairline-strong h-px flex-1" />
     </div>
   );
 }
