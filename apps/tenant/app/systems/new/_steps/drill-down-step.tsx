@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Table, TableBody, TableRow, TableCell } from "@irontrust/ui";
+import { Button } from "@irontrust/ui";
 import {
   useProductCategories,
   useProductDetail,
@@ -15,26 +15,17 @@ export interface DrillDownResult {
   catalogueProductName: string | null;
 }
 
-interface Crumb {
-  id: string | undefined;
-  name: string;
-}
-
 /**
- * WI-4: category tree (parent_id drill) -> vendors -> products -> product
- * detail. "Not in catalogue / in-house" is always reachable and sets
- * is_custom, skipping straight to WI-5 with no product selected (CAT-8
- * catalogue-miss curation signal is explicitly out of F1 scope — no event
- * is emitted here).
+ * WI-4: category list -> vendor/product browse -> product detail confirm.
+ * "Not in catalogue / in-house" is always reachable (CAT-8 miss signal
+ * is out of F1 scope — no event emitted here).
  */
 export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownResult) => void }) {
-  const [breadcrumb, setBreadcrumb] = useState<Crumb[]>([{ id: undefined, name: "All categories" }]);
   const [browsingCategoryId, setBrowsingCategoryId] = useState<string | null>(null);
   const [vendorId, setVendorId] = useState<string | undefined>(undefined);
   const [productId, setProductId] = useState<string | null>(null);
 
-  const currentParentId = breadcrumb[breadcrumb.length - 1]?.id;
-  const categories = useProductCategories(browsingCategoryId ? undefined : currentParentId);
+  const categories = useProductCategories();
   const vendors = useVendorsInCategory(browsingCategoryId ?? "");
   const products = useProductsInCategory(browsingCategoryId ?? "", vendorId);
   const productDetail = useProductDetail(productId ?? undefined);
@@ -43,18 +34,10 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
     onComplete({ isCustom: true, catalogueProductId: null, catalogueProductName: null });
   }
 
-  function chooseCategory(id: string, name: string) {
-    setBreadcrumb((prev) => [...prev, { id, name }]);
-  }
-
-  function backOneLevel() {
-    if (browsingCategoryId) {
-      setBrowsingCategoryId(null);
-      setVendorId(undefined);
-      setProductId(null);
-      return;
-    }
-    setBreadcrumb((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  function backToCategories() {
+    setBrowsingCategoryId(null);
+    setVendorId(undefined);
+    setProductId(null);
   }
 
   // -------------------------------------------------------------------
@@ -96,49 +79,71 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
   // Vendor / product browsing within a chosen category
   // -------------------------------------------------------------------
   if (browsingCategoryId) {
+    const vendorList = vendors.data ?? [];
+    const productList = products.data ?? [];
+    const selectedVendorName = vendorList.find((v) => v.id === vendorId)?.name;
+
     return (
       <section aria-label="vendor-product-browse" className="mx-auto max-w-4xl space-y-6 px-6 py-8">
-        <Button type="button" variant="secondary" onClick={backOneLevel}>
-          Back to categories
+        <Button type="button" variant="secondary" onClick={backToCategories}>
+          ← Back to categories
         </Button>
 
-        <h3 className="font-semibold mb-1">Vendors</h3>
-        {vendors.isLoading && <p>Loading vendors…</p>}
-        {vendors.data && vendors.data.length === 0 && <p>No vendors in this category yet.</p>}
-        <Table>
-          <TableBody>
-            {vendors.data?.map((v) => (
-              <TableRow key={v.id}>
-                <TableCell>
-                  <button
-                    type="button"
-                    aria-pressed={vendorId === v.id}
-                    onClick={() => setVendorId(vendorId === v.id ? undefined : v.id)}
-                  >
-                    {v.name}
-                  </button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {/* Vendor filter — only shown when there are multiple vendors */}
+        {vendorList.length > 1 && (
+          <div>
+            <p className="text-ink-muted mb-2 text-sm font-medium">Filter by vendor</p>
+            <div className="flex flex-wrap gap-2">
+              {vendorList.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  aria-pressed={vendorId === v.id}
+                  className={`border-hairline rounded-full border px-3 py-1 text-sm transition-colors ${
+                    vendorId === v.id
+                      ? "bg-ink text-surface"
+                      : "hover:bg-surface-sunken"
+                  }`}
+                  onClick={() => setVendorId(vendorId === v.id ? undefined : v.id)}
+                >
+                  {v.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-        <h3 className="font-semibold mb-1">Products</h3>
-        {products.isLoading && <p>Loading products…</p>}
-        {products.data && products.data.length === 0 && <p>No products found.</p>}
-        <Table>
-          <TableBody>
-            {products.data?.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell>
-                  <button type="button" onClick={() => setProductId(p.id)}>
-                    {p.name}
-                  </button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {/* Product list */}
+        <div>
+          <p className="text-ink-muted mb-2 text-sm font-medium">
+            {selectedVendorName ? `Products by ${selectedVendorName}` : "Products"}
+          </p>
+          {(products.isLoading || vendors.isLoading) && <p>Loading…</p>}
+          {!products.isLoading && productList.length === 0 && (
+            <p className="text-ink-muted text-sm">No products found in this category.</p>
+          )}
+          {productList.length > 0 && (
+            <ul className="space-y-2">
+              {productList.map((p) => {
+                const vendor = vendorList.find((v) => v.id === p.vendor_id);
+                return (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      className="border-hairline hover:bg-surface-sunken w-full rounded-lg border px-4 py-3 text-left"
+                      onClick={() => setProductId(p.id)}
+                    >
+                      <span className="font-medium">{p.name}</span>
+                      {vendor && (
+                        <span className="text-ink-muted ml-2 text-sm">{vendor.name}</span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
 
         <Button type="button" variant="secondary" onClick={exitCustom}>
           Not in catalogue / in-house
@@ -148,50 +153,41 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
   }
 
   // -------------------------------------------------------------------
-  // Category tree
+  // Category list — clicking goes directly to vendor/product browse
   // -------------------------------------------------------------------
   return (
     <section aria-label="category-drill-down" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
       <h2 className="text-lg font-semibold">Select a product category</h2>
-      <nav aria-label="breadcrumb" className="text-ink-muted text-sm">
-        {breadcrumb.map((c, i) => (
-          <span key={c.id ?? "root"}>
-            {i > 0 && " / "}
-            {c.name}
-          </span>
-        ))}
-      </nav>
-
-      {breadcrumb.length > 1 && (
-        <Button type="button" variant="secondary" onClick={backOneLevel}>
-          Back
-        </Button>
-      )}
+      <p className="text-ink-muted text-sm">
+        Choose the category that best describes your AI product.
+      </p>
 
       {categories.isLoading && <p>Loading categories…</p>}
       {categories.isError && <p role="alert">Could not load categories.</p>}
       {categories.data && categories.data.length === 0 && (
-        <p>No categories here — browse vendors and products directly, or use the exit below.</p>
+        <p className="text-ink-muted text-sm">
+          No categories available — use the option below to register a custom or in-house system.
+        </p>
       )}
 
-      <Table>
-        <TableBody>
-          {categories.data?.map((cat) => (
-            <TableRow key={cat.id}>
-              <TableCell>
-                <button type="button" onClick={() => chooseCategory(cat.id, cat.name)}>
-                  {cat.name}
-                </button>
-              </TableCell>
-              <TableCell>
-                <button type="button" onClick={() => setBrowsingCategoryId(cat.id)}>
-                  Browse vendors/products
-                </button>
-              </TableCell>
-            </TableRow>
+      {categories.data && categories.data.length > 0 && (
+        <ul className="space-y-2">
+          {categories.data.map((cat) => (
+            <li key={cat.id}>
+              <button
+                type="button"
+                className="border-hairline hover:bg-surface-sunken w-full rounded-lg border px-4 py-3 text-left"
+                onClick={() => setBrowsingCategoryId(cat.id)}
+              >
+                <span className="font-medium">{cat.name}</span>
+                {cat.description && (
+                  <span className="text-ink-muted mt-0.5 block text-sm">{cat.description}</span>
+                )}
+              </button>
+            </li>
           ))}
-        </TableBody>
-      </Table>
+        </ul>
+      )}
 
       <Button type="button" variant="secondary" onClick={exitCustom}>
         Not in catalogue / in-house

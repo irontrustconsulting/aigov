@@ -46,7 +46,7 @@ describe("DrillDownStep", () => {
     render(<DrillDownStep onComplete={onComplete} />, { wrapper });
 
     await waitFor(() =>
-      expect(screen.getByText(/no categories here/i)).toBeInTheDocument()
+      expect(screen.getByText(/no categories available/i)).toBeInTheDocument()
     );
     expect(screen.getByRole("button", { name: /not in catalogue/i })).toBeInTheDocument();
   });
@@ -85,10 +85,10 @@ describe("DrillDownStep", () => {
     render(<DrillDownStep onComplete={onComplete} />, { wrapper });
 
     await waitFor(() => screen.getByText("Chatbots"));
-    fireEvent.click(screen.getByRole("button", { name: /browse vendors\/products/i }));
+    fireEvent.click(screen.getByRole("button", { name: /chatbots/i }));
 
     await waitFor(() => screen.getByText("Acme Bot"));
-    fireEvent.click(screen.getByRole("button", { name: "Acme Bot" }));
+    fireEvent.click(screen.getByRole("button", { name: /Acme Bot/i }));
 
     await waitFor(() => screen.getByRole("button", { name: /use this product/i }));
     fireEvent.click(screen.getByRole("button", { name: /use this product/i }));

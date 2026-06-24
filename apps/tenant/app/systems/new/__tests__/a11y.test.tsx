@@ -52,7 +52,7 @@ describe("WI-11 axe pass — wizard screens", () => {
   test("DrillDownStep", async () => {
     global.fetch = jest.fn(() => jsonResponse([])) as jest.Mock;
     const { container, getByText } = render(<DrillDownStep onComplete={jest.fn()} />, { wrapper });
-    await waitFor(() => getByText(/no categories here/i));
+    await waitFor(() => getByText(/no categories available/i));
     await expectNoAxeViolations(container);
   });
 
