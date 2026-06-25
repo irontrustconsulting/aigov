@@ -49,6 +49,8 @@ Structured-JSON export (EXP-1 data half; PDF deferred), **zero migrations / no n
 ### Member management
 A tenant admin creates members (Cognito invite + `Membership(MEMBER, zero governance roles)` atomic with compensation — PAT-1). Listing is driven from `membership` joined to `app_user` with Cognito accept status; never bare `app_user` (INV-2).
 
+**UI-F9-MEMBERS (UI, tenant plane) — shipped.** `apps/tenant/app/members/`. Admin-only surface (DF-F9-3): `MeRead.role === "admin"` gates both the sidebar entry (below Audit) and the page; non-admin direct-nav renders not-authorised treatment with zero `GET /v1/members` issued. Member list (`DataTable`, FE-23 kit; all four INV-70 states). Accept-status chip: neutral non-semantic chrome (`data-accept-status`; no `--verdict-*` — FE-16). Roles-held column: single `GET /governance-roles/assignments` (tenant-wide, P5-confirmed present) grouped by `membership_id`, names joined from catalogue — no N+1. Invite member: `POST /v1/members` dialog; success invalidates `["members"]`; new row appears pending. Per-member role panel: `GET /governance-roles/assignments/member/{id}` + catalogue; assign `POST`; revoke `DELETE`. SoD-visible control (INV-71): resolvable conflict → disabled-with-reason ("Conflicts with {role}: separation of duties", colon, no em dash); self case → control absent + note ("Governance roles are assigned by another administrator, to preserve separation of duties"; INV-56). Born-compliant with INV-69/INV-70. **P2 note:** live DB has a 6th role `system_owner_smoke` (dev artifact, no conflict entries); UI binds the live catalogue verbatim. **0 migrations this sprint.** OPEN-4 remains open (DF-F9-1; dev workaround: direct insert).
+
 ### Governance role management
 Full assign/revoke/list-by-tenant/list-by-member. SoD enforced at assignment via `assert_governance_assignable` (INV-7). Read-only catalogue endpoint returns the five roles + the full conflict matrix.
 
@@ -282,7 +284,7 @@ Tested: `tests/platform/test_platform_me.py` (backend); `apps/operator/app/(cons
 
 ### Composition-debt register (Appendix C — remediation tracker for INV-69/INV-70)
 
-Surfaces come under INV-69/INV-70 only once their UI-C0 per-surface composition pass clears them here. Member management is born compliant. Shell debt cleared globally by FE-20.
+Surfaces come under INV-69/INV-70 only once their UI-C0 per-surface composition pass clears them here. Member management (UI-F9-MEMBERS) is born compliant — no composition pass required. Shell debt cleared globally by FE-20.
 
 | Surface | Owes | Cleared by |
 |---|---|---|

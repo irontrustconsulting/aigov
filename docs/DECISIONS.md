@@ -485,6 +485,24 @@ Observed at the 2026-06-25 reactive pass: the coding agent improvised visual and
 Rejected: (a) letting the agent iterate UI reactively against user complaints — the origin of the erosion described above; (b) a purely advisory CLAUDE.md note with no `CONVENTION` invariant — no review hook would catch recurrence.
 ↳ origin: UI-C0-PRODUCTION-FOUNDATION · refs: INV-68
 
+**D-53** · Members UI scope = full: list + invite + SoD-visible assign/revoke
+The Members surface ships with the complete management set: member list (name / email / admin role / accept-status / roles-held), invite, and per-member governance-role assign/revoke with the SoD conflict matrix surfaced before the act. Half-scope (CRUD-only, role assignment deferred) would leave the multi-person review-to-authorise loop undemonstrable, which is the sprint's thesis objective.  
+Rejected: list + invite only (deferred role assignment), which would require a second sprint and leave the SoD constraint invisible in the UI, making the governance model appear opaque to admins.
+↳ origin: UI-F9-MEMBERS · refs: D-4, INV-7, INV-71, FE-24
+
+**DF-F9-1** · OPEN-4 deferred — no self-assignment or SoD relaxation this sprint (sprint-local)
+OPEN-4 (genesis governance-role bootstrap gap: an admin cannot obtain a governance role through the UI because self-assignment is blocked by D-5) remains open. The dev workaround (direct `governance_role_assignment` insert) is the only path for an owner to self-assign during development. The consequence is accepted and documented: a no-governance-role admin invites and staffs others but cannot obtain a governance role themselves through the UI. No self-assign relaxation, provision seed, or runtime grace is added.  
+Rejected: resolving OPEN-4 now via provision seed or runtime grace — insufficient justification at this sprint; compliance with D-5/INV-7 is the current stance until a compelling reason to relax is established.
+↳ origin: UI-F9-MEMBERS (sprint-local DF) · refs: OPEN-4, D-5, INV-7
+
+~~**DF-F9-2**~~ · **Struck** (was: additive `MeRead` admin flag). Pre-sprint review B1: `MeRead` already carries `role`. No backend delta required. Number retired; not renumbered.
+↳ origin: UI-F9-MEMBERS review (B1)
+
+**DF-F9-3** · Tenant-plane administrative-axis nav + page gating (sprint-local)
+The Members nav entry renders and the page issues its gated calls iff `MeRead.role === "admin"` (lowercase string literal, P3-confirmed); non-admin callers see no entry and the page issues zero `GET /v1/members` calls (the not-authorised treatment pattern, distinct from a disabled entry). This convention is new ground: tenant-plane `admin`/`member` gating is not covered by FE-8 (act-SoD), FE-13 (operator permission-absence), or any prior tenant-plane convention. Absence (not disabled) matches the DF7-1/DF2-5/DF5-7 established zero-call-for-unauthorised-role pattern.  
+Rejected: render-then-403 (shows a non-functional entry; masks the empty state behind an access error).
+↳ origin: UI-F9-MEMBERS (sprint-local DF) · refs: FE-8, FE-13, INV-68, FE-24
+
 **D-52** · Identity split — tenant name in sidebar foot, user in top utility bar
 The tenant name goes in the sidebar foot (wired from `MeRead.tenant_name`); the logged-in user (display name or email + sign-out) moves to a slim top utility bar at the head of the main content column (`apps/tenant/app/_components/top-utility-bar.tsx`). Nav stays in the sidebar — this is not a return to top-bar navigation; the C0 sidebar topology is unchanged. The canonical home of the tenant name is the `tenant.name` column; `MeRead` (tenant plane) and `GET /platform/tenants` (operator plane) are two plane-scoped projections of it, so the tenant-plane field is single-homed on `MeRead` with no second tenant-plane route needed or added.
 Rejected: (a) a dedicated tenant-plane `GET /v1/tenant` route (a second home for the same fact; `D-22`; no such route exists and none is added); (b) keeping user identity in the sidebar foot and adding tenant name beside it (two identities crowding one block). The reversal of `FE-20`'s "no top-bar" stance is scoped here: `FE-20` removed a top-bar *navigation*; this adds a top *utility* bar for identity only — nav remains in the sidebar.

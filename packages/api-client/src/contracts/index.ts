@@ -10,3 +10,5 @@ export * from "./assessment";
 export * from "./evidence";
 export * from "./coverage";
 export * from "./export";
+export * from "./member";
+export * from "./governance-roles";

@@ -14,6 +14,11 @@ const BASE_NAV: Omit<SidebarNavItem, "isActive">[] = [
   { href: "/audit", label: "Audit" },
 ];
 
+const MEMBERS_ENTRY: Omit<SidebarNavItem, "isActive"> = {
+  href: "/members",
+  label: "Members",
+};
+
 function TenantFoot() {
   const { data } = useQuery({
     queryKey: ["me"],
@@ -32,8 +37,17 @@ function TenantFoot() {
 
 export function TenantSidebar() {
   const pathname = usePathname();
+  const { data: me } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => api.get<MeRead>("/v1/me"),
+    staleTime: 5 * 60 * 1000,
+  });
 
-  const navItems: SidebarNavItem[] = BASE_NAV.map((item) => ({
+  const baseItems = me?.role === "admin"
+    ? [...BASE_NAV, MEMBERS_ENTRY]
+    : BASE_NAV;
+
+  const navItems: SidebarNavItem[] = baseItems.map((item) => ({
     ...item,
     isActive:
       pathname === item.href ||
