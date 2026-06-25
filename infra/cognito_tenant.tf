@@ -1,3 +1,7 @@
+# Resolves the AWS account ID at plan/apply time so the SES source ARN below
+# stays portable across accounts (staging, prod) without hardcoding.
+data "aws_caller_identity" "current" {}
+
 # ---------------------------------------------------------------------------
 # Tenant (customer) Cognito user pool.
 #
@@ -85,6 +89,18 @@ resource "aws_cognito_user_pool" "tenants" {
   # Live value is INACTIVE (unlike the operator pool's ACTIVE) — left as-is,
   # not a F0 decision to change.
   deletion_protection = "INACTIVE"
+
+  # Use our own SES-verified domain rather than Cognito's shared default sender
+  # (no-reply@verificationemail.com). COGNITO_DEFAULT has poor deliverability
+  # with Gmail — shared-sender reputation from unrelated AWS customers causes
+  # invite emails to be silently filtered. irontrustconsulting.co.uk is a
+  # verified SES domain identity in the same region; Cognito sends on its behalf
+  # using DKIM, which satisfies Gmail's DMARC alignment requirements.
+  email_configuration {
+    email_sending_account = "DEVELOPER"
+    from_email_address    = "IronTrust <info@irontrustconsulting.co.uk>"
+    source_arn            = "arn:aws:ses:${var.aws_region}:${data.aws_caller_identity.current.account_id}:identity/irontrustconsulting.co.uk"
+  }
 
   # Custom-attribute schema is immutable in Cognito once created, and the
   # provider's TypeSet diffing on `schema` is order-sensitive on import — a

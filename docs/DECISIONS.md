@@ -498,6 +498,11 @@ Rejected: resolving OPEN-4 now via provision seed or runtime grace — insuffici
 ~~**DF-F9-2**~~ · **Struck** (was: additive `MeRead` admin flag). Pre-sprint review B1: `MeRead` already carries `role`. No backend delta required. Number retired; not renumbered.
 ↳ origin: UI-F9-MEMBERS review (B1)
 
+**D-54** · Cognito tenant pool email delivery via SES rather than Cognito default
+`COGNITO_DEFAULT` sends invite emails from AWS's shared `no-reply@verificationemail.com` address. That shared sender's reputation is degraded by unrelated AWS customers; Gmail applies DMARC alignment checks that the shared sender cannot satisfy for our domain, causing invite emails to be silently filtered for `@gmail.com` recipients. Switching to `DEVELOPER` mode routes outbound email through SES using the verified `irontrustconsulting.co.uk` domain identity: the FROM address is `info@irontrustconsulting.co.uk`, DKIM is signed under our domain, and SPF aligns — all three authentication signals satisfy Gmail's bulk-sender rules. The `irontrustconsulting.co.uk` domain and `info@irontrustconsulting.co.uk` address were already verified in SES (production sending, not sandbox) in `eu-west-2`. Change is a single `email_configuration` block in `infra/cognito_tenant.tf`; no code, schema, or auth-flow change.  
+Rejected: leaving `COGNITO_DEFAULT` — worked for `@irontrustconsulting.co.uk` recipients (corporate mail server, lower spam threshold) but consistently failed for Gmail recipients, making the invite flow unreliable at MVP.  
+↳ origin: operational fix 2026-06-25 · refs: infra/cognito_tenant.tf
+
 **DF-F9-3** · Tenant-plane administrative-axis nav + page gating (sprint-local)
 The Members nav entry renders and the page issues its gated calls iff `MeRead.role === "admin"` (lowercase string literal, P3-confirmed); non-admin callers see no entry and the page issues zero `GET /v1/members` calls (the not-authorised treatment pattern, distinct from a disabled entry). This convention is new ground: tenant-plane `admin`/`member` gating is not covered by FE-8 (act-SoD), FE-13 (operator permission-absence), or any prior tenant-plane convention. Absence (not disabled) matches the DF7-1/DF2-5/DF5-7 established zero-call-for-unauthorised-role pattern.  
 Rejected: render-then-403 (shows a non-functional entry; masks the empty state behind an access error).
