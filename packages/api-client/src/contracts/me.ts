@@ -14,5 +14,6 @@ export interface MeRead {
   role: string;
   email: string | null;
   name: string | null;
+  tenant_name: string;
   governance_roles: GovernanceRoleRead[];
 }

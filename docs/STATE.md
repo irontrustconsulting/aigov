@@ -4,7 +4,7 @@
 **Purpose:** What is implemented and what must not be reinvented, at the level of *what exists · what shape · which gate*. It points outward for depth and never restates the detail.
 **Lanes:** constraints → `INVARIANTS.md` (`INV-n`); schema (tables/enums/indexes) → `DATA-MODEL.md`; auth / identity / RLS / session mechanics → `ARCHITECTURE.md`; implementation shapes → `PATTERNS.md` (`PAT-n`); decisions/rationale → `DECISIONS.md` (`D-n`); conceptual model → `DOMAIN.md`.
 
-**Current through:** UI-C0-PRODUCTION-FOUNDATION (AppShell/Sidebar both planes, PageHeader/PageScaffold, EmptyState/FirstRunPanel, shared primitive kit). Sprints 1–7b + UI-F1..F8 + UI-V0 + UI-V1 + UI-C0 built. Per-surface composition passes (F1–F8) tracked in the composition-debt register below.
+**Current through:** UI-C1-PORTFOLIO-IDENTITY (dashboard composition pass + identity fold; `MeRead.tenant_name`; `Skeleton`/`ErrorState` built). Sprints 1–7b + UI-F1..F8 + UI-V0 + UI-V1 + UI-C0 + UI-C1 built. Per-surface composition passes (F1–F8) tracked in the composition-debt register below.
 
 ---
 
@@ -256,13 +256,27 @@ Tested: `tests/platform/test_platform_me.py` (backend); `apps/operator/app/(cons
 
 **`PageHeader` / `PageScaffold` (FE-21)** — `packages/ui/src/scaffold`. `PageHeader`: title (h1 `text-2xl font-semibold`), optional subtitle, action slot, breadcrumb/step slot. `PageScaffold`: `mx-auto max-w-4xl px-6 py-8 space-y-8`. Supersedes the provisional 26-page layout pass per the forward-scope clause — existing surfaces updated in per-surface composition passes (Appendix C register below).
 
-**UI state patterns (FE-22)** — `packages/ui/src/state`. `EmptyState` (icon, message `role="status"`, optional action) and `FirstRunPanel` (h2 heading, body, action) shipped. `Skeleton` and `ErrorState` blocked pending designer targets (flagged in C0-PREFLIGHT.md; to be added when targets arrive).
+**UI state patterns (FE-22)** — `packages/ui/src/state`. `EmptyState` (icon, message `role="status"`, optional action) and `FirstRunPanel` (h2 heading, body, action) shipped in UI-C0. `Skeleton` (pulsing placeholder blocks; `lines?` param; `SkeletonBlock` single-block variant) and `ErrorState` (calm retryable: muted danger icon, message, `Try again` button, optional support line) **shipped in UI-C1** (owed target resolved; INV-70 cleared for the dashboard surface).
 
 **Shared primitive kit (FE-23)** — `packages/ui/src/kit`. `StatCard` (label, value, optional trend), `SectionHeader` (h2 + optional action), `ListSelectRow` (whole-row button, single `ChevronRight`, no per-row label), `DataTable`/`DataTableHeader`/`DataTableBody` scaffold extending existing `Table`/`TableBody` (INV-66) — no new `<tbody>` primitive.
 
 **Tests:** 152 in `packages/ui` all green (shell: 7, scaffold: 9, state: 11, kit: 16, prior: 109); operator sidebar gating: 6 (FE-13 assertions). Axe zero violations across all new components. `eslint-plugin-irontrust/no-literal-token-value` passes (INV-63).
 
 **The three provisional reactive items from 2026-06-25 (marked in the post-V1 section above):** AppNav top-bar superseded by FE-20 shell; layout/typography pass superseded by FE-21 scaffold in scope; DrillDownStep remains provisional pending F1 per-surface pass (`OPEN-C1`).
+
+---
+
+### Portfolio composition + identity fold (`UI-C1-PORTFOLIO-IDENTITY`)
+
+**Delta:** presentational + one additive `MeRead` response-schema field (`DF3-7` precedent) — 0 new tables / enums / migrations.
+
+**FE-22 completion (UI-C0 owed):** `Skeleton` and `ErrorState` built in `packages/ui/src/state` to rendered targets. `Skeleton`: pulsing placeholder blocks, `lines?` param, `SkeletonBlock` single-block export. `ErrorState`: calm retryable, muted danger icon, short message, `Try again` button, optional `supportLine`. Both exported from `packages/ui/src/index.ts`. 14 new tests; 166/166 `packages/ui` tests green. Clears the INV-70 debt for the F2 dashboard surface.
+
+**F2 dashboard composition pass:** `apps/tenant/app/dashboard/page.tsx` fully composed with the C0 kit (`PageScaffold`, `PageHeader`, `StatCard`, `SectionHeader`, `DataTable`/`DataTableHeader`/`DataTableBody`/`TableRow`/`TableCell`/`TableHeaderCell`, `EmptyState`, `FirstRunPanel`, `Skeleton`, `ErrorState`). All F2 semantic contracts preserved: `DF2-5` admin branch (zero roles → no portfolio call issued), `DF6-9` (no `/coverage` or `/export` call from the dashboard), `FE-11` whose-court derivation unchanged, `INV-52` (no compliance-% headline), face-order preserved (`your-court` leads for adoption roles, `portfolio-posture` for assurance), compact `TierBadge` in systems list, zero-use-case row nudge. Three `StatCard`s (Systems count, Use cases under governance, Awaiting you) client-derived from existing query data — no new API calls. `FirstRunPanel` for zero-systems first-run. F2 composition-debt row cleared (see debt register).
+
+**MeRead.tenant_name:** `tenant_name: str` added to `MeRead` in `app/schemas/governance.py`; `GET /v1/me` handler populates from `db.get(Tenant, ctx.tenant_id).name` on the existing RLS session (M-1 confirmed). `tenant_name: string` added to `MeRead` interface in `packages/api-client/src/contracts/me.ts`. All `MeRead` fixtures across the tenant test suite swept (16 files). `pnpm --filter tenant test` 206/206 green.
+
+**Shell identity fold (FE-20 ALTER):** `apps/tenant/app/_components/top-utility-bar.tsx` (NEW) — slim `h-10` bar at the head of the main content column, reads cached `["me"]` query, shows logged-in user display name or email + sign-out link. `apps/tenant/app/_components/tenant-sidebar.tsx` (ALTER) — `AccountBlock` replaced by `TenantFoot` that renders `MeRead.tenant_name` in the sidebar foot; `NOTE` comment removed (gap resolved). `apps/tenant/app/layout.tsx` (ALTER) — children wrapped in `<div className="flex h-full flex-col"><TopUtilityBar /><div className="flex-1 overflow-y-auto">{children}</div></div>` so the utility bar is sticky at the top of the main column and content scrolls below it. Nav stays in the sidebar (D-52). Operator shell (`apps/operator/`) untouched.
 
 ---
 
@@ -273,7 +287,8 @@ Surfaces come under INV-69/INV-70 only once their UI-C0 per-surface composition 
 | Surface | Owes | Cleared by |
 |---|---|---|
 | F1 intake (`systems/new` + steps) | scaffold + states + kit; `DrillDownStep` re-ground (`OPEN-C1`) | F1 composition pass |
-| F2 portfolio (`dashboard`, `systems/[id]`) | scaffold + states + kit | F2 composition pass |
+| F2 dashboard (`dashboard`) | — | **CLEARED (UI-C1)** — bound by INV-69/INV-70 |
+| F2 systems (`systems/[id]`) | scaffold + states + kit | F2 composition pass |
 | F3 assess (`use-cases/[id]`) | scaffold + states + kit | F3 composition pass |
 | F4 assure (`review-queue`, `use-cases/[id]` ext) | scaffold + states + kit | F4 composition pass |
 | F5 evidence (`evidence`, ext) | scaffold + states + kit | F5 composition pass |

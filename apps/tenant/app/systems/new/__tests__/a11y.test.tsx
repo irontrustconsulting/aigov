@@ -109,7 +109,7 @@ describe("WI-11 axe pass — wizard screens", () => {
       const url = String(input);
       if (url.includes("/v1/me")) {
         return jsonResponse({
-          membership_id: "m1", tenant_id: "t1", role: "member", email: null, name: null,
+          membership_id: "m1", tenant_id: "t1", role: "member", email: null, name: null, tenant_name: "Acme Corp",
           governance_roles: [{ id: "g1", key: "system_owner", name: "System Owner", description: null, line_of_defence: 1 }],
         });
       }
@@ -135,7 +135,7 @@ describe("WI-11 axe pass — wizard screens", () => {
     global.fetch = jest.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("/v1/me")) {
-        return jsonResponse({ membership_id: "m1", tenant_id: "t1", role: "member", email: null, name: null, governance_roles: [] });
+        return jsonResponse({ membership_id: "m1", tenant_id: "t1", role: "member", email: null, name: null, tenant_name: "Acme Corp", governance_roles: [] });
       }
       if (url.includes("classification/context")) {
         return jsonResponse({

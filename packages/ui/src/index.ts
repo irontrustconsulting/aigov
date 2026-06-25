@@ -6,6 +6,8 @@ export { PageScaffold, type PageScaffoldProps } from "./scaffold/page-scaffold";
 
 export { EmptyState, type EmptyStateProps } from "./state/empty-state";
 export { FirstRunPanel, type FirstRunPanelProps } from "./state/first-run-panel";
+export { ErrorState, type ErrorStateProps } from "./state/error-state";
+export { Skeleton, SkeletonBlock } from "./state/skeleton";
 
 export { StatCard, type StatCardProps } from "./kit/stat-card";
 export { SectionHeader, type SectionHeaderProps } from "./kit/section-header";

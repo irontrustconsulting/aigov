@@ -3,7 +3,26 @@
 import Link from "next/link";
 import { useMe } from "@/lib/intake";
 import { isYourCourt, resolveCourt, useSystems, usePortfolio } from "@/lib/portfolio";
-import { WhoseCourtIndicator, VerdictChip, TierBadge, toTierMember } from "@irontrust/ui";
+import {
+  WhoseCourtIndicator,
+  VerdictChip,
+  TierBadge,
+  toTierMember,
+  PageScaffold,
+  PageHeader,
+  StatCard,
+  SectionHeader,
+  DataTable,
+  DataTableHeader,
+  DataTableBody,
+  TableRow,
+  TableCell,
+  TableHeaderCell,
+  EmptyState,
+  FirstRunPanel,
+  Skeleton,
+  ErrorState,
+} from "@irontrust/ui";
 import type { SystemRollupRead } from "@irontrust/api-client";
 
 // 1st-line roles lead with your-court; 2nd/3rd-line (assurance face) lead
@@ -12,36 +31,43 @@ import type { SystemRollupRead } from "@irontrust/api-client";
 const ADOPTION_ROLE_KEYS = new Set(["system_owner", "contributor"]);
 
 /**
- * UI-F2-PORTFOLIO: the tenant portfolio landing — realises the F0
- * authenticated-landing route (`/dashboard`) as the navigational hub,
- * replacing the W7a/b smoke surface. Pure wire-up over `GET /v1/portfolio`,
- * `GET /v1/systems`, `GET /v1/me`; read-only (`re-evaluate` deferred, A1).
- *
- * `useMe()` fetches first and branches proactively (DF2-5): an admin-only
- * caller (zero governance roles) never mounts `PortfolioHub`, so the
- * `gov:ALL`-gated `GET /portfolio` request is never issued — not
- * issue-then-catch.
+ * UI-C1-PORTFOLIO-IDENTITY: F2 portfolio composition pass.
+ * Preserves all F2 semantic contracts (DF2-5, DF6-9, FE-11, INV-52);
+ * composes from the C0 kit (FE-20..23, INV-69, INV-70).
  */
 export default function DashboardPage() {
   const me = useMe();
 
-  if (me.isLoading) return <p>Loading…</p>;
-  if (me.isError || !me.data) return <p role="alert">Could not load your role.</p>;
+  if (me.isLoading) {
+    return (
+      <PageScaffold>
+        <Skeleton lines={5} />
+      </PageScaffold>
+    );
+  }
+
+  if (me.isError || !me.data) {
+    return (
+      <PageScaffold>
+        <ErrorState
+          message="Could not load your role."
+          onRetry={() => me.refetch()}
+        />
+      </PageScaffold>
+    );
+  }
 
   const roleKeys = new Set(me.data.governance_roles.map((r) => r.key));
 
   if (roleKeys.size === 0) {
+    // DF2-5: admin branch — no portfolio call issued.
     return (
-      <main className="mx-auto max-w-4xl px-6 py-8">
+      <PageScaffold>
         <section aria-label="admin-empty-state">
-          <h1 className="mb-4 text-2xl font-semibold">Portfolio</h1>
-          <p className="text-ink-muted text-sm">
-            Your account doesn&apos;t hold a governance role yet, so there&apos;s no portfolio to show.
-            Once a governance role is assigned, systems and use cases you&apos;re party to will appear
-            here.
-          </p>
+          <PageHeader title="Portfolio" />
+          <EmptyState message="Your account doesn't hold a governance role yet, so there's no portfolio to show. Once a governance role is assigned, systems and use cases you're party to will appear here." />
         </section>
-      </main>
+      </PageScaffold>
     );
   }
 
@@ -52,18 +78,32 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
   const portfolio = usePortfolio();
   const systems = useSystems();
 
-  if (portfolio.isLoading || systems.isLoading) return <p>Loading your portfolio…</p>;
-  if (portfolio.isError || !portfolio.data || systems.isError || !systems.data) {
-    return <p role="alert">Could not load the portfolio.</p>;
+  if (portfolio.isLoading || systems.isLoading) {
+    return (
+      <PageScaffold>
+        <Skeleton lines={8} />
+      </PageScaffold>
+    );
   }
 
-  // Both faces share one surface (DF2-2): which section leads differs by
-  // role, but every governance-role caller sees both — including a
-  // 2nd/3rd-line caller, whose own your-court set may simply be empty.
+  if (portfolio.isError || !portfolio.data || systems.isError || !systems.data) {
+    return (
+      <PageScaffold>
+        <ErrorState
+          message="Could not load the portfolio."
+          onRetry={() => {
+            portfolio.refetch();
+            systems.refetch();
+          }}
+        />
+      </PageScaffold>
+    );
+  }
+
   const isAdoptionFace = [...roleKeys].some((k) => ADOPTION_ROLE_KEYS.has(k));
 
   const zeroUseCaseSystems = systems.data.filter(
-    (s) => !portfolio.data.some((p) => p.system_id === s.id)
+    (s) => !portfolio.data!.some((p) => p.system_id === s.id)
   );
 
   const yourCourtEntries = portfolio.data.flatMap((system) =>
@@ -72,51 +112,113 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
       .filter(({ court }) => isYourCourt(court, roleKeys))
   );
 
+  // Stat derivation — client-side from existing reads; no new API calls (DF6-9).
+  const systemCount = systems.data.length;
+  const useCaseCount = portfolio.data.reduce((n, s) => n + s.use_cases.length, 0);
+  const awaitingYouCount = yourCourtEntries.length;
+
+  if (systemCount === 0 && portfolio.data.length === 0) {
+    // FDD-3: governance caller with zero systems → FirstRunPanel leads.
+    return (
+      <PageScaffold>
+        <PageHeader title="Portfolio" />
+        <FirstRunPanel
+          heading="Register your first AI system"
+          body="Track your AI systems, complete impact assessments, and meet your governance obligations — all in one place."
+          action={
+            <Link
+              href="/systems/new"
+              className="inline-flex items-center justify-center rounded-md border border-transparent bg-brand px-4 py-2 text-sm font-medium text-surface"
+            >
+              Register a system
+            </Link>
+          }
+        />
+      </PageScaffold>
+    );
+  }
+
   const yourCourtSection = (
-    <section
-      aria-label="your-court"
-      className="rounded-lg px-4 py-3"
-      style={{ background: "var(--court-yours-fill)", borderLeft: "3px solid var(--court-yours-bar)" }}
-    >
-      <h2 className="mb-2 font-semibold" style={{ color: "var(--court-yours-text)" }}>
-        Your court
-      </h2>
-      {yourCourtEntries.length === 0 ? (
-        <p className="text-ink-muted text-sm">Nothing is waiting on you right now.</p>
-      ) : (
-        <ul className="space-y-2">
-          {yourCourtEntries.map(({ system, useCase, court }) => (
-            <li key={useCase.use_case_id} className="flex flex-wrap items-center gap-2 text-sm">
-              <Link href={`/systems/${system.system_id}`} className="font-medium underline">
-                {system.system_name}
-              </Link>
-              <span className="text-ink-muted">—</span>
-              <span>{useCase.title}: {court?.reason}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+    <section aria-label="your-court">
+      <SectionHeader title="Your court" />
+      <div className="mt-3">
+        {yourCourtEntries.length === 0 ? (
+          <EmptyState message="Nothing is waiting on you right now." />
+        ) : (
+          <ul className="space-y-2">
+            {yourCourtEntries.map(({ system, useCase, court }) => (
+              <li key={useCase.use_case_id} className="flex flex-wrap items-center gap-2 text-sm">
+                <Link href={`/systems/${system.system_id}`} className="font-medium underline">
+                  {system.system_name}
+                </Link>
+                <span className="text-ink-muted">—</span>
+                <span>
+                  {useCase.title}: {court?.reason}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 
   const postureSection = (
-    <section aria-label="portfolio-posture" className="border-hairline rounded-lg border p-4">
-      <h2 className="mb-2 font-semibold">Portfolio posture</h2>
-      <p className="text-ink-muted text-sm">
-        {portfolio.data.length} system{portfolio.data.length === 1 ? "" : "s"} with at least one use
-        case under governance.
-      </p>
-      {/* Navigation only — no coverage truth rendered here (DF6-9). */}
-      <Link href="/audit" className="mt-2 block text-sm underline">
-        View control coverage and audit packs →
-      </Link>
+    <section aria-label="portfolio-posture">
+      <SectionHeader title="Portfolio posture" />
+      <div className="mt-2 space-y-2">
+        <p className="text-sm text-ink-muted">
+          {portfolio.data.length} system{portfolio.data.length === 1 ? "" : "s"} with at least one
+          use case under governance.
+        </p>
+        {/* Navigation only — no coverage truth rendered here (DF6-9). */}
+        <Link href="/audit" className="block text-sm underline">
+          View control coverage and audit packs →
+        </Link>
+      </div>
     </section>
   );
 
-  return (
-    <main className="mx-auto max-w-4xl space-y-8 px-6 py-8">
-      <h1 className="text-2xl font-semibold">Portfolio</h1>
+  // All use-case rows for the systems table.
+  const systemRows = [
+    ...portfolio.data.flatMap((system) =>
+      system.use_cases.map((useCase) => ({
+        kind: "usecase" as const,
+        system,
+        useCase,
+        court: resolveCourt(useCase.blocking),
+      }))
+    ),
+    ...zeroUseCaseSystems.map((s) => ({
+      kind: "zero" as const,
+      system: s,
+    })),
+  ];
 
+  return (
+    <PageScaffold>
+      <PageHeader
+        title="Portfolio"
+        action={
+          roleKeys.has("system_owner") ? (
+            <Link
+              href="/systems/new"
+              className="inline-flex items-center justify-center rounded-md border border-transparent bg-brand px-4 py-2 text-sm font-medium text-surface"
+            >
+              Register a system
+            </Link>
+          ) : undefined
+        }
+      />
+
+      {/* Stat row — 3 lifecycle counts; no coverage, no % (DF6-9, INV-52) */}
+      <div className="grid grid-cols-3 gap-4" role="region" aria-label="stats">
+        <StatCard label="Systems" value={systemCount} />
+        <StatCard label="Use cases under governance" value={useCaseCount} />
+        <StatCard label="Awaiting you" value={awaitingYouCount} />
+      </div>
+
+      {/* Face-order (FE-11): adoption leads with your-court; assurance leads with posture */}
       {isAdoptionFace ? (
         <>
           {yourCourtSection}
@@ -130,61 +232,70 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
       )}
 
       <section aria-label="systems">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Systems</h2>
-          {roleKeys.has("system_owner") && (
-            <Link href="/systems/new" className="text-sm underline">
-              Register a system →
-            </Link>
-          )}
+        <SectionHeader title="Systems" />
+        <div className="mt-3">
+          <DataTable>
+            <DataTableHeader>
+              <TableHeaderCell>System / Use case</TableHeaderCell>
+              <TableHeaderCell>Tier</TableHeaderCell>
+              <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell>Court</TableHeaderCell>
+            </DataTableHeader>
+            <DataTableBody emptyMessage="No systems registered yet.">
+              {systemRows.map((row, i) => {
+                if (row.kind === "zero") {
+                  return (
+                    <TableRow key={`zero-${i}`}>
+                      <td colSpan={4} className="px-4 py-3" aria-label="zero-use-case-system">
+                        <p className="font-medium text-sm">{row.system.name}</p>
+                        <p className="text-xs text-ink-muted">No use case registered yet for this system.</p>
+                      </td>
+                    </TableRow>
+                  );
+                }
+                const { system, useCase, court } = row;
+                return (
+                  <TableRow key={useCase.use_case_id}>
+                    <TableCell>
+                      <Link
+                        href={`/systems/${system.system_id}`}
+                        className="font-medium underline"
+                      >
+                        {system.system_name}
+                      </Link>
+                      <span className="mx-1 text-ink-muted">·</span>
+                      <Link
+                        href={`/use-cases/${useCase.use_case_id}`}
+                        className="text-ink-muted underline"
+                      >
+                        {useCase.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {useCase.eu_tier ? (
+                        <TierBadge value={toTierMember(useCase.eu_tier)} variant="compact" />
+                      ) : (
+                        <span className="text-ink-muted">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <VerdictChip value={useCase.state} />
+                    </TableCell>
+                    <TableCell>
+                      {court && (
+                        <WhoseCourtIndicator
+                          partyLabel={court.partyLabel}
+                          isYourCourt={isYourCourt(court, roleKeys)}
+                        />
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </DataTableBody>
+          </DataTable>
         </div>
-        <ul className="space-y-3">
-          {portfolio.data.map((system) => (
-            <SystemCard key={system.system_id} system={system} roleKeys={roleKeys} />
-          ))}
-          {zeroUseCaseSystems.map((s) => (
-            <li key={s.id} aria-label="zero-use-case-system" className="border-hairline rounded-lg border p-4">
-              <p className="font-medium">{s.name}</p>
-              <p className="text-ink-muted text-sm">No use case registered yet for this system.</p>
-            </li>
-          ))}
-        </ul>
-        {portfolio.data.length === 0 && zeroUseCaseSystems.length === 0 && (
-          <p className="text-ink-muted text-sm">No systems registered yet.</p>
-        )}
       </section>
-    </main>
-  );
-}
-
-function SystemCard({ system, roleKeys }: { system: SystemRollupRead; roleKeys: Set<string> }) {
-  return (
-    <li className="border-hairline rounded-lg border p-4">
-      <Link href={`/systems/${system.system_id}`} className="font-semibold underline">
-        {system.system_name}
-      </Link>
-      <ul className="mt-3 space-y-2">
-        {system.use_cases.map((useCase) => {
-          const court = resolveCourt(useCase.blocking);
-          return (
-            <li key={useCase.use_case_id} className="flex flex-wrap items-center gap-2 text-sm">
-              <Link href={`/use-cases/${useCase.use_case_id}`} className="text-ink font-medium underline">
-                {useCase.title}
-              </Link>
-              <VerdictChip value={useCase.state} />
-              {useCase.eu_tier && (
-                <TierBadge value={toTierMember(useCase.eu_tier)} variant="compact" />
-              )}
-              {court && (
-                <WhoseCourtIndicator
-                  partyLabel={court.partyLabel}
-                  isYourCourt={isYourCourt(court, roleKeys)}
-                />
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </li>
+    </PageScaffold>
   );
 }

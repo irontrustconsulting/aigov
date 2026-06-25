@@ -106,6 +106,7 @@ class TestGetMe:
         assert body["membership_id"] == str(m.id)
         assert body["tenant_id"] == str(tenant.id)
         assert body["role"] == "member"
+        assert body["tenant_name"] == tenant.name
         assert body["governance_roles"] == []
 
     def test_with_governance_roles(self, db_session, client, tenant, gov_roles):
@@ -132,8 +133,10 @@ class TestGetMe:
             app.dependency_overrides.pop(get_tenant_db, None)
 
         assert r.status_code == 200
-        keys = {role["key"] for role in r.json()["governance_roles"]}
+        body = r.json()
+        keys = {role["key"] for role in body["governance_roles"]}
         assert keys == {"system_owner", "contributor"}
+        assert body["tenant_name"] == tenant.name
 
     def test_self_scoped_only_no_cross_membership_leak(
         self, db_session, client, tenant, gov_roles

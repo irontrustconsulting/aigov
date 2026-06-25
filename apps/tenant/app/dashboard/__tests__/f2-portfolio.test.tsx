@@ -1,11 +1,14 @@
 /**
  * @jest-environment jsdom
  *
- * F2 visual done-checks (UI-V1-TENANT-SKIN):
+ * F2 done-checks (UI-C1-PORTFOLIO-IDENTITY composition pass):
  * - Whose-court section leads for adoption face (system_owner)
  * - Portfolio posture section leads for assurance face (reviewer)
  * - No compliance-% headline (INV-52)
  * - Compact TierBadge rendered in use-case list (not raw tier string)
+ * - Zero-states: admin-empty, first-run (zero systems), per-region empty your-court
+ * - Loading → Skeleton (role=status); Error → "Try again" retry button
+ * - No /v1/coverage or /v1/export call from the dashboard (DF6-9)
  */
 import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -28,6 +31,7 @@ function me(governanceRoleKeys: string[]): MeRead {
     role: "member",
     email: "caller@acme.test",
     name: "Caller",
+    tenant_name: "Acme Corp",
     governance_roles: governanceRoleKeys.map((key) => ({
       id: key,
       key,
@@ -91,9 +95,10 @@ describe("F2 dashboard — whose-court leads for adoption face", () => {
     mockFetch({ me: me(["system_owner"]), portfolio: [HIGH_RISK_SYSTEM], systems: [SYSTEM_READ] });
     renderWithClient();
     await waitFor(() => expect(screen.getByLabelText("your-court")).toBeInTheDocument());
-    const main = document.querySelector("main")!;
-    const yourCourtEl = main.querySelector("[aria-label='your-court']")!;
-    const postureEl = main.querySelector("[aria-label='portfolio-posture']")!;
+    // PageScaffold renders a <div>, not <main> (AppShell provides <main> in the live app).
+    const root = document.body;
+    const yourCourtEl = root.querySelector("[aria-label='your-court']")!;
+    const postureEl = root.querySelector("[aria-label='portfolio-posture']")!;
     // your-court should come first: postureEl follows yourCourtEl
     expect(
       yourCourtEl.compareDocumentPosition(postureEl) & Node.DOCUMENT_POSITION_FOLLOWING
@@ -104,9 +109,10 @@ describe("F2 dashboard — whose-court leads for adoption face", () => {
     mockFetch({ me: me(["reviewer"]), portfolio: [HIGH_RISK_SYSTEM], systems: [SYSTEM_READ] });
     renderWithClient();
     await waitFor(() => expect(screen.getByLabelText("portfolio-posture")).toBeInTheDocument());
-    const main = document.querySelector("main")!;
-    const postureEl = main.querySelector("[aria-label='portfolio-posture']")!;
-    const yourCourtEl = main.querySelector("[aria-label='your-court']")!;
+    // PageScaffold renders a <div>, not <main> (AppShell provides <main> in the live app).
+    const root = document.body;
+    const postureEl = root.querySelector("[aria-label='portfolio-posture']")!;
+    const yourCourtEl = root.querySelector("[aria-label='your-court']")!;
     // posture-section should come first: yourCourtEl follows postureEl
     expect(
       postureEl.compareDocumentPosition(yourCourtEl) & Node.DOCUMENT_POSITION_FOLLOWING
@@ -130,5 +136,70 @@ describe("F2 dashboard — compact TierBadge in use-case list", () => {
     await waitFor(() => expect(screen.getByLabelText("your-court")).toBeInTheDocument());
     const badge = container.querySelector("[data-variant='compact'][data-tier='high']");
     expect(badge).not.toBeNull();
+  });
+});
+
+describe("F2 dashboard — zero-states (INV-70)", () => {
+  test("admin (zero gov roles) — EmptyState shown; no portfolio or systems call", async () => {
+    const fetchSpy = (global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(me([])),
+      } as Response)
+    ) as jest.Mock);
+    renderWithClient();
+    await waitFor(() => expect(screen.getByLabelText("admin-empty-state")).toBeInTheDocument());
+    for (const call of fetchSpy.mock.calls) {
+      expect(String(call[0])).not.toContain("/v1/portfolio");
+      expect(String(call[0])).not.toContain("/v1/systems");
+    }
+  });
+
+  test("governance caller with zero systems — FirstRunPanel shown", async () => {
+    mockFetch({ me: me(["system_owner"]), portfolio: [], systems: [] });
+    renderWithClient();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: /register your first ai system/i })).toBeInTheDocument()
+    );
+  });
+
+  test("your-court section shows EmptyState when no items awaiting", async () => {
+    // system_owner: HIGH_RISK_SYSTEM blocks on 'reviewer', so owner's court is empty.
+    mockFetch({ me: me(["system_owner"]), portfolio: [HIGH_RISK_SYSTEM], systems: [SYSTEM_READ] });
+    renderWithClient();
+    await waitFor(() => expect(screen.getByLabelText("your-court")).toBeInTheDocument());
+    expect(screen.getByText(/nothing is waiting on you/i)).toBeInTheDocument();
+  });
+});
+
+describe("F2 dashboard — loading and error states (INV-70)", () => {
+  test("loading state renders Skeleton (role=status)", () => {
+    // Never resolve fetch — stays in loading state.
+    global.fetch = jest.fn(() => new Promise(() => {})) as jest.Mock;
+    const { container } = renderWithClient();
+    // Skeleton renders role=status
+    expect(container.querySelector("[role='status']")).toBeInTheDocument();
+  });
+
+  test("error state renders Try again button", async () => {
+    global.fetch = jest.fn(() =>
+      Promise.resolve({ ok: false, status: 500, text: async () => "" } as Response)
+    ) as jest.Mock;
+    renderWithClient();
+    await waitFor(() => expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument());
+  });
+});
+
+describe("F2 dashboard — no coverage or export call from dashboard (DF6-9)", () => {
+  test("no /v1/coverage or /v1/export request issued", async () => {
+    mockFetch({ me: me(["system_owner"]), portfolio: [HIGH_RISK_SYSTEM], systems: [SYSTEM_READ] });
+    renderWithClient();
+    await waitFor(() => expect(screen.getByLabelText("your-court")).toBeInTheDocument());
+    for (const call of (global.fetch as jest.Mock).mock.calls) {
+      const url = String(call[0]);
+      expect(url).not.toContain("/v1/coverage");
+      expect(url).not.toContain("/v1/export");
+    }
   });
 });

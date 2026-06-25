@@ -31,6 +31,7 @@ function mockMe(roleKeys: string[]) {
             role: "member",
             email: null,
             name: null,
+            tenant_name: "Acme Corp",
             governance_roles: roleKeys.map((key) => ({
               id: key,
               key,

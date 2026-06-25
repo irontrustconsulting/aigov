@@ -26,6 +26,109 @@ exports[`EmptyState snapshot 1`] = `
 </div>
 `;
 
+exports[`ErrorState snapshot — with supportLine 1`] = `
+<div
+  class="flex flex-col items-center gap-3 rounded-lg border border-hairline bg-surface-sunken px-6 py-10 text-center"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-circle-alert h-6 w-6 text-danger/60"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <circle
+      cx="12"
+      cy="12"
+      r="10"
+    />
+    <line
+      x1="12"
+      x2="12"
+      y1="8"
+      y2="12"
+    />
+    <line
+      x1="12"
+      x2="12.01"
+      y1="16"
+      y2="16"
+    />
+  </svg>
+  <p
+    class="text-sm text-ink"
+  >
+    Could not load data.
+  </p>
+  <button
+    class="text-sm font-medium text-brand hover:underline"
+    type="button"
+  >
+    Try again
+  </button>
+  <p
+    class="text-xs text-ink-muted"
+  >
+    If the problem persists, contact support.
+  </p>
+</div>
+`;
+
+exports[`ErrorState snapshot — without supportLine 1`] = `
+<div
+  class="flex flex-col items-center gap-3 rounded-lg border border-hairline bg-surface-sunken px-6 py-10 text-center"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-circle-alert h-6 w-6 text-danger/60"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <circle
+      cx="12"
+      cy="12"
+      r="10"
+    />
+    <line
+      x1="12"
+      x2="12"
+      y1="8"
+      y2="12"
+    />
+    <line
+      x1="12"
+      x2="12.01"
+      y1="16"
+      y2="16"
+    />
+  </svg>
+  <p
+    class="text-sm text-ink"
+  >
+    Could not load data.
+  </p>
+  <button
+    class="text-sm font-medium text-brand hover:underline"
+    type="button"
+  >
+    Try again
+  </button>
+</div>
+`;
+
 exports[`FirstRunPanel snapshot 1`] = `
 <div
   class="rounded-lg border border-hairline bg-surface px-6 py-8"
@@ -53,5 +156,55 @@ exports[`FirstRunPanel snapshot 1`] = `
       </button>
     </div>
   </div>
+</div>
+`;
+
+exports[`Skeleton snapshot — 5 lines 1`] = `
+<div
+  aria-label="Loading"
+  class="space-y-3 "
+  role="status"
+>
+  <div
+    aria-hidden="true"
+    class="animate-pulse rounded bg-surface-sunken h-5 w-1/2"
+  />
+  <div
+    aria-hidden="true"
+    class="animate-pulse rounded bg-surface-sunken h-4 w-full"
+  />
+  <div
+    aria-hidden="true"
+    class="animate-pulse rounded bg-surface-sunken h-4 w-2/3"
+  />
+  <div
+    aria-hidden="true"
+    class="animate-pulse rounded bg-surface-sunken h-4 w-full"
+  />
+  <div
+    aria-hidden="true"
+    class="animate-pulse rounded bg-surface-sunken h-4 w-full"
+  />
+</div>
+`;
+
+exports[`Skeleton snapshot — default 1`] = `
+<div
+  aria-label="Loading"
+  class="space-y-3 "
+  role="status"
+>
+  <div
+    aria-hidden="true"
+    class="animate-pulse rounded bg-surface-sunken h-5 w-1/2"
+  />
+  <div
+    aria-hidden="true"
+    class="animate-pulse rounded bg-surface-sunken h-4 w-full"
+  />
+  <div
+    aria-hidden="true"
+    class="animate-pulse rounded bg-surface-sunken h-4 w-2/3"
+  />
 </div>
 `;

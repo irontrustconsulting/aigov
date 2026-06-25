@@ -58,4 +58,5 @@ class MeRead(BaseModel):
     role: str
     email: str | None
     name: str | None
+    tenant_name: str
     governance_roles: list[GovernanceRoleRead]

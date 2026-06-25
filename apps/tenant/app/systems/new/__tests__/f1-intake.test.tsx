@@ -41,6 +41,7 @@ function mockMe(roleKeys: string[]) {
             membership_id: "m1",
             tenant_id: "t1",
             user_id: "u1",
+            tenant_name: "Acme Corp",
             governance_roles: roleKeys.map((key) => ({ key, display_name: key })),
           }),
         headers: new Headers({ "content-type": "application/json" }),

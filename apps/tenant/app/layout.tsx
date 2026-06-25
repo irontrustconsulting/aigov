@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { Providers } from "./providers";
 import { TenantSidebar } from "./_components/tenant-sidebar";
+import { TopUtilityBar } from "./_components/top-utility-bar";
 import { AppShell } from "@irontrust/ui";
 
 export const metadata = {
@@ -15,7 +16,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" data-theme="tenant">
       <body>
         <Providers>
-          <AppShell sidebar={<TenantSidebar />}>{children}</AppShell>
+          <AppShell sidebar={<TenantSidebar />}>
+            <div className="flex h-full flex-col">
+              <TopUtilityBar />
+              <div className="flex-1 overflow-y-auto">{children}</div>
+            </div>
+          </AppShell>
         </Providers>
       </body>
     </html>

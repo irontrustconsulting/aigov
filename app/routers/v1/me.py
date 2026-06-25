@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.context import TenantContext, get_tenant_context, get_tenant_db
 from app.models.governance import GovernanceRole, GovernanceRoleAssignment
+from app.models.identity import Tenant
 from app.schemas.governance import GovernanceRoleRead, MeRead
 
 router = APIRouter(tags=["me"])
@@ -38,11 +39,13 @@ def get_me(
         .where(GovernanceRoleAssignment.membership_id == ctx.membership_id)
         .order_by(GovernanceRole.line_of_defence, GovernanceRole.key)
     ))
+    tenant = db.get(Tenant, ctx.tenant_id)
     return MeRead(
         membership_id=ctx.membership_id,
         tenant_id=ctx.tenant_id,
         role=ctx.role,
         email=ctx.email,
         name=ctx.name,
+        tenant_name=tenant.name,
         governance_roles=[GovernanceRoleRead.model_validate(r) for r in roles],
     )

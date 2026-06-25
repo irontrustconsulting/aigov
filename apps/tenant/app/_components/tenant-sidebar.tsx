@@ -14,24 +14,18 @@ const BASE_NAV: Omit<SidebarNavItem, "isActive">[] = [
   { href: "/audit", label: "Audit" },
 ];
 
-function AccountBlock() {
+function TenantFoot() {
   const { data } = useQuery({
     queryKey: ["me"],
     queryFn: () => api.get<MeRead>("/v1/me"),
     staleTime: 5 * 60 * 1000,
   });
 
-  const displayName = data?.name ?? data?.email ?? null;
-
   return (
-    <div className="space-y-1 px-1 py-1">
-      {displayName && (
-        <p className="truncate text-xs font-medium text-ink">{displayName}</p>
+    <div className="px-1 py-1">
+      {data?.tenant_name && (
+        <p className="truncate text-xs font-medium text-ink">{data.tenant_name}</p>
       )}
-      {/* NOTE: tenant name absent from MeRead (tenant_id only); flagged C0-PREFLIGHT.md. */}
-      <a href="/api/auth/logout" className="block text-xs text-ink-muted hover:text-ink">
-        Sign out
-      </a>
     </div>
   );
 }
@@ -54,7 +48,7 @@ export function TenantSidebar() {
         </Link>
       }
       navItems={navItems}
-      foot={<AccountBlock />}
+      foot={<TenantFoot />}
     />
   );
 }

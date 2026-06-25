@@ -54,6 +54,7 @@ function mockFetch({
             role: "member",
             email: null,
             name: null,
+            tenant_name: "Acme Corp",
             governance_roles: isSystemOwner
               ? [{ id: "g1", key: "system_owner", name: "System Owner", description: null, line_of_defence: 1 }]
               : [],

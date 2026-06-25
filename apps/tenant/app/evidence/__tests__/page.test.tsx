@@ -25,6 +25,7 @@ function me(governanceRoleKeys: string[]): MeRead {
     role: "member",
     email: "user@acme.test",
     name: "Test User",
+    tenant_name: "Acme Corp",
     governance_roles: governanceRoleKeys.map((key) => ({
       id: key,
       key,
