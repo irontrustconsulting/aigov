@@ -277,3 +277,11 @@ Every colour and spacing value used in `packages/ui` components must reference a
 **INV-65** · CONVENTION · IBM Plex Serif confined to `AuditPackView` and `AtoDocumentView` root wrappers
 The serif face (`font-serif` / IBM Plex Serif) must only appear on the root `<article>` of `AuditPackView` and `AtoDocumentView`. No other tenant surface uses serif. The font-face signals "exported document / archival artefact", not UI. Using it in interactive surfaces (forms, lists, dashboards) violates the reading-mode distinction.
 ↳ origin: UI-V1-TENANT-SKIN · locus: `packages/ui/src/audit/` · refs: FE-17, D-44
+
+**INV-66** · CONVENTION · every `<TableRow>` must be wrapped in `<TableBody>`
+`<TableRow>` (`<tr>`) must never be a direct child of `<Table>` (`<table>`). Browsers auto-insert a `<tbody>` during HTML parsing; React SSR does not — the DOM mismatch triggers a React hydration error at runtime. Wrap all data rows in `<TableBody>` (the exported `<tbody>` primitive from `packages/ui`). `<TableHeaderRow>` (`<thead>`) is exempt: browsers do not auto-promote `<thead>` the same way.
+↳ origin: post-UI-V1 correction (2026-06-25) · locus: `packages/ui/src/primitives/table.tsx` · refs: INV-54
+
+**INV-67** · CONVENTION · Tailwind v4 `@source` directive must cover `packages/ui/src` in every app `globals.css`
+Tailwind v4 automatic content detection scans only the app's own directory. Utility classes used exclusively in `packages/ui` components are never generated unless the app explicitly declares `@source "../../../packages/ui/src"` before the `@import "tailwindcss"` line. This directive must appear in `apps/tenant/app/globals.css` and `apps/operator/app/globals.css`. Omitting it causes the design system to silently produce an unstyled UI — all token-derived classes from UI components go missing.
+↳ origin: post-UI-V1 correction (2026-06-25) · locus: `apps/*/app/globals.css` · refs: FE-14, D-49

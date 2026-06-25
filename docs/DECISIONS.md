@@ -469,3 +469,13 @@ See DF-V1-1.
 **OPEN-V7** · `--sev-*` severity channel — no current data-model referent; deferred
 Reserved in the token layer at V0. No severity field exists in any schema at HEAD. Deferred until a severity concept materialises. Open until a schema change introduces a severity dimension.
 ↳ refs: D-48, SV-1
+
+**D-49** · Tailwind v4 `@source` directive is the canonical way to make app builds scan `packages/ui`
+Tailwind v4 auto-detection does not follow symlinks into sibling monorepo packages. Rather than duplicating component source into each app or adding a post-build copy step, each app's `globals.css` carries `@source "../../../packages/ui/src"` before `@import "tailwindcss"`. This is the minimal, stable solution: it is explicit, version-control visible, and fails loudly (missing utility classes) rather than silently if removed.  
+Rejected: `content` array in a Tailwind config file (Tailwind v4 uses CSS-first config; a JS config file for this alone would be a regression); duplicating component source (violates single-home; maintenance burden).
+↳ origin: post-UI-V1 correction (2026-06-25) · refs: INV-67, FE-14
+
+**D-50** · Global 401 redirect lives in `createQueryClient`'s `QueryCache.onError`
+When a BFF proxy call returns 401 (session cookie present but server-side store empty — e.g. after a dev-server restart), React Query marks the query failed and the UI showed a generic error message. The correct behaviour is an immediate redirect to `/api/auth/login`. The handler belongs in `createQueryClient` (`packages/api-client`) because: (a) it is shared across both apps, (b) it fires for every query globally without requiring per-surface wiring, and (c) `QueryCache.onError` is the idiomatic TanStack Query v5 location for cross-cutting error handling. The `retry` function is also set to return `false` for 401 to skip the pointless retry round-trip. The underlying session store (in-memory, dev-only) is a known limitation; this handler is the correct client-side recovery regardless of the store implementation.  
+Rejected: per-query `onError` (requires wiring at every call site); middleware-only check (middleware sees only the cookie, not store validity; cannot redirect on 401 without a server round-trip).
+↳ origin: post-UI-V1 correction (2026-06-25) · refs: INV-50, UI-F0-FOUNDATION session store note
