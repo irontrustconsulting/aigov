@@ -285,3 +285,15 @@ The serif face (`font-serif` / IBM Plex Serif) must only appear on the root `<ar
 **INV-67** · CONVENTION · Tailwind v4 `@source` directive must cover `packages/ui/src` in every app `globals.css`
 Tailwind v4 automatic content detection scans only the app's own directory. Utility classes used exclusively in `packages/ui` components are never generated unless the app explicitly declares `@source "../../../packages/ui/src"` before the `@import "tailwindcss"` line. This directive must appear in `apps/tenant/app/globals.css` and `apps/operator/app/globals.css`. Omitting it causes the design system to silently produce an unstyled UI — all token-derived classes from UI components go missing.
 ↳ origin: post-UI-V1 correction (2026-06-25) · locus: `apps/*/app/globals.css` · refs: FE-14, D-49
+
+**INV-68** · CONVENTION · No-undesigned-UI guardrail: the coding agent does not originate visual, layout, UX, or composition design
+The coding agent implements only what an execution-only handoff specifies. If it judges that a visual or UX change is needed, it flags the need and stops; it does not improvise. It never records an undesigned visual or UX decision in STATE, INDEX, or any canonical as shipped work. Genuine defects (build breaks, hydration errors, broken redirects, classes referencing absent tokens) are exempt and may be fixed and recorded as fixes. The exemption boundary: a defect is a behaviour the surface was specified to have and does not exhibit; design is any unspecified visual or UX choice. This invariant does not collide with INV-49 (operation locus, not design origination).
+↳ origin: UI-C0-PRODUCTION-FOUNDATION · locus: `CLAUDE.md` + `packages/ui/src` + `apps/*` · refs: D-51
+
+**INV-69** · CONVENTION · Compose from the kit — no bespoke layout or one-off components (forward-scoped per C0-5)
+A surface built after UI-C0 uses `AppShell`/`Sidebar` (FE-20), `PageScaffold`/`PageHeader` (FE-21), `EmptyState`/`FirstRunPanel` (FE-22), and the FE-23 kit primitives rather than inventing bespoke layout or one-off components. A surface built before UI-C0 comes under this invariant only once its UI-C0 per-surface composition pass has cleared it in the composition-debt register (design doc Appendix C). Until cleared, it is tracked as remediation debt, not a standing violation.
+↳ origin: UI-C0-PRODUCTION-FOUNDATION · locus: `packages/ui/src` + `apps/*` · refs: FE-20, FE-21, FE-22, FE-23, D-51, INV-68
+
+**INV-70** · CONVENTION · Every data surface defines empty, first-run, loading, and error states (forward-scoped per C0-5)
+Any surface that displays server-fetched data must provide all four presentation states: empty (no data), first-run (no data and first visit), loading (skeleton), and error. This uses FE-22 primitives (`EmptyState`, `FirstRunPanel`, `Skeleton`, `ErrorState`). The same forward-scope clause as INV-69 applies: surfaces predating UI-C0 are brought under this invariant at their per-surface composition pass.
+↳ origin: UI-C0-PRODUCTION-FOUNDATION · locus: `apps/*` data surfaces · refs: FE-22, INV-69, D-51, INV-68

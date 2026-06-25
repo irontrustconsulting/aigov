@@ -1,0 +1,57 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`EmptyState snapshot 1`] = `
+<div
+  class="flex flex-col items-center gap-3 rounded-lg border border-hairline bg-surface-sunken px-6 py-10 text-center"
+  role="status"
+>
+  <div
+    aria-hidden="true"
+    class="text-ink-muted"
+  >
+    <span>
+      📭
+    </span>
+  </div>
+  <p
+    class="text-sm text-ink-muted"
+  >
+    No items found.
+  </p>
+  <div>
+    <button>
+      Add item
+    </button>
+  </div>
+</div>
+`;
+
+exports[`FirstRunPanel snapshot 1`] = `
+<div
+  class="rounded-lg border border-hairline bg-surface px-6 py-8"
+>
+  <div
+    class="space-y-4"
+  >
+    <div
+      class="space-y-1"
+    >
+      <h2
+        class="text-lg font-semibold text-ink"
+      >
+        Get started
+      </h2>
+      <p
+        class="text-sm text-ink-muted"
+      >
+        Register your first AI system to begin.
+      </p>
+    </div>
+    <div>
+      <button>
+        Register
+      </button>
+    </div>
+  </div>
+</div>
+`;

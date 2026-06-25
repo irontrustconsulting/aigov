@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { Button } from "../primitives/button";
 import { ProvenanceBadge, type Provenance } from "./provenance-badge";

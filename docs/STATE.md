@@ -4,7 +4,7 @@
 **Purpose:** What is implemented and what must not be reinvented, at the level of *what exists · what shape · which gate*. It points outward for depth and never restates the detail.
 **Lanes:** constraints → `INVARIANTS.md` (`INV-n`); schema (tables/enums/indexes) → `DATA-MODEL.md`; auth / identity / RLS / session mechanics → `ARCHITECTURE.md`; implementation shapes → `PATTERNS.md` (`PAT-n`); decisions/rationale → `DECISIONS.md` (`D-n`); conceptual model → `DOMAIN.md`.
 
-**Current through:** UI-V1-TENANT-SKIN + post-V1 corrections (Tailwind @source, TableBody, stale classes, layout pass, AppNav, DrillDown UX, global 401 redirect). Sprints 1–7b + UI-F1..F8 + UI-V0 + UI-V1 built (tenant UI plane complete with full visual system; operator UI plane F7+F8 shipped).
+**Current through:** UI-C0-PRODUCTION-FOUNDATION (AppShell/Sidebar both planes, PageHeader/PageScaffold, EmptyState/FirstRunPanel, shared primitive kit). Sprints 1–7b + UI-F1..F8 + UI-V0 + UI-V1 + UI-C0 built. Per-surface composition passes (F1–F8) tracked in the composition-debt register below.
 
 ---
 
@@ -241,10 +241,45 @@ Tested: `tests/platform/test_platform_me.py` (backend); `apps/operator/app/(cons
 - **Tailwind v4 `@source` directive** — Both apps' `globals.css` were missing `@source "../../../packages/ui/src"`. Tailwind v4 auto-detection does not follow symlinks into sibling packages; without the directive, utility classes used exclusively in `packages/ui` components (e.g. `rounded-sm`, `text-xs`, `py-0.5` in `VerdictChip`/`TierBadge`) were never generated, making the design system silently invisible. Fixed per D-49 / INV-67.
 - **`TableBody` component** — `<TableRow>` (`<tr>`) as a direct child of `<Table>` (`<table>`) caused React hydration errors: browsers auto-insert `<tbody>` during HTML parsing; React SSR does not. `TableBody` (`<tbody>`) added to `packages/ui/src/primitives/table.tsx` and exported from `packages/ui/src/index.ts`. All existing `Table` usages in `packages/ui` and the tenant app updated to wrap `TableRow` in `TableBody` (INV-66).
 - **Stale Tailwind class names** — Eight `packages/ui` files carried pre-V0 class names (`border-border`, `bg-bg`, `text-text`, `bg-surface-subtle`, `bg-border-strong`, `text-link`, `text-red-600`, `text-text-muted`) that referenced tokens not present in the IronTrust token system, doing nothing silently. Replaced with V0 equivalents (`border-hairline`, `bg-surface`, `text-ink`, `bg-surface-sunken`, `bg-hairline-strong`, `text-brand`, `text-danger`, `text-ink-muted`) across `dialog.tsx`, `select.tsx`, `audit-grade-divider.tsx`, `evidence-manifest-table.tsx`, `evidence-manifest-chip.tsx`, `evidence-link-picker.tsx`, `evidence-upload-control.tsx`, `free-text.tsx`.
-- **Layout and typography pass** — All 26 remaining tenant app pages/steps/regions that carried no layout classes were styled with the consistent pattern: `mx-auto max-w-4xl space-y-{4,8} px-6 py-8` shells; `text-2xl font-semibold` H1; `text-lg font-semibold` H2; `border-hairline rounded-lg border p-4` cards; `text-ink-muted text-sm` muted text; token-referenced primary button and verdict/court edge-bar colours. Covered: all wizard steps (`_steps/`), all assessment regions (`_regions/`), and the five main page shells (`dashboard`, `evidence`, `audit`, `review-queue`, `systems/[id]`).
-- **`AppNav` persistent header** — `apps/tenant/app/_components/app-nav.tsx` added: an `<AppNav>` client component that renders a `border-hairline border-b` header with the IronTrust logo → `/dashboard` and four primary nav links (Portfolio, Review queue, Evidence, Audit), active link highlighted. Wired into `apps/tenant/app/layout.tsx` as a persistent shell wrapping all pages. Solves the navigation dead-end on interior pages.
-- **`DrillDownStep` UX rewrite** — Products in the catalogue are attached to *sub-categories* (e.g. "Customer-facing Chatbots"), not to the 14 top-level categories (e.g. "Customer Engagement"). The original two-column table (category name + "Browse vendors/products" button) was replaced with a proper two-level hierarchy: Stage 1 = top-level category cards → Stage 2 = sub-category cards → Stage 3 = product list with optional vendor filter chips → Stage 4 = product confirm. No "Browse vendors/products" button exists; clicking a category card is the single action at each level. Tests updated to distinguish top-level vs sub-category API calls by `parent_id` query param.
+- **PROVISIONAL (pending UI-C0 re-grounding): code stays live and rendering; pending-re-grounding means the foundation will supersede it, not revert it.** **Layout and typography pass** — All 26 remaining tenant app pages/steps/regions that carried no layout classes were styled with the consistent pattern: `mx-auto max-w-4xl space-y-{4,8} px-6 py-8` shells; `text-2xl font-semibold` H1; `text-lg font-semibold` H2; `border-hairline rounded-lg border p-4` cards; `text-ink-muted text-sm` muted text; token-referenced primary button and verdict/court edge-bar colours. Covered: all wizard steps (`_steps/`), all assessment regions (`_regions/`), and the five main page shells (`dashboard`, `evidence`, `audit`, `review-queue`, `systems/[id]`). Superseded by FE-21 scaffold (UI-C0); existing surfaces updated in per-surface composition passes.
+- **PROVISIONAL (pending UI-C0 re-grounding): code stays live and rendering; pending-re-grounding means the foundation will supersede it, not revert it.** **`AppNav` persistent header** — `apps/tenant/app/_components/app-nav.tsx` added: an `<AppNav>` client component that renders a `border-hairline border-b` header with the IronTrust logo → `/dashboard` and four primary nav links (Portfolio, Review queue, Evidence, Audit), active link highlighted. Wired into `apps/tenant/app/layout.tsx` as a persistent shell wrapping all pages. Solves the navigation dead-end on interior pages. Superseded by FE-20 sidebar shell (UI-C0).
+- **PROVISIONAL (pending UI-C0 re-grounding): code stays live and rendering; pending-re-grounding means the foundation will supersede it, not revert it.** **`DrillDownStep` UX rewrite** — Products in the catalogue are attached to *sub-categories* (e.g. "Customer-facing Chatbots"), not to the 14 top-level categories (e.g. "Customer Engagement"). The original two-column table (category name + "Browse vendors/products" button) was replaced with a proper two-level hierarchy: Stage 1 = top-level category cards → Stage 2 = sub-category cards → Stage 3 = product list with optional vendor filter chips → Stage 4 = product confirm. No "Browse vendors/products" button exists; clicking a category card is the single action at each level. Tests updated to distinguish top-level vs sub-category API calls by `parent_id` query param. Re-grounded at F1 per-surface pass (`OPEN-C1`).
 - **Global 401 redirect** — `packages/api-client/src/query-client.ts` now wires a `QueryCache({ onError })` that redirects to `/api/auth/login` whenever any query receives a 401, and sets `retry: false` for 401 to skip the pointless retry round-trip (D-50). Eliminates the "Could not load your role." error shown when the in-memory session store is wiped by a dev-server restart while the browser still holds a valid session cookie.
+
+---
+
+### Production UI composition layer (`UI-C0-PRODUCTION-FOUNDATION`)
+
+**Delta:** presentational only — 0 backend / 0 schema / 0 route / 0 enum. Installs the no-undesigned-UI guardrail (INV-68/D-51) as a standing CLAUDE.md process rule.
+
+**`AppShell` / `Sidebar` (FE-20)** — `packages/ui/src/shell`. `AppShell` provides `flex h-screen` layout (fixed sidebar + scrollable main). `Sidebar` accepts `brand`, `navItems` (with caller-computed `isActive`), optional `nav` override slot (for `RequirePermission`-gated items), `foot`, and `railBg`. **Tenant app** (`apps/tenant`): `app-nav.tsx` top-bar removed; `TenantSidebar` (`apps/tenant/app/_components/tenant-sidebar.tsx`) wires brand + Portfolio/Review queue/Evidence/Audit nav items + account block (`MeRead.name`/`email`; tenant name not in `MeRead` — gap flagged in C0-PREFLIGHT.md). **Operator app** (`apps/operator`): `apps/operator/app/(console)/layout.tsx` reworked to `AppShell`; `OperatorSidebar` (`apps/operator/app/(console)/_components/operator-sidebar.tsx`) uses `railBg="var(--chrome-rail-bg)"` (INV-60), `nav` slot with `RequirePermission`-gated Provisioning and RBAC Management links (FE-13), UNBUILT placeholders preserved. Auth-failure redirect and `useQuery(["platform-me"])` remain in layout. Visual refinement of operator rail pending designer target (INV-68 / C0-PREFLIGHT.md flag).
+
+**`PageHeader` / `PageScaffold` (FE-21)** — `packages/ui/src/scaffold`. `PageHeader`: title (h1 `text-2xl font-semibold`), optional subtitle, action slot, breadcrumb/step slot. `PageScaffold`: `mx-auto max-w-4xl px-6 py-8 space-y-8`. Supersedes the provisional 26-page layout pass per the forward-scope clause — existing surfaces updated in per-surface composition passes (Appendix C register below).
+
+**UI state patterns (FE-22)** — `packages/ui/src/state`. `EmptyState` (icon, message `role="status"`, optional action) and `FirstRunPanel` (h2 heading, body, action) shipped. `Skeleton` and `ErrorState` blocked pending designer targets (flagged in C0-PREFLIGHT.md; to be added when targets arrive).
+
+**Shared primitive kit (FE-23)** — `packages/ui/src/kit`. `StatCard` (label, value, optional trend), `SectionHeader` (h2 + optional action), `ListSelectRow` (whole-row button, single `ChevronRight`, no per-row label), `DataTable`/`DataTableHeader`/`DataTableBody` scaffold extending existing `Table`/`TableBody` (INV-66) — no new `<tbody>` primitive.
+
+**Tests:** 152 in `packages/ui` all green (shell: 7, scaffold: 9, state: 11, kit: 16, prior: 109); operator sidebar gating: 6 (FE-13 assertions). Axe zero violations across all new components. `eslint-plugin-irontrust/no-literal-token-value` passes (INV-63).
+
+**The three provisional reactive items from 2026-06-25 (marked in the post-V1 section above):** AppNav top-bar superseded by FE-20 shell; layout/typography pass superseded by FE-21 scaffold in scope; DrillDownStep remains provisional pending F1 per-surface pass (`OPEN-C1`).
+
+---
+
+### Composition-debt register (Appendix C — remediation tracker for INV-69/INV-70)
+
+Surfaces come under INV-69/INV-70 only once their UI-C0 per-surface composition pass clears them here. Member management is born compliant. Shell debt cleared globally by FE-20.
+
+| Surface | Owes | Cleared by |
+|---|---|---|
+| F1 intake (`systems/new` + steps) | scaffold + states + kit; `DrillDownStep` re-ground (`OPEN-C1`) | F1 composition pass |
+| F2 portfolio (`dashboard`, `systems/[id]`) | scaffold + states + kit | F2 composition pass |
+| F3 assess (`use-cases/[id]`) | scaffold + states + kit | F3 composition pass |
+| F4 assure (`review-queue`, `use-cases/[id]` ext) | scaffold + states + kit | F4 composition pass |
+| F5 evidence (`evidence`, ext) | scaffold + states + kit | F5 composition pass |
+| F6 audit (`audit`, ext) | scaffold + states + kit | F6 composition pass |
+| F7 provisioning (operator) | states + kit | F7 composition pass |
+| F8 operators (operator) | states + kit | F8 composition pass |
 
 ---
 

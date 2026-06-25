@@ -1,3 +1,5 @@
+"use client";
+
 import * as RadixSelect from "@radix-ui/react-select";
 
 export interface SelectOption {

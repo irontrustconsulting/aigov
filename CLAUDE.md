@@ -44,6 +44,14 @@ The current unit of work is `sprints/*.md`. Don't restate any of the above here.
 
 ---
 
+## No-undesigned-UI guardrail (INV-68)
+
+The coding agent does not originate visual, layout, UX, or composition design. It implements only what an execution-only handoff specifies. If it judges a visual or UX change is needed, it flags it and stops; it does not improvise one. It never records an undesigned visual or UX decision in STATE, INDEX, or any canonical as shipped work. Genuine defects (build breaks, hydration errors, broken redirects, classes referencing absent tokens) are exempt and may be fixed and recorded as fixes.
+
+References: `INV-68`, `D-51`.
+
+---
+
 ## Sprint closure — definition of done
 
 You are the only agent that edits `docs/`; closure is your job. The **canon statement** of this rule is `INDEX.md` → Working discipline; the **per-sprint instance** is the handoff's final work item, which names the exact edits and the `INV`/`D` text to append. The steps below are the standing expansion — run them every sprint, whether or not a given handoff spells each one out.

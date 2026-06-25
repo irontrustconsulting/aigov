@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import "./globals.css";
 import { Providers } from "./providers";
-import { AppNav } from "./_components/app-nav";
+import { TenantSidebar } from "./_components/tenant-sidebar";
+import { AppShell } from "@irontrust/ui";
 
 export const metadata = {
   title: "IronTrust",
@@ -14,8 +15,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" data-theme="tenant">
       <body>
         <Providers>
-          <AppNav />
-          {children}
+          <AppShell sidebar={<TenantSidebar />}>{children}</AppShell>
         </Providers>
       </body>
     </html>

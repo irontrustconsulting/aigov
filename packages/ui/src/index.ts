@@ -1,3 +1,24 @@
+export { AppShell, type AppShellProps } from "./shell/app-shell";
+export { Sidebar, type SidebarProps, type SidebarNavItem } from "./shell/sidebar";
+
+export { PageHeader, type PageHeaderProps } from "./scaffold/page-header";
+export { PageScaffold, type PageScaffoldProps } from "./scaffold/page-scaffold";
+
+export { EmptyState, type EmptyStateProps } from "./state/empty-state";
+export { FirstRunPanel, type FirstRunPanelProps } from "./state/first-run-panel";
+
+export { StatCard, type StatCardProps } from "./kit/stat-card";
+export { SectionHeader, type SectionHeaderProps } from "./kit/section-header";
+export { ListSelectRow, type ListSelectRowProps } from "./kit/list-select-row";
+export {
+  DataTable,
+  DataTableHeader,
+  DataTableBody,
+  type DataTableProps,
+  type DataTableHeaderProps,
+  type DataTableBodyProps,
+} from "./kit/data-table";
+
 export { Button, type ButtonProps, type ButtonVariant } from "./primitives/button";
 export { Select } from "./primitives/select";
 export { Dialog } from "./primitives/dialog";
