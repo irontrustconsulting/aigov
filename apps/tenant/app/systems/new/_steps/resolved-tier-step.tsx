@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Button, FreeText, SingleSelect, SodAction, TierBadge, toTierMember, type SelectOption } from "@irontrust/ui";
+import { Button, FreeText, PageHeader, PageScaffold, SingleSelect, SodAction, TierBadge, toTierMember, type SelectOption } from "@irontrust/ui";
 import type { ClassificationRead, EUAIActTier } from "@irontrust/api-client";
 import { useEUSubcategories, useMe, useOverrideClassification } from "@/lib/intake";
 
@@ -101,7 +101,7 @@ export function ResolvedTierStep({
         onChange={setJustification}
       />
       {overrideMutation.isError && (
-        <p role="alert">Could not apply the override. Check the tier/subcategory pair and try again.</p>
+        <div role="alert" className="text-sm text-danger">Could not apply the override. Check the tier/subcategory pair and try again.</div>
       )}
       <Button type="submit" disabled={!subcategoryCode || overrideMutation.isPending}>
         Confirm override
@@ -110,20 +110,22 @@ export function ResolvedTierStep({
   );
 
   return (
-    <section aria-label="resolved-tier" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
-      <h2 className="text-lg font-semibold">Classification result</h2>
-      <TierBadge
-        value={toTierMember(classification.tier)}
-        variant="card"
-        basis={tierBasis}
-        overrideLadder={
-          <SodAction barred={!isSystemOwner}>{overrideForm}</SodAction>
-        }
-      />
+    <PageScaffold>
+      <section aria-label="resolved-tier" className="space-y-4">
+        <PageHeader title="Classification result" />
+        <TierBadge
+          value={toTierMember(classification.tier)}
+          variant="card"
+          basis={tierBasis}
+          overrideLadder={
+            <SodAction barred={!isSystemOwner}>{overrideForm}</SodAction>
+          }
+        />
 
-      <Button type="button" onClick={onContinue}>
-        Continue
-      </Button>
-    </section>
+        <Button type="button" onClick={onContinue}>
+          Continue
+        </Button>
+      </section>
+    </PageScaffold>
   );
 }

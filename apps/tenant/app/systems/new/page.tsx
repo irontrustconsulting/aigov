@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducer } from "react";
+import { ErrorState, Skeleton } from "@irontrust/ui";
 import { useMe } from "@/lib/intake";
 import { initialWizardState, wizardReducer } from "./wizard-state";
 import { DrillDownStep } from "./_steps/drill-down-step";
@@ -27,8 +28,8 @@ export default function NewSystemPage() {
   const me = useMe();
   const [state, dispatch] = useReducer(wizardReducer, initialWizardState);
 
-  if (me.isLoading) return <p>Loading…</p>;
-  if (me.isError || !me.data) return <p role="alert">Could not load your role.</p>;
+  if (me.isLoading) return <Skeleton />;
+  if (me.isError || !me.data) return <ErrorState message="Could not load your role." onRetry={() => me.refetch()} />;
 
   const roleKeys = new Set(me.data.governance_roles.map((r) => r.key));
   const isSystemOwner = roleKeys.has("system_owner");

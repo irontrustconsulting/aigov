@@ -4,7 +4,7 @@
 **Purpose:** What is implemented and what must not be reinvented, at the level of *what exists · what shape · which gate*. It points outward for depth and never restates the detail.
 **Lanes:** constraints → `INVARIANTS.md` (`INV-n`); schema (tables/enums/indexes) → `DATA-MODEL.md`; auth / identity / RLS / session mechanics → `ARCHITECTURE.md`; implementation shapes → `PATTERNS.md` (`PAT-n`); decisions/rationale → `DECISIONS.md` (`D-n`); conceptual model → `DOMAIN.md`.
 
-**Current through:** UI-C1-PORTFOLIO-IDENTITY (dashboard composition pass + identity fold; `MeRead.tenant_name`; `Skeleton`/`ErrorState` built). Sprints 1–7b + UI-F1..F8 + UI-V0 + UI-V1 + UI-C0 + UI-C1 built. Per-surface composition passes (F1–F8) tracked in the composition-debt register below.
+**Current through:** UI-C2-INTAKE-CATALOGUE (catalogue drill-down redesign — vendor rung, LogoTile, F1 composition pass; `logo_url` plumbed; `OPEN-C1` resolved). Sprints 1–7b + UI-F1..F8 + UI-F9 + UI-V0 + UI-V1 + UI-C0 + UI-C1 + UI-C2 built. Per-surface composition passes (F1–F8) tracked in the composition-debt register below.
 
 ---
 
@@ -245,7 +245,7 @@ Tested: `tests/platform/test_platform_me.py` (backend); `apps/operator/app/(cons
 - **Stale Tailwind class names** — Eight `packages/ui` files carried pre-V0 class names (`border-border`, `bg-bg`, `text-text`, `bg-surface-subtle`, `bg-border-strong`, `text-link`, `text-red-600`, `text-text-muted`) that referenced tokens not present in the IronTrust token system, doing nothing silently. Replaced with V0 equivalents (`border-hairline`, `bg-surface`, `text-ink`, `bg-surface-sunken`, `bg-hairline-strong`, `text-brand`, `text-danger`, `text-ink-muted`) across `dialog.tsx`, `select.tsx`, `audit-grade-divider.tsx`, `evidence-manifest-table.tsx`, `evidence-manifest-chip.tsx`, `evidence-link-picker.tsx`, `evidence-upload-control.tsx`, `free-text.tsx`.
 - **PROVISIONAL (pending UI-C0 re-grounding): code stays live and rendering; pending-re-grounding means the foundation will supersede it, not revert it.** **Layout and typography pass** — All 26 remaining tenant app pages/steps/regions that carried no layout classes were styled with the consistent pattern: `mx-auto max-w-4xl space-y-{4,8} px-6 py-8` shells; `text-2xl font-semibold` H1; `text-lg font-semibold` H2; `border-hairline rounded-lg border p-4` cards; `text-ink-muted text-sm` muted text; token-referenced primary button and verdict/court edge-bar colours. Covered: all wizard steps (`_steps/`), all assessment regions (`_regions/`), and the five main page shells (`dashboard`, `evidence`, `audit`, `review-queue`, `systems/[id]`). Superseded by FE-21 scaffold (UI-C0); existing surfaces updated in per-surface composition passes.
 - **PROVISIONAL (pending UI-C0 re-grounding): code stays live and rendering; pending-re-grounding means the foundation will supersede it, not revert it.** **`AppNav` persistent header** — `apps/tenant/app/_components/app-nav.tsx` added: an `<AppNav>` client component that renders a `border-hairline border-b` header with the IronTrust logo → `/dashboard` and four primary nav links (Portfolio, Review queue, Evidence, Audit), active link highlighted. Wired into `apps/tenant/app/layout.tsx` as a persistent shell wrapping all pages. Solves the navigation dead-end on interior pages. Superseded by FE-20 sidebar shell (UI-C0).
-- **PROVISIONAL (pending UI-C0 re-grounding): code stays live and rendering; pending-re-grounding means the foundation will supersede it, not revert it.** **`DrillDownStep` UX rewrite** — Products in the catalogue are attached to *sub-categories* (e.g. "Customer-facing Chatbots"), not to the 14 top-level categories (e.g. "Customer Engagement"). The original two-column table (category name + "Browse vendors/products" button) was replaced with a proper two-level hierarchy: Stage 1 = top-level category cards → Stage 2 = sub-category cards → Stage 3 = product list with optional vendor filter chips → Stage 4 = product confirm. No "Browse vendors/products" button exists; clicking a category card is the single action at each level. Tests updated to distinguish top-level vs sub-category API calls by `parent_id` query param. Re-grounded at F1 per-surface pass (`OPEN-C1`).
+- **PROVISIONAL (pending UI-C0 re-grounding): code stays live and rendering; pending-re-grounding means the foundation will supersede it, not revert it.** **`DrillDownStep` UX rewrite** — Products in the catalogue are attached to *sub-categories* (e.g. "Customer-facing Chatbots"), not to the 14 top-level categories (e.g. "Customer Engagement"). The original two-column table (category name + "Browse vendors/products" button) was replaced with a proper two-level hierarchy: Stage 1 = top-level category cards → Stage 2 = sub-category cards → Stage 3 = product list with optional vendor filter chips → Stage 4 = product confirm. No "Browse vendors/products" button exists; clicking a category card is the single action at each level. Tests updated to distinguish top-level vs sub-category API calls by `parent_id` query param. Re-grounded at UI-C2 (`OPEN-C1` resolved — see D-56).
 - **Global 401 redirect** — `packages/api-client/src/query-client.ts` now wires a `QueryCache({ onError })` that redirects to `/api/auth/login` whenever any query receives a 401, and sets `retry: false` for 401 to skip the pointless retry round-trip (D-50). Eliminates the "Could not load your role." error shown when the in-memory session store is wiped by a dev-server restart while the browser still holds a valid session cookie.
 
 ---
@@ -264,7 +264,7 @@ Tested: `tests/platform/test_platform_me.py` (backend); `apps/operator/app/(cons
 
 **Tests:** 152 in `packages/ui` all green (shell: 7, scaffold: 9, state: 11, kit: 16, prior: 109); operator sidebar gating: 6 (FE-13 assertions). Axe zero violations across all new components. `eslint-plugin-irontrust/no-literal-token-value` passes (INV-63).
 
-**The three provisional reactive items from 2026-06-25 (marked in the post-V1 section above):** AppNav top-bar superseded by FE-20 shell; layout/typography pass superseded by FE-21 scaffold in scope; DrillDownStep remains provisional pending F1 per-surface pass (`OPEN-C1`).
+**The three provisional reactive items from 2026-06-25 (marked in the post-V1 section above):** AppNav top-bar superseded by FE-20 shell; layout/typography pass superseded by FE-21 scaffold in scope; DrillDownStep re-grounded at UI-C2 (`OPEN-C1` resolved — D-56).
 
 ---
 
@@ -282,13 +282,31 @@ Tested: `tests/platform/test_platform_me.py` (backend); `apps/operator/app/(cons
 
 ---
 
+### Catalogue drill-down & F1 composition pass (`UI-C2-INTAKE-CATALOGUE`)
+
+**Delta:** presentational + one additive response-schema field (`logo_url` on `ProductDetailOut` / `CatalogueVendorRef`) — 0 new tables / enums / migrations.
+
+**`DrillDownStep` redesign (D-56 / `OPEN-C1` resolved):** Funnel IA upgraded to the designed four-rung shape: top-category → sub-category → vendor rung (discrete step, not filter chips) → product → confirm. Single-vendor sub-categories auto-skip the vendor rung (INV-72); `vendorAutoSkipPrevented` ref prevents re-triggering on back-navigation. In-house exit (`"Not in catalogue / in-house"`) present at every rung. All four INV-70 states per rung.
+
+**`LogoTile` (FE-25):** New kit component in `packages/ui/src/kit/logo-tile.tsx`. Props: `src?: string | null`, `name: string`, `size?: number` (default 40px). Renders `<img>` when `src` is present; 1–2 initial monogram (neutral ramp — no `--verdict-*` tokens) when `src` is null/absent. `aria-label={name}` on container. Default 40px on vendor/product rows; 24px for vendor in confirm step.
+
+**`ListSelectRow` [ALTER] (FE-23):** Optional `leading?: React.ReactNode` slot prepended before the label. Vendor and product rows pass `<LogoTile …>` as `leading`; category rows omit it.
+
+**F1 composition pass (WI-6):** All `systems/new` steps re-grounded — `IntakeCaptureStep`, `PrefillStep`, `UseCaseCreateStep`, `ResolvedTierStep`, `ContextGateStep`, `TerminalProhibited`, `WhoseCourtStep`, `NeedsSystemOwner`, `AssuranceReadOnly` — each wrapped in `<PageScaffold>` + `<PageHeader>`; `<p>Loading…</p>` → `<Skeleton>`; `<p role="alert">` network errors → `<ErrorState … onRetry={…} />`; inline mutation errors → `<div role="alert" className="text-sm text-danger">` (DF-C2-4). No `mx-auto max-w-4xl` remains in `systems/new`. F1 composition-debt row cleared.
+
+**`logo_url` additive field + logo seed (WI-1/WI-2):** `logo_url: str | None = None` added to `CatalogueVendorRef` and `ProductDetailOut` in `app/schemas/system.py`; `get_product_detail` passes `logo_url=product.logo_url` / `logo_url=vendor.logo_url`. `packages/api-client/src/contracts/reference.ts` updated. Existing serialisation unchanged (defaults to `None`). `scripts/seed/seed_logos.py` fetches 128 × 128 PNG per vendor via Google's favicon service and saves to `apps/tenant/public/logos/<slug>.png` (D-55); falls back to an SVG monogram for any vendor where the fetch fails. **P-1 confirmed:** 61/62 real vendors and 70/71 products now have `logo_url` set; `SmokeVendor-cc3672` intentionally NULL (dev artifact, no domain mapping). **P-2 confirmed:** `non_leaf_attachments = 0` — all products attach to leaf categories only; the non-leaf DrillDownStep sub-category branch is implemented but unreachable in current prod data.
+
+**Tests:** 175/175 `packages/ui` tests green (7 LogoTile, 3 new ListSelectRow, prior); 11 new `DrillDownStep` tests; full tenant test suite green.
+
+---
+
 ### Composition-debt register (Appendix C — remediation tracker for INV-69/INV-70)
 
 Surfaces come under INV-69/INV-70 only once their UI-C0 per-surface composition pass clears them here. Member management (UI-F9-MEMBERS) is born compliant — no composition pass required. Shell debt cleared globally by FE-20.
 
 | Surface | Owes | Cleared by |
 |---|---|---|
-| F1 intake (`systems/new` + steps) | scaffold + states + kit; `DrillDownStep` re-ground (`OPEN-C1`) | F1 composition pass |
+| F1 intake (`systems/new` + steps) | scaffold + states + kit; `DrillDownStep` re-ground (`OPEN-C1`) | **CLEARED (UI-C2)** — bound by INV-69/INV-70 |
 | F2 dashboard (`dashboard`) | — | **CLEARED (UI-C1)** — bound by INV-69/INV-70 |
 | F2 systems (`systems/[id]`) | scaffold + states + kit | F2 composition pass |
 | F3 assess (`use-cases/[id]`) | scaffold + states + kit | F3 composition pass |

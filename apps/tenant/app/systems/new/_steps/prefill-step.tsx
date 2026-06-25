@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, PrefillWithBasis, type Provenance } from "@irontrust/ui";
+import { Button, PageHeader, PageScaffold, PrefillWithBasis, Skeleton, type Provenance } from "@irontrust/ui";
 import type { CatalogueFactOut } from "@irontrust/api-client";
 import { usePrefill } from "@/lib/intake";
 
@@ -33,50 +33,55 @@ export function PrefillStep({ systemId, onContinue }: PrefillStepProps) {
   const prefill = usePrefill(systemId);
   const [amended, setAmended] = useState<Record<string, string | undefined>>({});
 
-  if (prefill.isLoading) return <p>Loading prefill…</p>;
+  if (prefill.isLoading) return <Skeleton />;
   if (prefill.isError) {
     // Never block the spine on a prefill read failure — it is a display
     // aid, not a gate (UX-1: a gate surfaces only when the owner's action
     // is required).
     return (
-      <section aria-label="prefill-confirm" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
-        <Button type="button" onClick={onContinue}>
-          Continue
-        </Button>
-      </section>
+      <PageScaffold>
+        <section aria-label="prefill-confirm">
+          <Button type="button" onClick={onContinue}>
+            Continue
+          </Button>
+        </section>
+      </PageScaffold>
     );
   }
 
   const facts = prefill.data?.facts ?? [];
 
   return (
-    <section aria-label="prefill-confirm" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
-      {facts.length > 0 && (
-        <ul className="space-y-3">
-          {facts.map((fact: CatalogueFactOut) => (
-            <li key={fact.key} className="border-hairline rounded-lg border p-4">
-              <PrefillWithBasis
-                valueLabel={amended[fact.key] ?? factValueLabel(fact.value)}
-                basis={
-                  fact.source_label
-                    ? `${fact.source_label}${fact.last_checked_at ? ` · checked ${fact.last_checked_at}` : ""}`
-                    : "From the product catalogue"
-                }
-                provenance={fact.provenance as Provenance}
-                options={NOT_APPLICABLE_OPTION}
-                onOverride={(newValue) => {
-                  const label =
-                    NOT_APPLICABLE_OPTION.find((o) => o.value === newValue)?.label ?? newValue;
-                  setAmended((prev) => ({ ...prev, [fact.key]: label }));
-                }}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-      <Button type="button" onClick={onContinue}>
-        Continue
-      </Button>
-    </section>
+    <PageScaffold>
+      <section aria-label="prefill-confirm" className="space-y-4">
+        <PageHeader title="Review catalogue facts" subtitle="These facts have been pre-filled from the product catalogue. Amend any that don't apply to your system." />
+        {facts.length > 0 && (
+          <ul className="space-y-3">
+            {facts.map((fact: CatalogueFactOut) => (
+              <li key={fact.key} className="border-hairline rounded-lg border p-4">
+                <PrefillWithBasis
+                  valueLabel={amended[fact.key] ?? factValueLabel(fact.value)}
+                  basis={
+                    fact.source_label
+                      ? `${fact.source_label}${fact.last_checked_at ? ` · checked ${fact.last_checked_at}` : ""}`
+                      : "From the product catalogue"
+                  }
+                  provenance={fact.provenance as Provenance}
+                  options={NOT_APPLICABLE_OPTION}
+                  onOverride={(newValue) => {
+                    const label =
+                      NOT_APPLICABLE_OPTION.find((o) => o.value === newValue)?.label ?? newValue;
+                    setAmended((prev) => ({ ...prev, [fact.key]: label }));
+                  }}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+        <Button type="button" onClick={onContinue}>
+          Continue
+        </Button>
+      </section>
+    </PageScaffold>
   );
 }

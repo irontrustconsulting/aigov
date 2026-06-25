@@ -37,7 +37,7 @@
 | `GET /reference/product-categories/{category_id}/vendors` | `anon` | — | `VendorRead[]` | — | Distinct vendors with ≥1 product in the category. |
 | `GET /reference/product-categories/{category_id}/products[?vendor_id]` | `anon` | — | `ProductRead[]` | — | Optional vendor narrow. |
 | `GET /reference/eu-ai-act/subcategories` | `anon` | — | `EUAIActSubcategoryRead[]` | — | Each row carries its `tier`. |
-| `GET /reference/products/{product_id}` | `anon` | — | `ProductDetailOut` | — | Vendor + category tags + EU subcategories. |
+| `GET /reference/products/{product_id}` | `anon` | — | `ProductDetailOut` | — | Vendor + category tags + EU subcategories. `ProductDetailOut.logo_url: string \| null` and `ProductDetailOut.vendor.logo_url: string \| null` included (additive, UI-C2). |
 | `GET /reference/operator-roles` | `member` | — | `VocabItemOut[]` | — | `UI-F1-INTAKE` WI-0; `active=true`, `sort_order`. |
 | `GET /reference/hosting-models` | `member` | — | `VocabItemOut[]` | — | WI-0. |
 | `GET /reference/usage-contexts` | `member` | — | `VocabItemOut[]` | — | WI-0. |

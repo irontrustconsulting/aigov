@@ -24,6 +24,7 @@ class CatalogueVendorRef(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     name: str
+    logo_url: str | None = None
 
 
 class VocabItemOut(BaseModel):
@@ -161,6 +162,7 @@ class EUAIActSubcategoryRef(BaseModel):
 class ProductDetailOut(BaseModel):
     id: uuid.UUID
     name: str
+    logo_url: str | None = None
     vendor: CatalogueVendorRef
     categories: list[CategoryRef]
     eu_ai_act_subcategories: list[EUAIActSubcategoryRef]

@@ -508,6 +508,40 @@ The Members nav entry renders and the page issues its gated calls iff `MeRead.ro
 Rejected: render-then-403 (shows a non-functional entry; masks the empty state behind an access error).
 ↳ origin: UI-F9-MEMBERS (sprint-local DF) · refs: FE-8, FE-13, INV-68, FE-24
 
+**D-55** · Catalogue logo assets served from Next.js `public/` at relative paths
+Logo files for `catalogue_vendor` and `catalogue_product` rows are placed at `apps/tenant/public/logos/<slug>.png` and served by the Next.js static asset handler. `logo_url` values in DB are relative paths (`/logos/<slug>.png`), making them deployment-neutral. `scripts/seed/seed_logos.py` fetches 128 × 128 PNG per vendor via Google's public favicon service (`www.google.com/s2/favicons?domain=…&sz=128`); falls back to an inline SVG monogram on fetch failure. Intentionally unresolvable dev-artifact vendors (`SmokeVendor-*`) are skipped and retain `logo_url = NULL`, driving the `LogoTile` React-level monogram.  
+Rejected: (a) external CDN path at runtime — introduces dependency and deployment coordination burden; (b) absolute URL in DB — ties data to a specific origin; (c) Clearbit Logo API — now requires authentication; Google favicon service is public and returns indexed 128 × 128 PNGs for all major software vendors.
+↳ origin: UI-C2-INTAKE-CATALOGUE · refs: FE-25, scripts/seed/seed_logos.py
+
+**D-56** · `DrillDownStep` vendor rung as a discrete funnel step (not filter chips)
+The provisional `DrillDownStep` (post-V1 UX rewrite) exposed vendors as optional filter chips on the product rung. The designed funnel makes the vendor rung a full discrete step between sub-category and product selection. Rationale: filter chips imply the full product set is visible and vendors merely narrow it; the designed intent is that vendor selection is a structural decision (which vendor's product are you evaluating?), not a post-hoc filter. Single-vendor sub-categories auto-skip the vendor rung (INV-72) to avoid an unnecessary click in the common case.  
+Rejected: retaining filter chips — misrepresents the vendor-product relationship and creates a poor UX for sub-categories with many products from multiple vendors.
+↳ origin: UI-C2-INTAKE-CATALOGUE · refs: INV-72, FE-25, FE-23, OPEN-C1
+
+**OPEN-C1** · `DrillDownStep` funnel IA provisional shape — **resolved at UI-C2 ✅ CLOSED**
+The post-V1 `DrillDownStep` (two-level hierarchy with vendor filter chips) was marked provisional pending a design-driven F1 per-surface composition pass. Resolved: vendor rung is now a proper discrete step per D-56; `LogoTile` branding on vendor/product rows per FE-25; all four INV-70 states per rung; F1 composition pass complete (WI-6). See `STATE.md §UI-C2`.
+↳ refs: D-56, INV-72, FE-25, FE-23
+
+**DF-C2-1** · `LogoTile` size choices — 40px default; 24px for vendor in confirm step (sprint-local)
+The vendor/product row `LogoTile` uses the default 40px. The vendor logo rendered alongside the product name in the confirm step uses `size={24}` to avoid dominating the compact identity line (`<LogoTile … size={24} />`). No additional size variants required at this sprint.
+↳ origin: UI-C2-INTAKE-CATALOGUE · refs: FE-25, D-56
+
+**DF-C2-2** · Vendor auto-skip via `useEffect` + `vendorAutoSkipPrevented` ref (sprint-local)
+The single-vendor auto-skip is implemented as a `useEffect` watching `[subCategoryId, vendorId, productId, vendors.data]`. A `useRef(false)` guard (`vendorAutoSkipPrevented`) is set `true` in `goBackFromProductRung` when `vendors.data.length === 1` and reset to `false` in `selectSubCategory`. This avoids a `useCallback`-heavy or state-machine approach for what is a simple navigation guard.
+↳ origin: UI-C2-INTAKE-CATALOGUE · refs: INV-72, D-56
+
+**DF-C2-3** · In-house exit at every rung (sprint-local)
+The `"Not in catalogue / in-house"` secondary button is rendered at every funnel rung (top-category, sub-category, vendor, product). This ensures a system_owner is never stranded after drilling into the wrong branch — they can always exit to the custom/in-house path without pressing Back repeatedly.
+↳ origin: UI-C2-INTAKE-CATALOGUE · refs: D-56
+
+**DF-C2-4** · Inline mutation errors use `<div role="alert">` not `<ErrorState>` (sprint-local)
+`<ErrorState>` (with a `Try again` button) fits full-page or full-section data load failures where the error replaces the failed content. Form mutation errors (submit failures on `IntakeCaptureStep`, `UseCaseCreateStep`, etc.) occur while the form stays visible and the user must correct and retry manually — a retry button would re-submit without correction and is misleading. Inline `<div role="alert" className="text-sm text-danger">` is the correct pattern for in-form mutation errors.
+↳ origin: UI-C2-INTAKE-CATALOGUE · refs: FE-22, INV-70
+
+**DF-C2-5** · `DrillDownResult` shape unchanged — vendor selection is navigation-only (sprint-local)
+The `DrillDownResult` type (`{isCustom, catalogueProductId, catalogueProductName}`) is not extended to include `vendorId`. The vendor rung serves only to narrow the product list and is not propagated to the reducer or to `POST /v1/systems`. The server derives the vendor from the selected `catalogue_product_id` (existing `catalogue_vendor_id` derivation unchanged).
+↳ origin: UI-C2-INTAKE-CATALOGUE · refs: D-56
+
 **D-52** · Identity split — tenant name in sidebar foot, user in top utility bar
 The tenant name goes in the sidebar foot (wired from `MeRead.tenant_name`); the logged-in user (display name or email + sign-out) moves to a slim top utility bar at the head of the main content column (`apps/tenant/app/_components/top-utility-bar.tsx`). Nav stays in the sidebar — this is not a return to top-bar navigation; the C0 sidebar topology is unchanged. The canonical home of the tenant name is the `tenant.name` column; `MeRead` (tenant plane) and `GET /platform/tenants` (operator plane) are two plane-scoped projections of it, so the tenant-plane field is single-homed on `MeRead` with no second tenant-plane route needed or added.
 Rejected: (a) a dedicated tenant-plane `GET /v1/tenant` route (a second home for the same fact; `D-22`; no such route exists and none is added); (b) keeping user identity in the sidebar foot and adding tenant name beside it (two identities crowding one block). The reversal of `FE-20`'s "no top-bar" stance is scoped here: `FE-20` removed a top-bar *navigation*; this adds a top *utility* bar for identity only — nav remains in the sidebar.

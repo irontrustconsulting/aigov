@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@irontrust/ui";
+import { useState, useEffect, useRef } from "react";
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  ListSelectRow,
+  LogoTile,
+  PageHeader,
+  PageScaffold,
+  Skeleton,
+} from "@irontrust/ui";
 import {
   useProductCategories,
   useProductDetail,
@@ -15,48 +24,96 @@ export interface DrillDownResult {
   catalogueProductName: string | null;
 }
 
+function InHouseExit({ onExit }: { onExit: () => void }) {
+  return (
+    <Button type="button" variant="secondary" onClick={onExit}>
+      Not in catalogue / in-house
+    </Button>
+  );
+}
+
 /**
- * WI-4: top-level category → sub-category → products → confirm.
- * Products live on sub-categories, not top-level, so two levels of
- * category selection are required before products appear.
- * "Not in catalogue / in-house" exits from any level.
+ * WI-4 (D-56): top-level category → sub-category → vendor rung (auto-skip
+ * when exactly 1 vendor) → product → confirm. ListSelectRow + LogoTile on
+ * vendor and product rungs; no tile on category rungs. Four INV-70 states per
+ * rung. In-house exit at every rung. DrillDownResult shape unchanged.
  */
 export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownResult) => void }) {
-  // topLevelId: the selected top-level category (null = stage 1)
-  // subCategoryId: the selected sub-category (null = stage 1/2, set = stage 3)
   const [topLevelId, setTopLevelId] = useState<string | null>(null);
   const [subCategoryId, setSubCategoryId] = useState<string | null>(null);
-  const [vendorId, setVendorId] = useState<string | undefined>(undefined);
+  const [vendorId, setVendorId] = useState<string | null>(null);
   const [productId, setProductId] = useState<string | null>(null);
+
+  // Prevents re-triggering vendor auto-skip when user explicitly navigates back
+  // from the product rung after a single-vendor skip.
+  const vendorAutoSkipPrevented = useRef(false);
 
   const topCategories = useProductCategories();
   const subCategories = useProductCategories(topLevelId ?? undefined);
   const vendors = useVendorsInCategory(subCategoryId ?? "");
-  const products = useProductsInCategory(subCategoryId ?? "", vendorId);
+  const products = useProductsInCategory(subCategoryId ?? "", vendorId ?? undefined);
   const productDetail = useProductDetail(productId ?? undefined);
 
   function exitCustom() {
     onComplete({ isCustom: true, catalogueProductId: null, catalogueProductName: null });
   }
 
-  // -------------------------------------------------------------------
-  // Stage 4: product detail confirmation
-  // -------------------------------------------------------------------
+  function selectSubCategory(id: string) {
+    vendorAutoSkipPrevented.current = false;
+    setSubCategoryId(id);
+    setVendorId(null);
+    setProductId(null);
+  }
+
+  function goBackFromProductRung() {
+    if (vendors.data?.length === 1) {
+      vendorAutoSkipPrevented.current = true;
+    }
+    setVendorId(null);
+    setProductId(null);
+  }
+
+  // Auto-skip vendor rung when there is exactly one vendor.
+  useEffect(() => {
+    if (vendorAutoSkipPrevented.current) return;
+    if (
+      subCategoryId &&
+      vendorId === null &&
+      productId === null &&
+      vendors.data !== undefined &&
+      vendors.data.length === 1
+    ) {
+      setVendorId(vendors.data[0].id);
+    }
+  }, [subCategoryId, vendorId, productId, vendors.data]);
+
+  // ── Stage 4: confirm ────────────────────────────────────────────────────────
   if (productId) {
-    if (productDetail.isLoading) return <p>Loading product…</p>;
+    if (productDetail.isLoading) return <Skeleton />;
     if (productDetail.isError || !productDetail.data) {
-      return <p role="alert">Could not load this product.</p>;
+      return (
+        <ErrorState
+          message="Could not load this product."
+          onRetry={() => productDetail.refetch()}
+        />
+      );
     }
     const product = productDetail.data;
     return (
-      <section aria-label="product-confirm" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
-        <h2 className="text-lg font-semibold">{product.name}</h2>
-        <p className="text-ink-muted text-sm">Vendor: {product.vendor.name}</p>
-        {product.categories.length > 0 && (
-          <p className="text-ink-muted text-sm">
-            Categories: {product.categories.map((c) => c.name).join(", ")}
-          </p>
-        )}
+      <PageScaffold>
+        <PageHeader title="Confirm your product selection" />
+        <div className="flex items-center gap-3">
+          <LogoTile src={product.logo_url} name={product.name} />
+          <div>
+            <p className="font-semibold text-ink">{product.name}</p>
+            {product.vendor && (
+              <div className="mt-1 flex items-center gap-2">
+                <LogoTile src={product.vendor.logo_url} name={product.vendor.name} size={24} />
+                <span className="text-sm text-ink-muted">{product.vendor.name}</span>
+              </div>
+            )}
+          </div>
+        </div>
         <div className="flex gap-2">
           <Button type="button" onClick={() => setProductId(null)} variant="secondary">
             ← Back
@@ -74,170 +131,181 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
             Use this product
           </Button>
         </div>
-      </section>
+      </PageScaffold>
     );
   }
 
-  // -------------------------------------------------------------------
-  // Stage 3: products within the chosen sub-category
-  // -------------------------------------------------------------------
-  if (subCategoryId) {
-    const vendorList = vendors.data ?? [];
+  // ── Stage 3b: product rung ──────────────────────────────────────────────────
+  if (subCategoryId && vendorId !== null) {
+    if (products.isLoading) return <Skeleton />;
+    if (products.isError) {
+      return (
+        <ErrorState
+          message="Could not load products."
+          onRetry={() => products.refetch()}
+        />
+      );
+    }
     const productList = products.data ?? [];
-    const selectedVendorName = vendorList.find((v) => v.id === vendorId)?.name;
-
     return (
-      <section aria-label="vendor-product-browse" className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+      <PageScaffold>
+        <PageHeader title="Select a product" />
+        <Button type="button" variant="secondary" onClick={goBackFromProductRung}>
+          ← Back
+        </Button>
+        {productList.length === 0 ? (
+          <EmptyState
+            message="No products found in this category."
+            action={<InHouseExit onExit={exitCustom} />}
+          />
+        ) : (
+          <>
+            <ul className="space-y-2" aria-label="vendor-product-browse">
+              {productList.map((p) => (
+                <li key={p.id}>
+                  <ListSelectRow
+                    label={p.name}
+                    leading={<LogoTile src={p.logo_url} name={p.name} />}
+                    onClick={() => setProductId(p.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+            <InHouseExit onExit={exitCustom} />
+          </>
+        )}
+      </PageScaffold>
+    );
+  }
+
+  // ── Stage 3a: vendor rung ───────────────────────────────────────────────────
+  if (subCategoryId) {
+    if (vendors.isLoading) return <Skeleton />;
+    if (vendors.isError) {
+      return (
+        <ErrorState
+          message="Could not load vendors."
+          onRetry={() => vendors.refetch()}
+        />
+      );
+    }
+    const vendorList = vendors.data ?? [];
+    return (
+      <PageScaffold>
+        <PageHeader title="Select a vendor" />
         <Button
           type="button"
           variant="secondary"
-          onClick={() => { setSubCategoryId(null); setVendorId(undefined); }}
+          onClick={() => { setSubCategoryId(null); setVendorId(null); }}
         >
           ← Back
         </Button>
-
-        {vendorList.length > 1 && (
-          <div>
-            <p className="text-ink-muted mb-2 text-sm font-medium">Filter by vendor</p>
-            <div className="flex flex-wrap gap-2">
+        {vendorList.length === 0 ? (
+          <EmptyState
+            message="No vendors available in this category."
+            action={<InHouseExit onExit={exitCustom} />}
+          />
+        ) : (
+          <>
+            <ul className="space-y-2" aria-label="vendor-list">
               {vendorList.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  aria-pressed={vendorId === v.id}
-                  className={`border-hairline rounded-full border px-3 py-1 text-sm transition-colors ${
-                    vendorId === v.id ? "bg-ink text-surface" : "hover:bg-surface-sunken"
-                  }`}
-                  onClick={() => setVendorId(vendorId === v.id ? undefined : v.id)}
-                >
-                  {v.name}
-                </button>
+                <li key={v.id}>
+                  <ListSelectRow
+                    label={v.name}
+                    leading={<LogoTile src={v.logo_url} name={v.name} />}
+                    onClick={() => setVendorId(v.id)}
+                  />
+                </li>
               ))}
-            </div>
-          </div>
-        )}
-
-        <div>
-          <p className="text-ink-muted mb-2 text-sm font-medium">
-            {selectedVendorName ? `Products by ${selectedVendorName}` : "Products"}
-          </p>
-          {(products.isLoading || vendors.isLoading) && <p>Loading…</p>}
-          {!products.isLoading && productList.length === 0 && (
-            <p className="text-ink-muted text-sm">No products found in this category.</p>
-          )}
-          {productList.length > 0 && (
-            <ul className="space-y-2">
-              {productList.map((p) => {
-                const vendor = vendorList.find((v) => v.id === p.vendor_id);
-                return (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      className="border-hairline hover:bg-surface-sunken w-full rounded-lg border px-4 py-3 text-left"
-                      onClick={() => setProductId(p.id)}
-                    >
-                      <span className="font-medium">{p.name}</span>
-                      {vendor && (
-                        <span className="text-ink-muted ml-2 text-sm">{vendor.name}</span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
             </ul>
-          )}
-        </div>
-
-        <Button type="button" variant="secondary" onClick={exitCustom}>
-          Not in catalogue / in-house
-        </Button>
-      </section>
+            <InHouseExit onExit={exitCustom} />
+          </>
+        )}
+      </PageScaffold>
     );
   }
 
-  // -------------------------------------------------------------------
-  // Stage 2: sub-categories of the chosen top-level category
-  // -------------------------------------------------------------------
+  // ── Stage 2: sub-category rung ──────────────────────────────────────────────
   if (topLevelId) {
+    if (subCategories.isLoading) return <Skeleton />;
+    if (subCategories.isError) {
+      return (
+        <ErrorState
+          message="Could not load categories."
+          onRetry={() => subCategories.refetch()}
+        />
+      );
+    }
+    const subList = subCategories.data ?? [];
     return (
-      <section aria-label="sub-category-list" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
+      <PageScaffold>
+        <PageHeader title="Select a sub-category" />
         <Button type="button" variant="secondary" onClick={() => setTopLevelId(null)}>
           ← Back
         </Button>
-        <h2 className="text-lg font-semibold">Select a sub-category</h2>
-
-        {subCategories.isLoading && <p>Loading…</p>}
-        {subCategories.isError && <p role="alert">Could not load categories.</p>}
-        {subCategories.data && subCategories.data.length === 0 && (
-          <p className="text-ink-muted text-sm">No sub-categories available here.</p>
+        {subList.length === 0 ? (
+          <EmptyState
+            message="No sub-categories available here."
+            action={<InHouseExit onExit={exitCustom} />}
+          />
+        ) : (
+          <>
+            <ul className="space-y-2" aria-label="sub-category-list">
+              {subList.map((cat) => (
+                <li key={cat.id}>
+                  <ListSelectRow
+                    label={cat.name}
+                    onClick={() => selectSubCategory(cat.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+            <InHouseExit onExit={exitCustom} />
+          </>
         )}
-
-        {subCategories.data && subCategories.data.length > 0 && (
-          <ul className="space-y-2">
-            {subCategories.data.map((cat) => (
-              <li key={cat.id}>
-                <button
-                  type="button"
-                  className="border-hairline hover:bg-surface-sunken w-full rounded-lg border px-4 py-3 text-left"
-                  onClick={() => setSubCategoryId(cat.id)}
-                >
-                  <span className="font-medium">{cat.name}</span>
-                  {cat.description && (
-                    <span className="text-ink-muted mt-0.5 block text-sm">{cat.description}</span>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <Button type="button" variant="secondary" onClick={exitCustom}>
-          Not in catalogue / in-house
-        </Button>
-      </section>
+      </PageScaffold>
     );
   }
 
-  // -------------------------------------------------------------------
-  // Stage 1: top-level categories
-  // -------------------------------------------------------------------
+  // ── Stage 1: top-level categories ──────────────────────────────────────────
+  if (topCategories.isLoading) return <Skeleton />;
+  if (topCategories.isError) {
+    return (
+      <ErrorState
+        message="Could not load categories."
+        onRetry={() => topCategories.refetch()}
+      />
+    );
+  }
+  const topList = topCategories.data ?? [];
   return (
-    <section aria-label="category-drill-down" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
-      <h2 className="text-lg font-semibold">Select a product category</h2>
-      <p className="text-ink-muted text-sm">
-        Choose the category that best describes your AI product.
-      </p>
-
-      {topCategories.isLoading && <p>Loading…</p>}
-      {topCategories.isError && <p role="alert">Could not load categories.</p>}
-      {topCategories.data && topCategories.data.length === 0 && (
-        <p className="text-ink-muted text-sm" aria-label="no-categories">
-          No categories available — use the option below to register a custom or in-house system.
-        </p>
-      )}
-
-      {topCategories.data && topCategories.data.length > 0 && (
-        <ul className="space-y-2">
-          {topCategories.data.map((cat) => (
-            <li key={cat.id}>
-              <button
-                type="button"
-                className="border-hairline hover:bg-surface-sunken w-full rounded-lg border px-4 py-3 text-left"
-                onClick={() => setTopLevelId(cat.id)}
-              >
-                <span className="font-medium">{cat.name}</span>
-                {cat.description && (
-                  <span className="text-ink-muted mt-0.5 block text-sm">{cat.description}</span>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <Button type="button" variant="secondary" onClick={exitCustom}>
-        Not in catalogue / in-house
-      </Button>
-    </section>
+    <PageScaffold>
+      <section aria-label="category-drill-down" className="space-y-4">
+        <PageHeader
+          title="Select a product category"
+          subtitle="Choose the category that best describes your AI product."
+        />
+        {topList.length === 0 ? (
+          <EmptyState
+            message="No categories available — use the option below to register a custom or in-house system."
+            action={<InHouseExit onExit={exitCustom} />}
+          />
+        ) : (
+          <>
+            <ul className="space-y-2">
+              {topList.map((cat) => (
+                <li key={cat.id}>
+                  <ListSelectRow
+                    label={cat.name}
+                    onClick={() => setTopLevelId(cat.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+            <InHouseExit onExit={exitCustom} />
+          </>
+        )}
+      </section>
+    </PageScaffold>
   );
 }

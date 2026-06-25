@@ -1,5 +1,6 @@
 "use client";
 
+import { ErrorState, PageHeader, PageScaffold, Skeleton } from "@irontrust/ui";
 import { useUseCaseLifecycle } from "@/lib/intake";
 
 /**
@@ -18,16 +19,26 @@ const RESPONSIBLE_PARTY_COPY: Record<string, string> = {
 export function WhoseCourtStep({ useCaseId }: { useCaseId: string }) {
   const lifecycle = useUseCaseLifecycle(useCaseId);
 
-  if (lifecycle.isLoading) return <p>Loading status…</p>;
-  if (lifecycle.isError || !lifecycle.data) return <p role="alert">Could not load the current status.</p>;
+  if (lifecycle.isLoading) return <Skeleton />;
+  if (lifecycle.isError || !lifecycle.data) {
+    return (
+      <ErrorState
+        message="Could not load the current status."
+        onRetry={() => lifecycle.refetch()}
+      />
+    );
+  }
 
   const { blocking } = lifecycle.data;
 
   if (!blocking) {
     return (
-      <section aria-label="whose-court" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
-        <p className="text-ink-muted text-sm">Nothing is blocking this use case right now.</p>
-      </section>
+      <PageScaffold>
+        <section aria-label="whose-court">
+          <PageHeader title="Use case status" />
+          <p className="text-sm text-ink-muted">Nothing is blocking this use case right now.</p>
+        </section>
+      </PageScaffold>
     );
   }
 
@@ -35,9 +46,12 @@ export function WhoseCourtStep({ useCaseId }: { useCaseId: string }) {
     RESPONSIBLE_PARTY_COPY[blocking.responsible_party] ?? `With ${blocking.responsible_party}.`;
 
   return (
-    <section aria-label="whose-court" className="mx-auto max-w-4xl space-y-4 px-6 py-8">
-      <p className="text-sm">{headline}</p>
-      <p className="text-ink-muted text-sm">{blocking.reason}</p>
-    </section>
+    <PageScaffold>
+      <section aria-label="whose-court">
+        <PageHeader title="Use case status" />
+        <p className="text-sm">{headline}</p>
+        <p className="text-sm text-ink-muted">{blocking.reason}</p>
+      </section>
+    </PageScaffold>
   );
 }

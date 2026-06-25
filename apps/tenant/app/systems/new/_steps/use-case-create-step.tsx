@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, FreeText } from "@irontrust/ui";
+import { Button, FreeText, PageHeader, PageScaffold } from "@irontrust/ui";
 import type { ClassificationRead } from "@irontrust/api-client";
 import { useCreateUseCase } from "@/lib/intake";
 
@@ -33,20 +33,23 @@ export function UseCaseCreateStep({ systemId, onCreated }: UseCaseCreateStepProp
   }
 
   return (
-    <form aria-label="use-case-create" onSubmit={handleSubmit} className="border-hairline mx-auto max-w-4xl space-y-4 rounded-lg border p-4">
-      <div className="space-y-1">
-        <label htmlFor="use-case-title" className="text-sm font-medium">What are you using this for?</label>
-        <input id="use-case-title" value={title} onChange={(e) => setTitle(e.target.value)} required className="border-hairline w-full rounded border px-3 py-1.5 text-sm" />
-      </div>
-      <FreeText id="use-case-purpose" label="Purpose (optional)" value={purpose} onChange={setPurpose} />
+    <PageScaffold>
+      <PageHeader title="Describe your use case" />
+      <form aria-label="use-case-create" onSubmit={handleSubmit} className="border-hairline space-y-4 rounded-lg border p-4">
+        <div className="space-y-1">
+          <label htmlFor="use-case-title" className="text-sm font-medium">What are you using this for?</label>
+          <input id="use-case-title" value={title} onChange={(e) => setTitle(e.target.value)} required className="border-hairline w-full rounded border px-3 py-1.5 text-sm" />
+        </div>
+        <FreeText id="use-case-purpose" label="Purpose (optional)" value={purpose} onChange={setPurpose} />
 
-      {createUseCase.isError && (
-        <p role="alert">Could not register this use case. Check the form and try again.</p>
-      )}
+        {createUseCase.isError && (
+          <div role="alert" className="text-sm text-danger">Could not register this use case. Check the form and try again.</div>
+        )}
 
-      <Button type="submit" disabled={createUseCase.isPending}>
-        Continue
-      </Button>
-    </form>
+        <Button type="submit" disabled={createUseCase.isPending}>
+          Continue
+        </Button>
+      </form>
+    </PageScaffold>
   );
 }

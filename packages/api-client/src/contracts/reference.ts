@@ -35,6 +35,7 @@ export interface EUAIActSubcategoryRead {
 export interface CatalogueVendorRef {
   id: string;
   name: string;
+  logo_url: string | null;
 }
 
 export interface CategoryRef {
@@ -51,6 +52,7 @@ export interface EUAIActSubcategoryRef {
 export interface ProductDetailOut {
   id: string;
   name: string;
+  logo_url: string | null;
   vendor: CatalogueVendorRef;
   categories: CategoryRef[];
   eu_ai_act_subcategories: EUAIActSubcategoryRef[];

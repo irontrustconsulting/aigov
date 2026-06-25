@@ -3,6 +3,7 @@ import { TableCell, TableHeaderCell, TableRow } from "../../primitives/table";
 import { StatCard } from "../stat-card";
 import { SectionHeader } from "../section-header";
 import { ListSelectRow } from "../list-select-row";
+import { LogoTile } from "../logo-tile";
 import { DataTable, DataTableHeader, DataTableBody } from "../data-table";
 import { expectNoAxeViolations } from "../../../test-utils/axe";
 
@@ -61,17 +62,36 @@ describe("ListSelectRow", () => {
     expect(getByRole("button", { name: /Customer Engagement/ })).toBeInTheDocument();
   });
 
-  test("has exactly one ChevronRight icon (no per-row action label)", () => {
-    const { container } = render(
+  test("has exactly one ChevronRight icon and label text", () => {
+    const { container, getByText } = render(
       <ListSelectRow label="Customer Engagement" onClick={() => {}} />
     );
     const svgs = container.querySelectorAll("svg");
     expect(svgs).toHaveLength(1);
-    // No text beyond the label (no per-row label like "Browse" or "Select")
-    const button = container.querySelector("button")!;
-    const spans = button.querySelectorAll("span");
-    expect(spans).toHaveLength(1);
-    expect(spans[0].textContent).toBe("Customer Engagement");
+    expect(getByText("Customer Engagement")).toBeInTheDocument();
+  });
+
+  test("renders leading slot before label", () => {
+    const { getByText, getByRole } = render(
+      <ListSelectRow
+        label="Acme AI"
+        onClick={() => {}}
+        leading={<span data-testid="logo">logo</span>}
+      />
+    );
+    expect(getByText("logo")).toBeInTheDocument();
+    expect(getByRole("button", { name: /Acme AI/ })).toBeInTheDocument();
+  });
+
+  test("leading + label + chevron — axe passes", async () => {
+    const { container } = render(
+      <ListSelectRow
+        label="Acme AI"
+        onClick={() => {}}
+        leading={<LogoTile name="Acme AI" />}
+      />
+    );
+    await expectNoAxeViolations(container);
   });
 
   test("disabled state", () => {
@@ -94,6 +114,48 @@ describe("ListSelectRow", () => {
     const { container } = render(
       <ListSelectRow label="Customer Engagement" onClick={() => {}} />
     );
+    await expectNoAxeViolations(container);
+  });
+});
+
+// ── LogoTile ──────────────────────────────────────────────────────────────────
+
+describe("LogoTile", () => {
+  test("renders img when src is present", () => {
+    const { getByRole } = render(<LogoTile src="/logos/acme.svg" name="Acme AI" />);
+    const img = getByRole("img", { name: "Acme AI" });
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute("src", "/logos/acme.svg");
+  });
+
+  test("renders monogram when src is null", () => {
+    const { getByText, queryByRole } = render(<LogoTile src={null} name="Acme AI" />);
+    expect(queryByRole("img")).toBeNull();
+    expect(getByText("AA")).toBeInTheDocument();
+  });
+
+  test("renders monogram when src is undefined", () => {
+    const { getByText } = render(<LogoTile name="Single" />);
+    expect(getByText("S")).toBeInTheDocument();
+  });
+
+  test("monogram caps at 2 initials", () => {
+    const { getByText } = render(<LogoTile name="Alpha Beta Gamma" />);
+    expect(getByText("AB")).toBeInTheDocument();
+  });
+
+  test("has aria-label from name", () => {
+    const { getByLabelText } = render(<LogoTile name="Acme AI" />);
+    expect(getByLabelText("Acme AI")).toBeInTheDocument();
+  });
+
+  test("logo-present path passes axe", async () => {
+    const { container } = render(<LogoTile src="/logos/acme.svg" name="Acme AI" />);
+    await expectNoAxeViolations(container);
+  });
+
+  test("monogram path passes axe", async () => {
+    const { container } = render(<LogoTile name="Acme AI" />);
     await expectNoAxeViolations(container);
   });
 });

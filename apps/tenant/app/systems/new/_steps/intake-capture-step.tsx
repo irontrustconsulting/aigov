@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, FreeText, MultiSelectInput, SingleSelect, type SelectOption } from "@irontrust/ui";
+import { Button, FreeText, MultiSelectInput, PageHeader, PageScaffold, SingleSelect, type SelectOption } from "@irontrust/ui";
 import type { SystemCreate, SystemDetail, SystemLifecycleStage } from "@irontrust/api-client";
 import {
   useAffectedParties,
@@ -80,7 +80,9 @@ export function IntakeCaptureStep({ isCustom, catalogueProductId, onSubmit }: In
   }
 
   return (
-    <form aria-label="intake-capture" onSubmit={handleSubmit} className="border-hairline mx-auto max-w-4xl space-y-4 rounded-lg border p-4">
+    <PageScaffold>
+    <PageHeader title="Register a system" />
+    <form aria-label="intake-capture" onSubmit={handleSubmit} className="border-hairline space-y-4 rounded-lg border p-4">
       <div className="space-y-1">
         <label htmlFor="system-name" className="text-sm font-medium">System name</label>
         <input id="system-name" value={name} onChange={(e) => setName(e.target.value)} required className="border-hairline w-full rounded border px-3 py-1.5 text-sm" />
@@ -139,11 +141,14 @@ export function IntakeCaptureStep({ isCustom, catalogueProductId, onSubmit }: In
 
       <FreeText id="purpose" label="Purpose (optional)" value={purpose} onChange={setPurpose} />
 
-      {createSystem.isError && <p role="alert">Could not register this system. Check the form and try again.</p>}
+      {createSystem.isError && (
+        <div role="alert" className="text-sm text-danger">Could not register this system. Check the form and try again.</div>
+      )}
 
       <Button type="submit" disabled={createSystem.isPending}>
         Continue
       </Button>
     </form>
+    </PageScaffold>
   );
 }

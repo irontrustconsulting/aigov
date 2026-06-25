@@ -1,3 +1,4 @@
+export { LogoTile, type LogoTileProps } from "./logo-tile";
 export { StatCard, type StatCardProps } from "./stat-card";
 export { SectionHeader, type SectionHeaderProps } from "./section-header";
 export { ListSelectRow, type ListSelectRowProps } from "./list-select-row";

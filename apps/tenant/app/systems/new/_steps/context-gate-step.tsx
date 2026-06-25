@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Button, FreeText, SingleSelect, SodAction, type SelectOption } from "@irontrust/ui";
+import { Button, ErrorState, FreeText, PageHeader, PageScaffold, SingleSelect, Skeleton, SodAction, type SelectOption } from "@irontrust/ui";
 import type { AnswerInput, ContextOutcomeRead, EUAIActTier } from "@irontrust/api-client";
 import {
   useClassificationContext,
@@ -43,8 +43,15 @@ export function ContextGateStep({ useCaseId, onResolved, onProhibitedHalt }: Con
 
   const isSystemOwner = me.data?.governance_roles.some((r) => r.key === "system_owner") ?? false;
 
-  if (context.isLoading) return <p>Loading questions…</p>;
-  if (context.isError || !context.data) return <p role="alert">Could not load the classification questions.</p>;
+  if (context.isLoading) return <Skeleton />;
+  if (context.isError || !context.data) {
+    return (
+      <ErrorState
+        message="Could not load the classification questions."
+        onRetry={() => context.refetch()}
+      />
+    );
+  }
 
   const { tree_version, questions } = context.data.residual_questions;
 
@@ -84,8 +91,9 @@ export function ContextGateStep({ useCaseId, onResolved, onProhibitedHalt }: Con
   }
 
   return (
-    <section aria-label="context-gate" className="mx-auto max-w-4xl space-y-6 px-6 py-8">
-      <h2 className="text-lg font-semibold">Classification questions</h2>
+    <PageScaffold>
+    <section aria-label="context-gate" className="space-y-6">
+      <PageHeader title="Classification questions" />
       <form aria-label="context-questions" onSubmit={handlePreview} className="space-y-4">
         {questions.map((q) => (
           <div key={q.code}>
@@ -98,7 +106,7 @@ export function ContextGateStep({ useCaseId, onResolved, onProhibitedHalt }: Con
             />
             {q.legal_ref && <p className="text-text-muted text-sm">{q.legal_ref}</p>}
             {outcome?.kind === "UNRESOLVED" && outcome.missing.includes(q.code) && (
-              <p role="alert">This answer is still needed.</p>
+              <div role="alert" className="text-xs text-danger">This answer is still needed.</div>
             )}
           </div>
         ))}
@@ -138,7 +146,7 @@ export function ContextGateStep({ useCaseId, onResolved, onProhibitedHalt }: Con
                 </fieldset>
               </SodAction>
 
-              {submit.isError && <p role="alert">Could not submit. Try again.</p>}
+              {submit.isError && <div role="alert" className="text-sm text-danger">Could not submit. Try again.</div>}
 
               <Button type="submit" disabled={submit.isPending}>
                 Submit
@@ -148,5 +156,6 @@ export function ContextGateStep({ useCaseId, onResolved, onProhibitedHalt }: Con
         </div>
       )}
     </section>
+    </PageScaffold>
   );
 }

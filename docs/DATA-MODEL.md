@@ -28,8 +28,8 @@
 ### Catalogue — `domain.py` (confirmed)
 | Table | Plane | Notes |
 |---|---|---|
-| `catalogue_vendor` | GLOBAL | |
-| `catalogue_product` | GLOBAL | Belongs to a vendor. |
+| `catalogue_vendor` | GLOBAL | `logo_url varchar` column present (nullable). Plumbed to `CatalogueVendorRef.logo_url` in `ProductDetailOut` response (UI-C2, additive — no DDL change). |
+| `catalogue_product` | GLOBAL | Belongs to a vendor. `logo_url varchar` column present (nullable). Plumbed to `ProductDetailOut.logo_url` (UI-C2, additive — no DDL change). Assets at `apps/tenant/public/logos/<slug>.png`; seeded via `scripts/seed/seed_logos.py` (D-55). |
 | `catalogue_fact` | GLOBAL | Prefill facts with provenance (CAT-4); facts only, never tier (D-8). |
 | `catalogue_product_risk` | GLOBAL | Typical risks per product (RSK-4). |
 

@@ -683,9 +683,22 @@ class TestReferenceProductDetail:
         body = r.json()
         assert body["id"] == str(product.id)
         assert body["name"] == "Acme LLM"
+        assert body["logo_url"] is None
         assert body["vendor"]["id"] == str(vendor.id)
+        assert body["vendor"]["logo_url"] is None
         assert body["categories"] == []
         assert body["eu_ai_act_subcategories"] == []
+
+    def test_logo_url_returned_when_seeded(self, client, db_session):
+        v = CatalogueVendor(id=uuid.uuid4(), name="Logo Corp", logo_url="/logos/logo-corp.svg")
+        p = CatalogueProduct(id=uuid.uuid4(), vendor_id=v.id, name="Logo Product", logo_url="/logos/logo-product.svg")
+        db_session.add_all([v, p])
+        db_session.flush()
+        r = client.get(f"/v1/reference/products/{p.id}")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["logo_url"] == "/logos/logo-product.svg"
+        assert body["vendor"]["logo_url"] == "/logos/logo-corp.svg"
 
     def test_unknown_product_returns_404(self, client):
         r = client.get(f"/v1/reference/products/{uuid.uuid4()}")
