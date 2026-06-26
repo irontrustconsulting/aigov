@@ -20,9 +20,16 @@ export function SingleSelect({
   onChange: (value: string) => void;
 }) {
   return (
-    <div>
-      <label htmlFor={id}>{label}</label>
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value)}>
+    <div className="space-y-1">
+      <label htmlFor={id} className="block text-sm font-medium text-ink">
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="block w-full appearance-none rounded border border-hairline bg-surface bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMUw2IDdMMTEgMSIgc3Ryb2tlPSIjNkI3MjgwIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[length:12px_8px] bg-[position:right_12px_center] bg-no-repeat px-3 py-1.5 pr-8 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-ink/20"
+      >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}

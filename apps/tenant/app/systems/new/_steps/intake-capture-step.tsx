@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, FreeText, MultiSelectInput, PageHeader, PageScaffold, SingleSelect, type SelectOption } from "@irontrust/ui";
+import { Button, ErrorState, FreeText, MultiSelectInput, PageHeader, PageScaffold, SingleSelect, Skeleton, TextInput, type SelectOption } from "@irontrust/ui";
 import type { SystemCreate, SystemDetail, SystemLifecycleStage } from "@irontrust/api-client";
 import {
   useAffectedParties,
@@ -53,6 +53,20 @@ export function IntakeCaptureStep({ isCustom, catalogueProductId, onSubmit }: In
 
   const createSystem = useCreateSystem();
 
+  const vocabQueries = [operatorRoles, hostingModels, usageContexts, humanOversightTypes, dataCategories, affectedParties];
+  if (vocabQueries.some((q) => q.isLoading)) return <Skeleton />;
+  if (vocabQueries.some((q) => q.isError)) {
+    return (
+      <PageScaffold>
+        <PageHeader title="Register a system" />
+        <ErrorState
+          message="Could not load form options."
+          onRetry={() => vocabQueries.filter((q) => q.isError).forEach((q) => q.refetch())}
+        />
+      </PageScaffold>
+    );
+  }
+
   function toOptions(items: { id: string; label: string }[] | undefined): SelectOption[] {
     return (items ?? []).map((i) => ({ value: i.id, label: i.label }));
   }
@@ -83,10 +97,7 @@ export function IntakeCaptureStep({ isCustom, catalogueProductId, onSubmit }: In
     <PageScaffold>
     <PageHeader title="Register a system" />
     <form aria-label="intake-capture" onSubmit={handleSubmit} className="border-hairline space-y-4 rounded-lg border p-4">
-      <div className="space-y-1">
-        <label htmlFor="system-name" className="text-sm font-medium">System name</label>
-        <input id="system-name" value={name} onChange={(e) => setName(e.target.value)} required className="border-hairline w-full rounded border px-3 py-1.5 text-sm" />
-      </div>
+      <TextInput id="system-name" label="System name" value={name} onChange={setName} />
 
       <SingleSelect
         id="operator-role"

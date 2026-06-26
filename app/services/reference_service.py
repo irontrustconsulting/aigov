@@ -69,7 +69,7 @@ def get_product_detail(product_id: uuid.UUID, db: Session) -> ProductDetailOut:
         id=product.id,
         name=product.name,
         logo_url=product.logo_url,
-        vendor=CatalogueVendorRef(id=vendor.id, name=vendor.name, logo_url=vendor.logo_url) if vendor else None,
+        vendor=CatalogueVendorRef(id=vendor.id, name=vendor.name, logo_url=vendor.logo_url),
         categories=[CategoryRef(id=c.id, name=c.name) for c in categories],
         eu_ai_act_subcategories=[
             EUAIActSubcategoryRef(id=s.id, code=s.code, label=s.name)

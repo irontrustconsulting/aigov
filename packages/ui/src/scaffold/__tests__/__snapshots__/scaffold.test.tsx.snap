@@ -11,18 +11,22 @@ exports[`PageScaffold snapshot — PageScaffold with PageHeader 1`] = `
       class="flex items-start justify-between gap-4"
     >
       <div
-        class="space-y-0.5"
+        class="flex items-start gap-2"
       >
-        <h1
-          class="text-2xl font-semibold text-ink"
+        <div
+          class="space-y-0.5"
         >
-          Test Page
-        </h1>
-        <p
-          class="text-sm text-ink-muted"
-        >
-          A subtitle
-        </p>
+          <h1
+            class="text-2xl font-semibold text-ink"
+          >
+            Test Page
+          </h1>
+          <p
+            class="text-sm text-ink-muted"
+          >
+            A subtitle
+          </p>
+        </div>
       </div>
     </div>
   </div>

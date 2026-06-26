@@ -33,62 +33,70 @@ function InHouseExit({ onExit }: { onExit: () => void }) {
 }
 
 /**
- * WI-4 (D-56): top-level category → sub-category → vendor rung (auto-skip
- * when exactly 1 vendor) → product → confirm. ListSelectRow + LogoTile on
- * vendor and product rungs; no tile on category rungs. Four INV-70 states per
- * rung. In-house exit at every rung. DrillDownResult shape unchanged.
+ * DrillDownStep (D-56): in-place single-open accordion.
+ * Branch rows (category / sub-category / vendor) use FE-23 branch mode.
+ * Leaf rows (product) use ListSelectRow + LogoTile.
+ * Vendor level only when >1 vendor (auto-skip otherwise).
+ * Mixed-node rule per DF-C2-8: branch-sibling collapse only, leaf rows persist.
+ * Four INV-70 states per expansion. DrillDownResult shape unchanged.
  */
 export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownResult) => void }) {
-  const [topLevelId, setTopLevelId] = useState<string | null>(null);
-  const [subCategoryId, setSubCategoryId] = useState<string | null>(null);
-  const [vendorId, setVendorId] = useState<string | null>(null);
-  const [productId, setProductId] = useState<string | null>(null);
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  const [expandedSubcategoryId, setExpandedSubcategoryId] = useState<string | null>(null);
+  const [expandedVendorId, setExpandedVendorId] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
-  // Prevents re-triggering vendor auto-skip when user explicitly navigates back
-  // from the product rung after a single-vendor skip.
   const vendorAutoSkipPrevented = useRef(false);
 
   const topCategories = useProductCategories();
-  const subCategories = useProductCategories(topLevelId ?? undefined);
-  const vendors = useVendorsInCategory(subCategoryId ?? "");
-  const products = useProductsInCategory(subCategoryId ?? "", vendorId ?? undefined);
-  const productDetail = useProductDetail(productId ?? undefined);
+  const subCategories = useProductCategories(expandedCategoryId ?? undefined);
+  // Direct products on the expanded category (mixed-node DF-C2-8)
+  const categoryDirectProducts = useProductsInCategory(expandedCategoryId ?? "", undefined);
+  const vendors = useVendorsInCategory(expandedSubcategoryId ?? "");
+  const subCategoryProducts = useProductsInCategory(
+    expandedSubcategoryId ?? "",
+    expandedVendorId ?? undefined,
+  );
+  const productDetail = useProductDetail(selectedProductId ?? undefined);
 
   function exitCustom() {
     onComplete({ isCustom: true, catalogueProductId: null, catalogueProductName: null });
   }
 
-  function selectSubCategory(id: string) {
+  function toggleCategory(id: string) {
+    const next = expandedCategoryId === id ? null : id;
+    setExpandedCategoryId(next);
+    setExpandedSubcategoryId(null);
+    setExpandedVendorId(null);
     vendorAutoSkipPrevented.current = false;
-    setSubCategoryId(id);
-    setVendorId(null);
-    setProductId(null);
   }
 
-  function goBackFromProductRung() {
-    if (vendors.data?.length === 1) {
-      vendorAutoSkipPrevented.current = true;
-    }
-    setVendorId(null);
-    setProductId(null);
+  function toggleSubcategory(id: string) {
+    const next = expandedSubcategoryId === id ? null : id;
+    setExpandedSubcategoryId(next);
+    setExpandedVendorId(null);
+    vendorAutoSkipPrevented.current = false;
   }
 
-  // Auto-skip vendor rung when there is exactly one vendor.
+  function toggleVendor(id: string) {
+    setExpandedVendorId(expandedVendorId === id ? null : id);
+  }
+
+  // Auto-skip vendor rung when exactly one vendor in expanded sub-category.
   useEffect(() => {
     if (vendorAutoSkipPrevented.current) return;
     if (
-      subCategoryId &&
-      vendorId === null &&
-      productId === null &&
+      expandedSubcategoryId &&
+      expandedVendorId === null &&
       vendors.data !== undefined &&
       vendors.data.length === 1
     ) {
-      setVendorId(vendors.data[0].id);
+      setExpandedVendorId(vendors.data[0].id);
     }
-  }, [subCategoryId, vendorId, productId, vendors.data]);
+  }, [expandedSubcategoryId, expandedVendorId, vendors.data]);
 
-  // ── Stage 4: confirm ────────────────────────────────────────────────────────
-  if (productId) {
+  // ── Confirm stage ───────────────────────────────────────────────────────────
+  if (selectedProductId) {
     if (productDetail.isLoading) return <Skeleton />;
     if (productDetail.isError || !productDetail.data) {
       return (
@@ -101,173 +109,37 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
     const product = productDetail.data;
     return (
       <PageScaffold>
-        <PageHeader title="Confirm your product selection" />
+        <PageHeader
+          title="Confirm your product selection"
+          onBack={() => setSelectedProductId(null)}
+        />
         <div className="flex items-center gap-3">
           <LogoTile src={product.logo_url} name={product.name} />
           <div>
             <p className="font-semibold text-ink">{product.name}</p>
-            {product.vendor && (
-              <div className="mt-1 flex items-center gap-2">
-                <LogoTile src={product.vendor.logo_url} name={product.vendor.name} size={24} />
-                <span className="text-sm text-ink-muted">{product.vendor.name}</span>
-              </div>
-            )}
+            <div className="mt-1 flex items-center gap-2">
+              <LogoTile src={product.vendor.logo_url} name={product.vendor.name} size={24} />
+              <span className="text-sm text-ink-muted">{product.vendor.name}</span>
+            </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button type="button" onClick={() => setProductId(null)} variant="secondary">
-            ← Back
-          </Button>
-          <Button
-            type="button"
-            onClick={() =>
-              onComplete({
-                isCustom: false,
-                catalogueProductId: product.id,
-                catalogueProductName: product.name,
-              })
-            }
-          >
-            Use this product
-          </Button>
-        </div>
-      </PageScaffold>
-    );
-  }
-
-  // ── Stage 3b: product rung ──────────────────────────────────────────────────
-  if (subCategoryId && vendorId !== null) {
-    if (products.isLoading) return <Skeleton />;
-    if (products.isError) {
-      return (
-        <ErrorState
-          message="Could not load products."
-          onRetry={() => products.refetch()}
-        />
-      );
-    }
-    const productList = products.data ?? [];
-    return (
-      <PageScaffold>
-        <PageHeader title="Select a product" />
-        <Button type="button" variant="secondary" onClick={goBackFromProductRung}>
-          ← Back
-        </Button>
-        {productList.length === 0 ? (
-          <EmptyState
-            message="No products found in this category."
-            action={<InHouseExit onExit={exitCustom} />}
-          />
-        ) : (
-          <>
-            <ul className="space-y-2" aria-label="vendor-product-browse">
-              {productList.map((p) => (
-                <li key={p.id}>
-                  <ListSelectRow
-                    label={p.name}
-                    leading={<LogoTile src={p.logo_url} name={p.name} />}
-                    onClick={() => setProductId(p.id)}
-                  />
-                </li>
-              ))}
-            </ul>
-            <InHouseExit onExit={exitCustom} />
-          </>
-        )}
-      </PageScaffold>
-    );
-  }
-
-  // ── Stage 3a: vendor rung ───────────────────────────────────────────────────
-  if (subCategoryId) {
-    if (vendors.isLoading) return <Skeleton />;
-    if (vendors.isError) {
-      return (
-        <ErrorState
-          message="Could not load vendors."
-          onRetry={() => vendors.refetch()}
-        />
-      );
-    }
-    const vendorList = vendors.data ?? [];
-    return (
-      <PageScaffold>
-        <PageHeader title="Select a vendor" />
         <Button
           type="button"
-          variant="secondary"
-          onClick={() => { setSubCategoryId(null); setVendorId(null); }}
+          onClick={() =>
+            onComplete({
+              isCustom: false,
+              catalogueProductId: product.id,
+              catalogueProductName: product.name,
+            })
+          }
         >
-          ← Back
+          Use this product
         </Button>
-        {vendorList.length === 0 ? (
-          <EmptyState
-            message="No vendors available in this category."
-            action={<InHouseExit onExit={exitCustom} />}
-          />
-        ) : (
-          <>
-            <ul className="space-y-2" aria-label="vendor-list">
-              {vendorList.map((v) => (
-                <li key={v.id}>
-                  <ListSelectRow
-                    label={v.name}
-                    leading={<LogoTile src={v.logo_url} name={v.name} />}
-                    onClick={() => setVendorId(v.id)}
-                  />
-                </li>
-              ))}
-            </ul>
-            <InHouseExit onExit={exitCustom} />
-          </>
-        )}
       </PageScaffold>
     );
   }
 
-  // ── Stage 2: sub-category rung ──────────────────────────────────────────────
-  if (topLevelId) {
-    if (subCategories.isLoading) return <Skeleton />;
-    if (subCategories.isError) {
-      return (
-        <ErrorState
-          message="Could not load categories."
-          onRetry={() => subCategories.refetch()}
-        />
-      );
-    }
-    const subList = subCategories.data ?? [];
-    return (
-      <PageScaffold>
-        <PageHeader title="Select a sub-category" />
-        <Button type="button" variant="secondary" onClick={() => setTopLevelId(null)}>
-          ← Back
-        </Button>
-        {subList.length === 0 ? (
-          <EmptyState
-            message="No sub-categories available here."
-            action={<InHouseExit onExit={exitCustom} />}
-          />
-        ) : (
-          <>
-            <ul className="space-y-2" aria-label="sub-category-list">
-              {subList.map((cat) => (
-                <li key={cat.id}>
-                  <ListSelectRow
-                    label={cat.name}
-                    onClick={() => selectSubCategory(cat.id)}
-                  />
-                </li>
-              ))}
-            </ul>
-            <InHouseExit onExit={exitCustom} />
-          </>
-        )}
-      </PageScaffold>
-    );
-  }
-
-  // ── Stage 1: top-level categories ──────────────────────────────────────────
+  // ── Main accordion ──────────────────────────────────────────────────────────
   if (topCategories.isLoading) return <Skeleton />;
   if (topCategories.isError) {
     return (
@@ -277,14 +149,18 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
       />
     );
   }
+
   const topList = topCategories.data ?? [];
+
   return (
     <PageScaffold>
       <section aria-label="category-drill-down" className="space-y-4">
         <PageHeader
           title="Select a product category"
           subtitle="Choose the category that best describes your AI product."
+          onBack={exitCustom}
         />
+
         {topList.length === 0 ? (
           <EmptyState
             message="No categories available — use the option below to register a custom or in-house system."
@@ -293,14 +169,217 @@ export function DrillDownStep({ onComplete }: { onComplete: (result: DrillDownRe
         ) : (
           <>
             <ul className="space-y-2">
-              {topList.map((cat) => (
-                <li key={cat.id}>
-                  <ListSelectRow
-                    label={cat.name}
-                    onClick={() => setTopLevelId(cat.id)}
-                  />
-                </li>
-              ))}
+              {topList.map((cat) => {
+                const isCatExpanded = expandedCategoryId === cat.id;
+
+                // Build sub-category content for this category's branch children
+                let catChildren: React.ReactNode = null;
+                if (isCatExpanded) {
+                  if (subCategories.isLoading) {
+                    catChildren = <div className="mt-2 pl-4"><Skeleton /></div>;
+                  } else if (subCategories.isError) {
+                    catChildren = (
+                      <div className="mt-2 pl-4">
+                        <ErrorState
+                          message="Could not load sub-categories."
+                          onRetry={() => subCategories.refetch()}
+                        />
+                      </div>
+                    );
+                  } else {
+                    const subList = subCategories.data ?? [];
+                    const directProducts = categoryDirectProducts.data ?? [];
+
+                    if (subList.length === 0 && directProducts.length === 0) {
+                      catChildren = (
+                        <div className="mt-2 pl-4">
+                          <EmptyState
+                            message="No products available in this category."
+                            action={<InHouseExit onExit={exitCustom} />}
+                          />
+                        </div>
+                      );
+                    } else {
+                      catChildren = (
+                        <div className="mt-2 pl-4 space-y-2">
+                          {/* Sub-category branch rows — single-open among siblings */}
+                          {subList.length > 0 && (
+                            <ul className="space-y-2">
+                              {subList.map((sub) => {
+                                const isSubExpanded = expandedSubcategoryId === sub.id;
+                                const vendorList = vendors.data ?? [];
+                                const showVendorLevel = vendorList.length > 1;
+
+                                let subChildren: React.ReactNode = null;
+                                if (isSubExpanded) {
+                                  if (vendors.isLoading) {
+                                    subChildren = <div className="mt-2 pl-4"><Skeleton /></div>;
+                                  } else if (vendors.isError) {
+                                    subChildren = (
+                                      <div className="mt-2 pl-4">
+                                        <ErrorState
+                                          message="Could not load vendors."
+                                          onRetry={() => vendors.refetch()}
+                                        />
+                                      </div>
+                                    );
+                                  } else if (vendorList.length === 0) {
+                                    subChildren = (
+                                      <div className="mt-2 pl-4">
+                                        <EmptyState
+                                          message="No vendors available in this category."
+                                          action={<InHouseExit onExit={exitCustom} />}
+                                        />
+                                      </div>
+                                    );
+                                  } else if (showVendorLevel) {
+                                    // Multi-vendor: show vendor branch rows
+                                    subChildren = (
+                                      <ul className="mt-2 pl-4 space-y-2">
+                                        {vendorList.map((v) => {
+                                          const isVendorExpanded = expandedVendorId === v.id;
+                                          let vendorChildren: React.ReactNode = null;
+                                          if (isVendorExpanded) {
+                                            if (subCategoryProducts.isLoading) {
+                                              vendorChildren = <div className="mt-2 pl-4"><Skeleton /></div>;
+                                            } else if (subCategoryProducts.isError) {
+                                              vendorChildren = (
+                                                <div className="mt-2 pl-4">
+                                                  <ErrorState
+                                                    message="Could not load products."
+                                                    onRetry={() => subCategoryProducts.refetch()}
+                                                  />
+                                                </div>
+                                              );
+                                            } else {
+                                              const pList = subCategoryProducts.data ?? [];
+                                              vendorChildren = pList.length === 0 ? (
+                                                <div className="mt-2 pl-4">
+                                                  <EmptyState
+                                                    message="No products found."
+                                                    action={<InHouseExit onExit={exitCustom} />}
+                                                  />
+                                                </div>
+                                              ) : (
+                                                <ul className="mt-2 pl-4 space-y-2">
+                                                  {pList.map((p) => (
+                                                    <li key={p.id}>
+                                                      <ListSelectRow
+                                                        label={p.name}
+                                                        leading={<LogoTile src={p.logo_url} name={p.name} />}
+                                                        onClick={() => setSelectedProductId(p.id)}
+                                                      />
+                                                    </li>
+                                                  ))}
+                                                </ul>
+                                              );
+                                            }
+                                          }
+                                          return (
+                                            <li key={v.id}>
+                                              <ListSelectRow
+                                                label={v.name}
+                                                leading={<LogoTile src={v.logo_url} name={v.name} />}
+                                                onClick={() => {}}
+                                                onToggle={() => toggleVendor(v.id)}
+                                                expanded={isVendorExpanded}
+                                              >
+                                                {vendorChildren}
+                                              </ListSelectRow>
+                                            </li>
+                                          );
+                                        })}
+                                      </ul>
+                                    );
+                                  } else {
+                                    // Single vendor (auto-skip): show products once vendorId is
+                                    // confirmed (prevents a transient flash before auto-skip fires)
+                                    if (expandedVendorId === null || subCategoryProducts.isLoading) {
+                                      subChildren = <div className="mt-2 pl-4"><Skeleton /></div>;
+                                    } else if (subCategoryProducts.isError) {
+                                      subChildren = (
+                                        <div className="mt-2 pl-4">
+                                          <ErrorState
+                                            message="Could not load products."
+                                            onRetry={() => subCategoryProducts.refetch()}
+                                          />
+                                        </div>
+                                      );
+                                    } else {
+                                      const pList = subCategoryProducts.data ?? [];
+                                      subChildren = pList.length === 0 ? (
+                                        <div className="mt-2 pl-4">
+                                          <EmptyState
+                                            message="No products found."
+                                            action={<InHouseExit onExit={exitCustom} />}
+                                          />
+                                        </div>
+                                      ) : (
+                                        <ul className="mt-2 pl-4 space-y-2">
+                                          {pList.map((p) => (
+                                            <li key={p.id}>
+                                              <ListSelectRow
+                                                label={p.name}
+                                                leading={<LogoTile src={p.logo_url} name={p.name} />}
+                                                onClick={() => setSelectedProductId(p.id)}
+                                              />
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      );
+                                    }
+                                  }
+
+                                }
+
+                                return (
+                                  <li key={sub.id}>
+                                    <ListSelectRow
+                                      label={sub.name}
+                                      onClick={() => {}}
+                                      onToggle={() => toggleSubcategory(sub.id)}
+                                      expanded={isSubExpanded}
+                                    >
+                                      {subChildren}
+                                    </ListSelectRow>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                          {/* Direct product leaf rows (mixed-node DF-C2-8) — always visible */}
+                          {directProducts.length > 0 && (
+                            <ul className="space-y-2">
+                              {directProducts.map((p) => (
+                                <li key={p.id}>
+                                  <ListSelectRow
+                                    label={p.name}
+                                    leading={<LogoTile src={p.logo_url} name={p.name} />}
+                                    onClick={() => setSelectedProductId(p.id)}
+                                  />
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    }
+                  }
+                }
+
+                return (
+                  <li key={cat.id}>
+                    <ListSelectRow
+                      label={cat.name}
+                      onClick={() => {}}
+                      onToggle={() => toggleCategory(cat.id)}
+                      expanded={isCatExpanded}
+                    >
+                      {catChildren}
+                    </ListSelectRow>
+                  </li>
+                );
+              })}
             </ul>
             <InHouseExit onExit={exitCustom} />
           </>

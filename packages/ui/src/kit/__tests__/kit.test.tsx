@@ -116,6 +116,56 @@ describe("ListSelectRow", () => {
     );
     await expectNoAxeViolations(container);
   });
+
+  // branch mode
+  test("branch mode: calls onToggle (not onClick) when clicked", () => {
+    const onClick = jest.fn();
+    const onToggle = jest.fn();
+    const { getByRole } = render(
+      <ListSelectRow label="Category" onClick={onClick} onToggle={onToggle} expanded={false} />
+    );
+    getByRole("button").click();
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  test("branch mode: aria-expanded reflects expanded prop", () => {
+    const { getByRole, rerender } = render(
+      <ListSelectRow label="Category" onClick={() => {}} onToggle={() => {}} expanded={false} />
+    );
+    expect(getByRole("button")).toHaveAttribute("aria-expanded", "false");
+    rerender(
+      <ListSelectRow label="Category" onClick={() => {}} onToggle={() => {}} expanded={true} />
+    );
+    expect(getByRole("button")).toHaveAttribute("aria-expanded", "true");
+  });
+
+  test("branch mode: children visible when expanded=true", () => {
+    const { getByText } = render(
+      <ListSelectRow label="Category" onClick={() => {}} onToggle={() => {}} expanded={true}>
+        <span>Child item</span>
+      </ListSelectRow>
+    );
+    expect(getByText("Child item")).toBeInTheDocument();
+  });
+
+  test("branch mode: children hidden when expanded=false", () => {
+    const { queryByText } = render(
+      <ListSelectRow label="Category" onClick={() => {}} onToggle={() => {}} expanded={false}>
+        <span>Child item</span>
+      </ListSelectRow>
+    );
+    expect(queryByText("Child item")).toBeNull();
+  });
+
+  test("branch mode: expanded passes axe", async () => {
+    const { container } = render(
+      <ListSelectRow label="Category" onClick={() => {}} onToggle={() => {}} expanded={true}>
+        <ListSelectRow label="Sub-item" onClick={() => {}} />
+      </ListSelectRow>
+    );
+    await expectNoAxeViolations(container);
+  });
 });
 
 // ── LogoTile ──────────────────────────────────────────────────────────────────

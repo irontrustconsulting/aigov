@@ -57,6 +57,31 @@ describe("PageScaffold", () => {
   });
 });
 
+describe("PageHeader — onBack", () => {
+  test("renders back button when onBack provided", () => {
+    const onBack = jest.fn();
+    const { getByRole } = render(<PageHeader title="Catalogue" onBack={onBack} />);
+    expect(getByRole("button", { name: "Go back" })).toBeInTheDocument();
+  });
+
+  test("back button calls onBack when clicked", () => {
+    const onBack = jest.fn();
+    const { getByRole } = render(<PageHeader title="Catalogue" onBack={onBack} />);
+    getByRole("button", { name: "Go back" }).click();
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  test("no back button when onBack omitted", () => {
+    const { queryByRole } = render(<PageHeader title="Portfolio" />);
+    expect(queryByRole("button", { name: "Go back" })).toBeNull();
+  });
+
+  test("with onBack — passes axe", async () => {
+    const { container } = render(<PageHeader title="Catalogue" onBack={() => {}} />);
+    await expectNoAxeViolations(container);
+  });
+});
+
 describe("PageHeader — axe", () => {
   test("all four slots populated — passes axe", async () => {
     const { container } = render(

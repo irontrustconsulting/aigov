@@ -1,6 +1,7 @@
 import type { SelectOption } from "./single-select";
 
-/** FE-4: multi-select rung of the input-preference order. */
+/** FE-4: multi-select rung of the input-preference order.
+ *  Renders as a spaced wrapping toggle-chip cluster (INV-73 — neutral selection token). */
 export function MultiSelectInput({
   id,
   label,
@@ -19,18 +20,31 @@ export function MultiSelectInput({
   }
 
   return (
-    <fieldset id={id}>
-      <legend>{label}</legend>
-      {options.map((opt) => (
-        <label key={opt.value}>
-          <input
-            type="checkbox"
-            checked={values.includes(opt.value)}
-            onChange={() => toggle(opt.value)}
-          />
-          {opt.label}
-        </label>
-      ))}
+    <fieldset id={id} className="space-y-2">
+      <legend className="text-sm font-medium text-ink">{label}</legend>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => {
+          const checked = values.includes(opt.value);
+          return (
+            <label
+              key={opt.value}
+              className={`inline-flex cursor-pointer items-center rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
+                checked
+                  ? "border-ink bg-ink text-surface"
+                  : "border-hairline bg-surface text-ink hover:bg-surface-sunken"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggle(opt.value)}
+                className="sr-only"
+              />
+              {opt.label}
+            </label>
+          );
+        })}
+      </div>
     </fieldset>
   );
 }

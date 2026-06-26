@@ -513,21 +513,21 @@ Logo files for `catalogue_vendor` and `catalogue_product` rows are placed at `ap
 Rejected: (a) external CDN path at runtime — introduces dependency and deployment coordination burden; (b) absolute URL in DB — ties data to a specific origin; (c) Clearbit Logo API — now requires authentication; Google favicon service is public and returns indexed 128 × 128 PNGs for all major software vendors.
 ↳ origin: UI-C2-INTAKE-CATALOGUE · refs: FE-25, scripts/seed/seed_logos.py
 
-**D-56** · `DrillDownStep` vendor rung as a discrete funnel step (not filter chips)
-The provisional `DrillDownStep` (post-V1 UX rewrite) exposed vendors as optional filter chips on the product rung. The designed funnel makes the vendor rung a full discrete step between sub-category and product selection. Rationale: filter chips imply the full product set is visible and vendors merely narrow it; the designed intent is that vendor selection is a structural decision (which vendor's product are you evaluating?), not a post-hoc filter. Single-vendor sub-categories auto-skip the vendor rung (INV-72) to avoid an unnecessary click in the common case.  
-Rejected: retaining filter chips — misrepresents the vendor-product relationship and creates a poor UX for sub-categories with many products from multiple vendors.
-↳ origin: UI-C2-INTAKE-CATALOGUE · refs: INV-72, FE-25, FE-23, OPEN-C1
+**D-56** · `DrillDownStep` in-place single-open accordion (not filter chips, not discrete panel steps)
+The provisional `DrillDownStep` (post-V1 UX rewrite) exposed vendors as optional filter chips on the product rung. The UI-C2 partial commit (`c6da0ec`) replaced that with a four-rung panel-replacement funnel; the full UI-C2 delivery replaces that in turn with an in-place single-open accordion: category rows expand inline to reveal sub-category rows; sub-category rows expand to reveal vendor rows (when >1 vendor) or product rows (single-vendor auto-skip, INV-72); product rows are leaves that emit `DrillDownResult`. No page transitions — all levels live in a single `PageScaffold`. Single-open state is managed by three `expandedXxxId` state variables: expanding one branch collapses the open sibling at the same level. `DrillDownResult` shape unchanged (DF-C2-5).
+Rejected: (a) filter chips — misrepresents the vendor-product relationship; (b) discrete panel-replacement steps — transitions impose a "going somewhere" mental model for what is a narrowing drill-down within one view; panel steps also require bespoke back-navigation state that the accordion state naturally handles.
+↳ origin: UI-C2-INTAKE-CATALOGUE · refs: INV-72, FE-25, FE-23, OPEN-C1, DF-C2-6, DF-C2-7, DF-C2-8
 
-**OPEN-C1** · `DrillDownStep` funnel IA provisional shape — **resolved at UI-C2 ✅ CLOSED**
-The post-V1 `DrillDownStep` (two-level hierarchy with vendor filter chips) was marked provisional pending a design-driven F1 per-surface composition pass. Resolved: vendor rung is now a proper discrete step per D-56; `LogoTile` branding on vendor/product rows per FE-25; all four INV-70 states per rung; F1 composition pass complete (WI-6). See `STATE.md §UI-C2`.
-↳ refs: D-56, INV-72, FE-25, FE-23
+**OPEN-C1** · `DrillDownStep` funnel IA provisional shape — **resolved at UI-C2 full delivery ✅ CLOSED**
+The post-V1 `DrillDownStep` (two-level hierarchy with vendor filter chips) was marked provisional pending a design-driven F1 per-surface composition pass. Resolved: rebuilt as in-place single-open accordion per D-56; `LogoTile` branding on vendor and product rows per FE-25; all four INV-70 states at every accordion level; vendor level present only when >1 vendor (DF-C2-7); mixed-node direct-product rows persist regardless of sub-category expansion (DF-C2-8); F1 composition pass complete. See `STATE.md §UI-C2`.
+↳ refs: D-56, INV-72, FE-25, FE-23, DF-C2-6, DF-C2-7, DF-C2-8
 
 **DF-C2-1** · `LogoTile` size choices — 40px default; 24px for vendor in confirm step (sprint-local)
 The vendor/product row `LogoTile` uses the default 40px. The vendor logo rendered alongside the product name in the confirm step uses `size={24}` to avoid dominating the compact identity line (`<LogoTile … size={24} />`). No additional size variants required at this sprint.
 ↳ origin: UI-C2-INTAKE-CATALOGUE · refs: FE-25, D-56
 
 **DF-C2-2** · Vendor auto-skip via `useEffect` + `vendorAutoSkipPrevented` ref (sprint-local)
-The single-vendor auto-skip is implemented as a `useEffect` watching `[subCategoryId, vendorId, productId, vendors.data]`. A `useRef(false)` guard (`vendorAutoSkipPrevented`) is set `true` in `goBackFromProductRung` when `vendors.data.length === 1` and reset to `false` in `selectSubCategory`. This avoids a `useCallback`-heavy or state-machine approach for what is a simple navigation guard.
+The single-vendor auto-skip is implemented as a `useEffect` watching `[expandedSubcategoryId, expandedVendorId, vendors.data]`. A `useRef(false)` guard (`vendorAutoSkipPrevented`) is reset to `false` in `toggleSubcategory` and `toggleCategory` on each new sub-category or category selection, so the auto-skip fires normally each time. Back-navigation from the confirm stage sets `selectedProductId → null` without touching `expandedVendorId`; the re-trigger condition (`expandedVendorId === null`) is not met, so no additional guard is needed on back. This avoids a `useCallback`-heavy or state-machine approach for what is a simple navigation guard.
 ↳ origin: UI-C2-INTAKE-CATALOGUE · refs: INV-72, D-56
 
 **DF-C2-3** · In-house exit at every rung (sprint-local)
@@ -541,6 +541,18 @@ The `"Not in catalogue / in-house"` secondary button is rendered at every funnel
 **DF-C2-5** · `DrillDownResult` shape unchanged — vendor selection is navigation-only (sprint-local)
 The `DrillDownResult` type (`{isCustom, catalogueProductId, catalogueProductName}`) is not extended to include `vendorId`. The vendor rung serves only to narrow the product list and is not propagated to the reducer or to `POST /v1/systems`. The server derives the vendor from the selected `catalogue_product_id` (existing `catalogue_vendor_id` derivation unchanged).
 ↳ origin: UI-C2-INTAKE-CATALOGUE · refs: D-56
+
+**DF-C2-6** · Category-level rows carry no `LogoTile` (sprint-local)
+Top-category and sub-category rows in the accordion render without a `LogoTile` leading slot. Categories are organisational containers, not branded products; no logo data exists for them in the schema. Only vendor and product rows carry `LogoTile` — vendor rows in the multi-vendor level (logo_url from `VendorRead`); product leaf rows at all product levels (logo_url from `ProductRead`). This is the only accordion level where `ListSelectRow` appears without a `leading` prop.
+↳ origin: UI-C2-INTAKE-CATALOGUE · refs: FE-25, FE-23, D-56
+
+**DF-C2-7** · Vendor level is navigation-only and appears only when >1 vendor (sprint-local)
+The vendor expansion level in `DrillDownStep` is rendered only when the expanded sub-category returns more than one vendor (`vendors.data.length > 1`). When exactly one vendor exists, the vendor rung is auto-skipped (INV-72) and the product list is shown directly below the sub-category row. When zero vendors exist, an `EmptyState` with in-house exit is shown (DF-C2-3). Vendor rows are disclosure triggers (`onToggle` branch mode, FE-23) that expand the product list below them; they have no `onClick` action and emit no `DrillDownResult` (DF-C2-5).
+↳ origin: UI-C2-INTAKE-CATALOGUE · refs: INV-72, D-56, DF-C2-5, FE-23
+
+**DF-C2-8** · Mixed-node rule: branch-sibling collapse only; leaf rows persist (sprint-local)
+A category may have both sub-category branches AND direct product memberships at the same node (`ProductCategoryMembership` at non-leaf nodes, confirmed by schema P-2). When `expandedCategoryId` is set and both sub-category and direct-product lists are non-empty, single-open collapse applies only among the branch sub-category rows (expanding one sub-category collapses its sibling if open); the direct product leaf rows are always visible in the parent panel regardless of which sub-category is expanded or collapsed. This prevents the direct products from being hidden behind a branch collapse state that the user cannot reason about.
+↳ origin: UI-C2-INTAKE-CATALOGUE · refs: D-56, FE-23, INV-72
 
 **D-52** · Identity split — tenant name in sidebar foot, user in top utility bar
 The tenant name goes in the sidebar foot (wired from `MeRead.tenant_name`); the logged-in user (display name or email + sign-out) moves to a slim top utility bar at the head of the main content column (`apps/tenant/app/_components/top-utility-bar.tsx`). Nav stays in the sidebar — this is not a return to top-bar navigation; the C0 sidebar topology is unchanged. The canonical home of the tenant name is the `tenant.name` column; `MeRead` (tenant plane) and `GET /platform/tenants` (operator plane) are two plane-scoped projections of it, so the tenant-plane field is single-homed on `MeRead` with no second tenant-plane route needed or added.

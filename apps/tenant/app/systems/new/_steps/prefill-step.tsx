@@ -58,7 +58,7 @@ export function PrefillStep({ systemId, onContinue }: PrefillStepProps) {
         {facts.length > 0 && (
           <ul className="space-y-3">
             {facts.map((fact: CatalogueFactOut) => (
-              <li key={fact.key} className="border-hairline rounded-lg border p-4">
+              <li key={fact.key}>
                 <PrefillWithBasis
                   valueLabel={amended[fact.key] ?? factValueLabel(fact.value)}
                   basis={

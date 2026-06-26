@@ -45,6 +45,8 @@ describe("IntakeCaptureStep", () => {
       { wrapper }
     );
 
+    // Vocab gate shows Skeleton until all vocab queries resolve
+    await waitFor(() => screen.getByLabelText("System name"));
     fireEvent.change(screen.getByLabelText("System name"), { target: { value: "My System" } });
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
@@ -64,6 +66,7 @@ describe("IntakeCaptureStep", () => {
       wrapper,
     });
 
+    await waitFor(() => screen.getByLabelText("System name"));
     fireEvent.change(screen.getByLabelText("System name"), { target: { value: "My System" } });
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
@@ -81,6 +84,7 @@ describe("IntakeCaptureStep", () => {
       wrapper,
     });
 
+    await waitFor(() => screen.getByLabelText("System name"));
     fireEvent.change(screen.getByLabelText("System name"), { target: { value: "My System" } });
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 

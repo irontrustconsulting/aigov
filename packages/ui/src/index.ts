@@ -44,6 +44,7 @@ export {
   ConstrainedDateInput,
 } from "./structured-input/constrained-structured";
 export { FreeText } from "./structured-input/free-text";
+export { TextInput } from "./structured-input/text-input";
 
 export {
   PrefillWithBasis,
