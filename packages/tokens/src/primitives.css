@@ -103,6 +103,11 @@
   --court-yours-fill: var(--color-brand-tint);
   --court-yours-text: var(--color-brand-strong);
 
+  /* ── Elevation shadows (FE-26) ───────────────────────────────────── */
+  /* Not WCAG text/graphical pairings — not in contrast.test.ts (DF-V2-1) */
+  --elevation-raised: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04); /* dark: TBD */
+  --elevation-overlay: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05); /* dark: TBD */
+
   /* ── Severity channel ────────────────────────────────────────────── */
   /* Saturation rationed: high/critical only at the top of the scale.    */
   --sev-low: var(--color-ink-muted);    /* dark: TBD */

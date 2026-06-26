@@ -3,6 +3,7 @@ export { Sidebar, type SidebarProps, type SidebarNavItem } from "./shell/sidebar
 
 export { PageHeader, type PageHeaderProps } from "./scaffold/page-header";
 export { PageScaffold, type PageScaffoldProps } from "./scaffold/page-scaffold";
+export { SectionGroup, type SectionGroupProps } from "./scaffold/section-group";
 
 export { EmptyState, type EmptyStateProps } from "./state/empty-state";
 export { FirstRunPanel, type FirstRunPanelProps } from "./state/first-run-panel";

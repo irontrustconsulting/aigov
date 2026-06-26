@@ -19,7 +19,6 @@ import {
   TableCell,
   TableHeaderCell,
   EmptyState,
-  FirstRunPanel,
   Skeleton,
   ErrorState,
 } from "@irontrust/ui";
@@ -118,22 +117,42 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
   const awaitingYouCount = yourCourtEntries.length;
 
   if (systemCount === 0 && portfolio.data.length === 0) {
-    // FDD-3: governance caller with zero systems → FirstRunPanel leads.
+    // D-61: zero-systems renders scaffolded-empty (supersedes UI-C1 FirstRunPanel takeover).
+    // INV-74: retained chrome (header + stat row + framed table); get-started content is in-region.
     return (
       <PageScaffold>
-        <PageHeader title="Portfolio" />
-        <FirstRunPanel
-          heading="Register your first AI system"
-          body="Track your AI systems, complete impact assessments, and meet your governance obligations — all in one place."
+        <PageHeader
+          title="Portfolio"
           action={
-            <Link
-              href="/systems/new"
-              className="inline-flex items-center justify-center rounded-md border border-transparent bg-brand px-4 py-2 text-sm font-medium text-surface"
-            >
-              Register a system
-            </Link>
+            roleKeys.has("system_owner") ? (
+              <Link
+                href="/systems/new"
+                className="inline-flex items-center justify-center rounded-md border border-transparent bg-brand px-4 py-2 text-sm font-medium text-surface"
+              >
+                Register a system
+              </Link>
+            ) : undefined
           }
         />
+        <div className="grid grid-cols-3 gap-4" role="region" aria-label="stats">
+          <StatCard label="Systems" value={0} />
+          <StatCard label="Use cases under governance" value={0} />
+          <StatCard label="Awaiting you" value={0} />
+        </div>
+        <section aria-label="systems">
+          <SectionHeader title="Systems" />
+          <div className="mt-3">
+            <DataTable>
+              <DataTableHeader>
+                <TableHeaderCell>System / Use case</TableHeaderCell>
+                <TableHeaderCell>Tier</TableHeaderCell>
+                <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell>Court</TableHeaderCell>
+              </DataTableHeader>
+              <DataTableBody emptyMessage="No systems registered yet." />
+            </DataTable>
+          </div>
+        </section>
       </PageScaffold>
     );
   }

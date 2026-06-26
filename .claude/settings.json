@@ -56,7 +56,8 @@
       "Bash(git -C /Users/hmaosa/dev/aigov log --oneline -5)",
       "Bash(git -C /Users/hmaosa/dev/aigov diff --stat HEAD)",
       "Bash(git -C /Users/hmaosa/dev/aigov add app/schemas/assessment.py app/services/assessment_service.py apps/tenant/app/systems/[id]/__tests__/page.test.tsx apps/tenant/app/systems/[id]/system-detail-client.tsx docs/API-ROUTES.md docs/DECISIONS.md docs/INDEX.md docs/STATE.md docs/UX.md packages/api-client/src/contracts/enums.ts packages/api-client/src/contracts/index.ts packages/api-client/src/contracts/assessment.ts sprints/UI-F3-ASSESS.md designs/UI-F3-ASSESS.design.md)",
-      "Bash(git -C /Users/hmaosa/dev/aigov add apps/tenant/app/use-cases/ apps/tenant/lib/assess/)"
+      "Bash(git -C /Users/hmaosa/dev/aigov add apps/tenant/app/use-cases/ apps/tenant/lib/assess/)",
+      "Bash(pnpm add *)"
     ],
     "additionalDirectories": [
       "/private/tmp"

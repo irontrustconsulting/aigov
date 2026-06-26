@@ -156,12 +156,18 @@ describe("F2 dashboard — zero-states (INV-70)", () => {
     }
   });
 
-  test("governance caller with zero systems — FirstRunPanel shown", async () => {
+  test("governance caller with zero systems — scaffolded-empty shown (D-61)", async () => {
     mockFetch({ me: me(["system_owner"]), portfolio: [], systems: [] });
     renderWithClient();
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: /register your first ai system/i })).toBeInTheDocument()
+      expect(screen.getByRole("heading", { name: /portfolio/i })).toBeInTheDocument()
     );
+    // Stat row present with zeros (INV-74: retained chrome)
+    expect(screen.getByLabelText("stats")).toBeInTheDocument();
+    // Systems table section framed
+    expect(screen.getByLabelText("systems")).toBeInTheDocument();
+    // Register button present for system_owner (DF2-5)
+    expect(screen.getByRole("link", { name: /register a system/i })).toBeInTheDocument();
   });
 
   test("your-court section shows EmptyState when no items awaiting", async () => {

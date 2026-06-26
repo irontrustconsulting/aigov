@@ -1,8 +1,9 @@
 /**
- * FE-16 (as amended D-48): VerdictChip — maps live enum members to one of six
- * meaning-class verdict tones. The chip label carries the specific member; the
- * tone carries the meaning-class. Serves five enums: assessment_status,
- * lifecycle_state, classification_status, coverage_status, approval_status.
+ * FE-16 (as amended D-48, D-60): VerdictChip — maps live enum members to one of six
+ * meaning-class verdict tones AND renders a humanized label from LABEL_MAP.
+ * The tone carries the meaning-class; the label carries the specific member.
+ * Serves five enums: assessment_status, lifecycle_state, classification_status,
+ * coverage_status, approval_status.
  *
  * eu_ai_act_tier is NOT handled here — it renders via TierBadge on the
  * dedicated --tier-* channel (INV-64). Tier members return data-tone=unknown
@@ -12,6 +13,8 @@
  * versa. Where a shared hue appears (--brand in court + progress; --verdict-
  * attention in severity medium), the component form disambiguates.
  */
+
+import { LABEL_MAP } from "./verdict-label-map";
 
 export type VerdictTone =
   | "neutral"
@@ -106,23 +109,29 @@ const TONE_STYLES: Record<VerdictTone, ToneStyle> = {
 
 export function VerdictChip({ value }: { value: string }) {
   const tone = TONE_MAP[value.toUpperCase()];
+  const label = LABEL_MAP[value] ?? (() => {
+    console.warn(`VerdictChip: no label for "${value}" — rendering raw value (INV-75)`);
+    return value;
+  })();
+
   if (!tone) {
     return (
       <span
         data-tone="unknown"
         className="rounded-sm border border-dashed px-2 py-0.5 text-xs text-ink-muted"
       >
-        {value}
+        {label}
       </span>
     );
   }
   const { className, style } = TONE_STYLES[tone];
   return (
     <span data-tone={tone} className={className} style={style}>
-      {value}
+      {label}
     </span>
   );
 }
 
 /** Exported for test coverage — guards exhaustiveness against the live V-5 dump. */
 export { TONE_MAP };
+export { LABEL_MAP };

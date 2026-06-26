@@ -554,6 +554,47 @@ The vendor expansion level in `DrillDownStep` is rendered only when the expanded
 A category may have both sub-category branches AND direct product memberships at the same node (`ProductCategoryMembership` at non-leaf nodes, confirmed by schema P-2). When `expandedCategoryId` is set and both sub-category and direct-product lists are non-empty, single-open collapse applies only among the branch sub-category rows (expanding one sub-category collapses its sibling if open); the direct product leaf rows are always visible in the parent panel regardless of which sub-category is expanded or collapsed. This prevents the direct products from being hidden behind a branch collapse state that the user cannot reason about.
 ↳ origin: UI-C2-INTAKE-CATALOGUE · refs: D-56, FE-23, INV-72
 
+**D-57** · Petrol deployment extended to section markers and group labels only [amends D-46]
+`--color-brand` (petrol) was confined to four uses: primary action button, focus ring, your-court edge-bar, and brand logo link (D-46). This extends the ceiling to include section-marker accent bars and group-label text in `SectionGroup` (FE-27). Still one hue; still contrast-gated; still no decorative chroma. Input-selection affordances remain governed by INV-73 (shipped; out of scope for this amendment). The A4 ceiling now = four D-46 uses + section markers + group labels.
+Rejected: extending petrol to selected/active input states (collides with INV-73's shipped selection treatment).
+↳ origin: UI-V2-DEPTH-LAYOUT · refs: D-46, INV-73, FE-27, DF-V2-3
+
+**D-58** · Depth-within-restraint: depth from neutral layering, subtle elevation, structure, disciplined accent — never decorative chroma
+The visual improvement mandate is met by: a neutral surface ramp (page → card → sunken), soft low-spread shadows (`--elevation-raised`/`--elevation-overlay`), `SectionGroup` structure, and one hue (petrol, within D-57 ceiling). Warmer palettes, additional accent hues, and ornamental motion are explicitly rejected. D-42 stands.
+Rejected: (a) warmer palette (D-42 signal-preservation; no warm signal channel exists for warmth to borrow from); (b) flat status quo (the complaint that drove the sprint); (c) decorative chroma (D-42 chromatic restraint).
+↳ origin: UI-V2-DEPTH-LAYOUT · refs: D-42, D-46, D-57, FE-26, FE-27
+
+**D-59** · Constrained-vocab-over-free-text; opinionated by default [principle; build deferred]
+Absent values → extend the controlled vocabulary from taxonomies, not a free-text escape hatch. This is the anchor decision for the deferred vocab-enrichment sprint; no build detail accretes in this sprint.
+Rejected: free-text "Other" (less analyzable, harder to report across tenants).
+↳ origin: UI-V2-DEPTH-LAYOUT (principle only; build deferred)
+
+**D-60** · Status enums render authored humanized labels via VerdictChip label map
+Each of the five verdict-family enums maps to a hand-authored label (Appendix D of design doc; 25 unique keys). The map (`packages/ui/src/status/verdict-label-map.ts`) lives with `VerdictChip`, mirroring `toTierMember()`'s home. Keys are the wire `.value` (lowercase snake_case) exactly as the server emits them; never `.toUpperCase()` (D-48). Shared values (`approved`, `needs_refresh`) resolve to one label each (no conflict). British spelling, domain phrasing, acronyms preserved.
+Rejected: (a) client-side title-casing the key (mishandles acronyms, British spelling, domain phrasing); (b) backend-supplied label (display concern — no schema reason to pollute the wire contract).
+↳ origin: UI-V2-DEPTH-LAYOUT · refs: D-48, FE-16 ALTER, INV-75, DF-V2-4
+
+**D-61** · Dashboard zero-systems renders scaffolded-empty (supersedes UI-C1 zero-systems choice)
+The dashboard's `systemCount === 0 && portfolio.data.length === 0` branch previously rendered a `FirstRunPanel` full-surface takeover (UI-C1 shipped choice, defensible at the time). This sprint supersedes that choice with scaffolded-empty: retained `PageHeader` (with `system_owner`-gated register button) + three `StatCard`s reading 0 + framed `DataTable` with in-region `emptyMessage`. The get-started content is within the retained data region, not replacing it. This is a **deliberate supersession of a shipped, CLEARED choice**, not remediation of a gap. `FirstRunPanel` (FE-22) is globally retained; the dashboard simply no longer uses it in this branch.
+Rejected: retaining the `FirstRunPanel` takeover (reads as a bare card hiding workspace structure; founder preference on first real use).
+↳ origin: UI-V2-DEPTH-LAYOUT · refs: INV-74, FE-22, FE-27, D-58
+
+**DF-V2-1** · Elevation shadows excluded from contrast.test.ts (sprint-local)
+`--elevation-raised` and `--elevation-overlay` are decorative-neutral box-shadows; they are not WCAG 1.4.3 text pairings or 1.4.11 graphical-element pairings. They are not added to `contrast.test.ts`. The real INV-62 exposure from this sprint is surface-ramp widening: if any `--color-paper`/`--color-surface`/`--color-surface-sunken` value changes in a future sprint, the full 30-pairing set must be re-verified (not just the changed pair).
+↳ origin: UI-V2-DEPTH-LAYOUT · refs: INV-62, FE-26
+
+**DF-V2-2** · `PageScaffold` `width` default is `'default'` (unchanged `max-w-4xl`) (sprint-local)
+All current `PageScaffold` consumers pass no `width` prop; at `'default'`, the rendered class is `max-w-4xl` — identical to the previous hardcoded value. No consumer migration required.
+↳ origin: UI-V2-DEPTH-LAYOUT · refs: FE-21 ALTER
+
+**DF-V2-3** · Only the dashboard is re-composed this sprint (sprint-local)
+F2 detail and F3–F8 inherit the VerdictChip label map (kit-level) and will adopt depth/layout (`SectionGroup`, elevation, wide scaffold) in their own per-surface composition passes. Cross-surface regression for this sprint is label-render + layout-break only; full recomposition is deferred.
+↳ origin: UI-V2-DEPTH-LAYOUT · refs: FE-26, FE-27, D-58
+
+**DF-V2-4** · VerdictChip label map keys on wire `.value` exactly (sprint-local)
+The `LABEL_MAP` in `verdict-label-map.ts` keys on the wire `.value` as the server emits it (lowercase snake_case). The chip never calls `.toUpperCase()` on the value before the label lookup. `vendor_check` is the correct wire value; the DB stores `VENDOR_CHECK` (uppercase), but the API serialiser emits lowercase. The TONE_MAP uses `.toUpperCase()` for its own lookup and is unchanged.
+↳ origin: UI-V2-DEPTH-LAYOUT · refs: D-48, D-60, FE-16 ALTER, INV-75
+
 **D-52** · Identity split — tenant name in sidebar foot, user in top utility bar
 The tenant name goes in the sidebar foot (wired from `MeRead.tenant_name`); the logged-in user (display name or email + sign-out) moves to a slim top utility bar at the head of the main content column (`apps/tenant/app/_components/top-utility-bar.tsx`). Nav stays in the sidebar — this is not a return to top-bar navigation; the C0 sidebar topology is unchanged. The canonical home of the tenant name is the `tenant.name` column; `MeRead` (tenant plane) and `GET /platform/tenants` (operator plane) are two plane-scoped projections of it, so the tenant-plane field is single-homed on `MeRead` with no second tenant-plane route needed or added.
 Rejected: (a) a dedicated tenant-plane `GET /v1/tenant` route (a second home for the same fact; `D-22`; no such route exists and none is added); (b) keeping user identity in the sidebar foot and adding tenant name beside it (two identities crowding one block). The reversal of `FE-20`'s "no top-bar" stance is scoped here: `FE-20` removed a top-bar *navigation*; this adds a top *utility* bar for identity only — nav remains in the sidebar.

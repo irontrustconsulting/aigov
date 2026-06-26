@@ -4,7 +4,7 @@
 **Purpose:** What is implemented and what must not be reinvented, at the level of *what exists · what shape · which gate*. It points outward for depth and never restates the detail.
 **Lanes:** constraints → `INVARIANTS.md` (`INV-n`); schema (tables/enums/indexes) → `DATA-MODEL.md`; auth / identity / RLS / session mechanics → `ARCHITECTURE.md`; implementation shapes → `PATTERNS.md` (`PAT-n`); decisions/rationale → `DECISIONS.md` (`D-n`); conceptual model → `DOMAIN.md`.
 
-**Current through:** UI-C2-INTAKE-CATALOGUE full delivery (in-place single-open accordion `DrillDownStep`; Lift A FE-4/FE-5 input-family visual pass + `TextInput`; Lift B FE-21 `PageHeader` back affordance; `ListSelectRow` branch mode FE-23; vocab aggregate gate; `LogoTile` FE-25; `logo_url` plumbed; `OPEN-C1` resolved; INV-73 minted; DF-C2-1..8 recorded). Sprints 1–7b + UI-F1..F8 + UI-F9 + UI-V0 + UI-V1 + UI-C0 + UI-C1 + UI-C2 built. Per-surface composition passes (F1–F8) tracked in the composition-debt register below.
+**Current through:** UI-V2-DEPTH-LAYOUT (elevation + surface-layering tokens FE-26; `SectionGroup` + `PageScaffold` width prop FE-27; `VerdictChip` label map FE-16 ALTER; dashboard zero-systems scaffolded-empty D-61; INV-74, INV-75, DF-V2-1..4 minted; `UI-V2-OPERATOR-SKIN` formally retired — absorbed into C-track). Sprints 1–7b + UI-F1..F8 + UI-F9 + UI-V0 + UI-V1 + UI-C0 + UI-C1 + UI-C2 + UI-V2 built. Per-surface composition passes (F1–F8) tracked in the composition-debt register below.
 
 ---
 
@@ -66,6 +66,8 @@ Two Next.js App Router BFF apps, `apps/tenant` (port 3000) and `apps/operator` (
 **Post-sprint infrastructure corrections (2026-06-24):** Both apps' root `app/page.tsx` was a bare stub; now server-redirects to `/dashboard`. Auth callback (`app/api/auth/callback/route.ts`) redirected to app origin root after login; now redirects directly to `/dashboard`. Session store (`lib/auth/in-memory-session-store.ts`) was module-scoped; pinned to `globalThis` in both apps so Next.js HMR module re-instantiation in dev no longer wipes live sessions. Operator console layout now auto-redirects to `/api/auth/login` when `GET /platform/me` errors (session expired/wiped), rather than silently collapsing to an empty nav. Provisioning form mutation now handles 401 (redirect to login) and unexpected 5xx (visible error message) — previously failed silently.
 
 Both Cognito pools' OAuth/PKCE/hosted-UI-domain config is applied (`infra/cognito_tenant.tf`, `infra/cognito_operator.tf`) against the real, pre-existing tenant pool (`eu-west-2_yW42jUA1i`, imported into Terraform state for the first time this sprint — it predates IaC management) and the existing operator pool — both updated in place, same pool/client ids, zero data loss. A `terraform apply` run without the prior `terraform import` step briefly created a duplicate empty tenant pool; caught via `terraform plan`/AWS describe before any further drift, the duplicate was destroyed and the real pool imported and updated cleanly. `terraform plan` shows no drift as of this sprint's close.
+
+**Operational fix (2026-06-25) — Cognito tenant pool invite email delivery (`D-54`):** Invite emails were silently filtered for `@gmail.com` recipients because `COGNITO_DEFAULT` sends from AWS's shared `no-reply@verificationemail.com` sender, whose reputation is degraded by unrelated AWS customers and which cannot satisfy Gmail DMARC alignment checks for our domain. Root cause: shared sender + no DKIM/SPF alignment to `irontrustconsulting.co.uk`. Fix: switched the tenant pool's `email_configuration` to `DEVELOPER` mode in `infra/cognito_tenant.tf`; SES routes outbound email from `info@irontrustconsulting.co.uk` (verified production sender, `eu-west-2`) — DKIM-signed under our domain, SPF-aligned, passes Gmail bulk-sender rules. No code, schema, or auth-flow change. Operator pool unaffected (operator invites not yet in the invite flow).
 
 ### Intake / registration wizard (`UI-F1-INTAKE`)
 `apps/tenant/app/systems/new` — the first tenant feature surface (adoption face, `UX.md` §5), pure wire-up over landed S1/S2/S5 routes plus the F0 shared packages, with one additive backend addition (`DF1-9`: the six intake-vocab list routes). A single-page wizard (`page.tsx`) driven by a reducer (`wizard-state.ts`) over the steps: drill-down (category → vendor → product, or "not in catalogue / in-house" exit) → structured capture (`POST /v1/systems`) → catalogue-fact prefill confirm (display-only, `DF1-4`/`DF1-8`) → use-case create (`POST /v1/use-cases`), branching on the create response in this precedence order: `requires_context` → the context-question gate sub-surface (preview-before-commit, the UNRESOLVED loop, `POST .../context`) → resolved tier + the gate-1 override ladder (`POST .../classify/override`, structurally tier/subcategory-matched) → whose-court (`GET .../lifecycle`, reading `blocking.responsible_party`/`reason` for real semantics — replaces the F0 generic pill). Role-aware at the page root via `GET /v1/me` (`D-24`): system_owner gets the full spine; a bare contributor/member gets a "needs a system owner" empty-state (capture is system_owner-only); reviewer/authoriser/auditor get an assurance-read message — this surface has no capture controls for them. `override_tier`/`classify/override` controls are `SodAction`-barred (absent, not disabled) for non-system_owner, backed server-side by `require_governance_role("system_owner")` (verified: a forced contributor call now asserted 403 in `tests/test_use_case_classification.py::test_override_by_non_system_owner_gets_403`, closing a gap the existing suite hadn't covered). Confirmed absent at this sprint's pre-flight and still absent: `POST .../advance` and `GET /systems/{id}/approval-status` — vendor/product clearance is surfaced via the lifecycle `blocking` vector instead (`C-3`). Reviewer sign-off (`DF1-3`) and `If-Match`/`FE-6` (`DF1-5`, asserted dormant by test) are out of scope for F1.
@@ -223,7 +225,7 @@ Tested: `tests/platform/test_platform_me.py` (backend); `apps/operator/app/(cons
 
 **eu_ai_act_tier escalation (V-5):** HIGH/LIMITED/MINIMAL not in design doc §2.2 mapping. Implementation tones: HIGH→attention, LIMITED→neutral, MINIMAL→neutral. Herbert to confirm at V1 before the tier chip is used in production surfaces.
 
-**Next visual tracks:** UI-V2-OPERATOR-SKIN (compact surface visual specifics for operator console).
+**`UI-V2-OPERATOR-SKIN` retired:** absorbed into the C-track (operator surface composition passes); the V2 designation is reclaimed by `UI-V2-DEPTH-LAYOUT` (N4 disposition).
 
 ### Visual layer — tenant skin (`UI-V1-TENANT-SKIN`)
 
@@ -301,6 +303,30 @@ Tested: `tests/platform/test_platform_me.py` (backend); `apps/operator/app/(cons
 **`logo_url` additive field + logo seed (WI-1/WI-2):** `logo_url: str | None = None` added to `CatalogueVendorRef` and `ProductDetailOut` in `app/schemas/system.py`; `get_product_detail` passes `logo_url=product.logo_url` / `logo_url=vendor.logo_url`. `packages/api-client/src/contracts/reference.ts` updated. Existing serialisation unchanged (defaults to `None`). `scripts/seed/seed_logos.py` fetches 128 × 128 PNG per vendor via Google's favicon service and saves to `apps/tenant/public/logos/<slug>.png` (D-55); falls back to an SVG monogram for any vendor where the fetch fails. **P-1 confirmed:** 61/62 real vendors and 70/71 products now have `logo_url` set; `SmokeVendor-cc3672` intentionally NULL (dev artifact, no domain mapping). **P-2 confirmed:** `non_leaf_attachments = 0` — all products attach to leaf categories only; the non-leaf DrillDownStep mixed-node branch is implemented but unreachable in current prod data.
 
 **Tests:** 13 `DrillDownStep` accordion tests green (single-vendor auto-skip, multi-vendor expand, in-house exit, back-from-confirm, `isCustom=false` catalogue flow, all INV-70 states); 227 tenant tests green; `packages/ui` suite green.
+
+---
+
+### Visual layer — depth + layout + semantic fidelity (`UI-V2-DEPTH-LAYOUT`)
+
+**Delta:** presentational only — 0 backend / 0 schema / 0 route / 0 enum change.
+
+**Elevation + surface-layering tokens (FE-26):** `--elevation-raised` and `--elevation-overlay` shadow tokens added to `:root` in `packages/tokens/src/primitives.css`. Deployment rule: page on `--color-surface`, cards on `bg-paper` + `shadow-[var(--elevation-raised)]`, sunken sub-panels on `bg-[var(--color-surface-sunken)]`. Shadows are decorative-neutral; not added to `contrast.test.ts` (DF-V2-1). `StatCard` updated to `bg-paper` + `--elevation-raised` (was `bg-surface` + hairline border). Dark slots reserved per VDD-4.
+
+**Layout + sectioning (FE-27):** New `SectionGroup` component (`packages/ui/src/scaffold/section-group.tsx`) — petrol accent bar (`border-l-2 border-brand`) + brand label (`text-brand font-semibold uppercase tracking-wider`) + optional sunken sub-panel (`bg-[var(--color-surface-sunken)]`) + hairline bottom divider. Exported from `packages/ui/src/scaffold/index.ts` and `packages/ui/src/index.ts`.
+
+**`PageScaffold` width variants (FE-21 ALTER):** `width?: 'default' | 'wide' | 'full'` added; `'default'` keeps `max-w-4xl` (all consumers unchanged). `wide` = `max-w-6xl`; `full` = no max-w constraint.
+
+**Petrol deployment (D-57 — amends D-46):** Petrol (`--color-brand`) extended to section markers (accent bar) and group labels in `SectionGroup`. Still one hue, contrast-gated, no creep to input-selection states (INV-73 governs those; A4 ceiling).
+
+**VerdictChip label map (FE-16 ALTER / D-60):** New `packages/ui/src/status/verdict-label-map.ts` — 25 unique wire-value → authored label entries (Appendix D; British spelling, domain phrasing, acronyms preserved). `VerdictChip` imports `LABEL_MAP` and renders `LABEL_MAP[value] ?? value`; unknown value logs a `console.warn` (INV-75 fallback). TONE_MAP + `data-tone` attribute unchanged. All 25 wire values confirmed against live `pg_enum` (P-6 pre-flight, 2026-06-26). F2–F8 surfaces inherit automatically (kit-level change).
+
+**Dashboard zero-systems re-composition (D-61 + INV-74):** The `systemCount === 0 && portfolio.data.length === 0` branch in `apps/tenant/app/dashboard/page.tsx` replaced with scaffolded-empty: `PageHeader` (with `system_owner`-gated register button) + 3 `StatCard`s reading 0 + framed `DataTable` with in-region `emptyMessage`. `FirstRunPanel` import removed from the dashboard page (FE-22 component globally retained). All UI-C1 F2 contracts preserved (`DF2-5`, `DF6-9`, `FE-11`, `INV-52`, face order).
+
+**INV-75 guard:** `verdict-chip.test.tsx` extended — 25 wire-value → label assertions + unknown-value fallback + `console.warn` assertion.
+
+**Tests:** 210 (ui) + 84 (tokens) + 227 (tenant) = 521 tests green. `contrast.test.ts` 30-pairing gate unaffected (no ramp value changes).
+
+**0 backend / 0 schema / 0 route delta.**
 
 ---
 
