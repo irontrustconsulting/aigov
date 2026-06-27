@@ -33,9 +33,11 @@ export async function getSession(): Promise<SessionData | null> {
   }
 
   // Proactively refresh the Cognito token if it has expired or is within
-  // 60 s of expiry. Failure (Cognito unreachable, refresh token expired)
-  // destroys the session and forces a re-login rather than forwarding a
-  // guaranteed-to-fail token to the API.
+  // 60 s of expiry. On failure (Cognito unreachable, refresh token expired,
+  // empty refresh token) return the existing session unchanged — the API will
+  // reject a truly expired token with 401, which the createQueryClient onError
+  // handler already converts to a re-login. Destroying the session here causes
+  // an infinite loop when the refresh itself fails.
   if (now >= session.expiresAt - 60_000) {
     try {
       const fresh = await refreshTokens(session.refreshToken);
@@ -48,8 +50,9 @@ export async function getSession(): Promise<SessionData | null> {
       await sessionStore.update(sessionId, refreshed);
       return { ...session, ...refreshed };
     } catch {
-      await sessionStore.destroy(sessionId);
-      return null;
+      // Refresh failed — return existing session unchanged. The API rejects a
+      // truly expired token with 401, which createQueryClient converts to a
+      // re-login. Destroying the session here causes an infinite redirect loop.
     }
   }
 

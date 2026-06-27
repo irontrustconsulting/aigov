@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth/get-session";
 import { isSameOriginRequest } from "@/lib/auth/csrf";
+import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 
 const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -21,7 +22,12 @@ async function handle(
 
   const session = await getSession();
   if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    // Clear any stale session cookie so the browser isn't stuck in a
+    // redirect loop (stale cookie survives a server restart, blocking
+    // re-login until the browser cookie jar is manually cleared).
+    const res = NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    res.cookies.delete(SESSION_COOKIE_NAME);
+    return res;
   }
 
   const { path } = await params;
