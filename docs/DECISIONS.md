@@ -595,6 +595,32 @@ F2 detail and F3–F8 inherit the VerdictChip label map (kit-level) and will ado
 The `LABEL_MAP` in `verdict-label-map.ts` keys on the wire `.value` as the server emits it (lowercase snake_case). The chip never calls `.toUpperCase()` on the value before the label lookup. `vendor_check` is the correct wire value; the DB stores `VENDOR_CHECK` (uppercase), but the API serialiser emits lowercase. The TONE_MAP uses `.toUpperCase()` for its own lookup and is unchanged.
 ↳ origin: UI-V2-DEPTH-LAYOUT · refs: D-48, D-60, FE-16 ALTER, INV-75
 
+**D-63** · Use-distinguishing context (`usage_context`, `human_oversight`, data categories, affected parties) belongs on `use_case`, not `system`
+A system may have multiple use cases with different purposes, oversight models, and data profiles. Attaching these facts to `system` causes fidelity loss when a system is re-used across use cases with different profiles, and conflates deployment-stable facts (product, hosting model, operator role) with use-distinguishing context. From DM-S1, `usage_context_id`/`human_oversight_type_id` are FK columns on `use_case`; `data_category_ids`/`affected_party_ids` are persisted in `use_case_data_category`/`use_case_affected_party` (RLS-isolated, `tenant_id`-partitioned, INV-77). The system registration payload retains only deployment-stable facts.
+Rejected: keeping both tables (duplicates the source of truth across two levels — unresolvable when they diverge); adding a many-to-many at system level as a default (same problem — which use case does the default apply to?).
+↳ origin: DM-S1 · refs: INV-76, INV-77, DF-D1-1..4
+
+**D-64** · Classifier (`resolve_classification`) is unchanged; context fields are not tiering inputs
+The four context fields relocated in D-63 do not feed the EU AI Act tier resolution. `resolve_classification` reads only `system.catalogue_product_id` and the global taxonomy bridge. `usage_context` and `human_oversight_type` are captured for DPIA/FRIA feeder pre-fill and export context, not for tier derivation. DPIA applicability is driven by the data category profile (special-category → REQUIRED; any category → RECOMMENDED; none → NOT_APPLICABLE) — evaluated against `use_case_data_category`, not the classifier logic. The context gate tree is similarly unchanged.
+Rejected: using context fields as additional tiering inputs — the EU AI Act's Annex III mapping is product/application-category-based; adding context signals without a legal mandate would obscure the classification rationale.
+↳ origin: DM-S1 · refs: INV-76, D-63
+
+**DF-D1-1** · Backfill is system-to-first-use-case (sprint-local)
+The DM-S1 migration backfills each system's context values to the system's first use case by `created_at` ordering. Systems with zero use cases lose the data (acceptable: those systems have no AIIA, so the context was never used). Systems with multiple use cases pick up identical context on every use case — a known imprecision accepted as a one-time migration artefact; operators are expected to correct per-use-case values after DM-S1 ships.
+↳ origin: DM-S1 (sprint-local DF) · refs: D-63
+
+**DF-D1-2** · Transitional capture — four fields captured in intake-capture-step, threaded to use-case-create-step (sprint-local)
+In the DM-S1 wizard flow, the four context fields are still presented on the intake-capture-step form (alongside system-level fields); on form submit, they are collected into an `IntakeCaptureContext` object and carried in wizard state to the use-case-create-step, where they are included in the `UseCaseCreate` POST body. This is a transitional arrangement; DM-S2 moves the capture form controls to the use-case step. The contract change (`SystemCreate` drops the four; `UseCaseCreate` gains them) is permanent from DM-S1.
+↳ origin: DM-S1 (sprint-local DF) · refs: D-63, INV-76
+
+**DF-D1-3** · Export shape: four context fields added to `UseCaseExportSectionsRead` (sprint-local)
+`SystemDetail` no longer carries the four context fields, so the export pack's per-use-case section (`UseCaseExportSectionsRead`) is extended with `usage_context`, `human_oversight_type`, `data_categories`, `affected_parties`. `_load_use_case_context` in `export_service.py` resolves them at pack-build time. This shifts the `content_hash` for all existing exports — correct and expected.
+↳ origin: DM-S1 (sprint-local DF) · refs: D-63
+
+**DF-D1-4** · DPIA/FRIA feeder pre-fill and DPIA applicability now read from `use_case_*` tables (sprint-local)
+The FRIA feeder snapshot reads `use_case_affected_party where use_case_id == use_case.id`; source_ref is `use_case_affected_party:{link.id}`. The DPIA feeder snapshot reads `use_case_data_category where use_case_id == use_case.id`; source_ref is `use_case_data_category:{link.id}`. The DPIA applicability check (`feeder_recommendations_for`) also queries `use_case_data_category`. All three were previously reading from `system_*` tables. The AIIA overview pre-fill for `usage_context` and `human_oversight_type` now reads `use_case.usage_context_id` / `use_case.human_oversight_type_id` (previously `system.*`).
+↳ origin: DM-S1 (sprint-local DF) · refs: D-63, D-64
+
 **D-62** · Proxy 401 clears the session cookie; proactive refresh failure is non-destructive
 Two related BFF session behaviours fixed as a unit (origin: post-UI-V2-DEPTH-LAYOUT ops debug).
 (1) When `getSession()` returns null — cookie present but UUID not in the in-memory store (common after a dev-server restart, where the store is wiped but the browser retains the old cookie) — the proxy's 401 response now deletes the session cookie (`Set-Cookie: irontrustai_tenant_session=; Max-Age=0`). The browser removes the stale cookie; the `createQueryClient` 401 handler navigates to login; the callback sets a fresh cookie; the next proxy call succeeds. Without this, the old cookie blocked recovery until the user cleared cookies manually, causing an infinite login-redirect loop.

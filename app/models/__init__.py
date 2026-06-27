@@ -49,11 +49,11 @@ from app.models.governance import (  # noqa: F401
     GovernanceRole, GovernanceRoleConflict, GovernanceRoleAssignment,
 )
 
-# System Intake vocab and link tables
+# System Intake vocab and use-case link tables
 from app.models.intake import (  # noqa: F401
     EUOperatorRole, HostingModel, UsageContext, HumanOversightType,
     DataCategory, AffectedParty,
-    SystemDataCategory, SystemAffectedParty,
+    UseCaseDataCategory, UseCaseAffectedParty,
 )
 
 # Classification gate — decision tree reference tables (global, no RLS)

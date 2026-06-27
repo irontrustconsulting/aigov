@@ -7,6 +7,7 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.base import EUAIActTier, LifecycleState
+from app.schemas.system import AffectedPartyOut, DataCategoryOut, VocabItemOut
 
 
 class UseCaseCreate(BaseModel):
@@ -14,6 +15,11 @@ class UseCaseCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     purpose: str | None = None
     context_blob: dict = Field(default_factory=dict)
+    # Use-distinguishing context (D-63/INV-76) — relocated from system in DM-S1
+    usage_context_id: uuid.UUID | None = None
+    human_oversight_type_id: uuid.UUID | None = None
+    data_category_ids: list[uuid.UUID] = Field(default_factory=list)
+    affected_party_ids: list[uuid.UUID] = Field(default_factory=list)
 
 
 class UseCaseRead(BaseModel):
@@ -26,6 +32,11 @@ class UseCaseRead(BaseModel):
     purpose: str | None
     state: LifecycleState
     eu_tier: EUAIActTier
+    # Use-distinguishing context (resolved on read; populated by the router)
+    usage_context: VocabItemOut | None = None
+    human_oversight_type: VocabItemOut | None = None
+    data_categories: list[DataCategoryOut] = Field(default_factory=list)
+    affected_parties: list[AffectedPartyOut] = Field(default_factory=list)
 
 
 class ClassificationRead(BaseModel):

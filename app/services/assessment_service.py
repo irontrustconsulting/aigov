@@ -48,9 +48,9 @@ from app.models.intake import (
     EUOperatorRole,
     HostingModel,
     HumanOversightType,
-    SystemAffectedParty,
-    SystemDataCategory,
     UsageContext,
+    UseCaseAffectedParty,
+    UseCaseDataCategory,
 )
 from app.models.knowledge import Control, Risk
 from app.models.lifecycle import AuditEvent, DeploymentAuthorisation, Evidence
@@ -499,14 +499,14 @@ def create_aiia(use_case_id: uuid.UUID, ctx: TenantContext, db: Session) -> Asse
             (
                 "Usage context",
                 UsageContext,
-                system.usage_context_id,
-                "system.usage_context_id",
+                use_case.usage_context_id,
+                "use_case.usage_context_id",
             ),
             (
                 "Human oversight type",
                 HumanOversightType,
-                system.human_oversight_type_id,
-                "system.human_oversight_type_id",
+                use_case.human_oversight_type_id,
+                "use_case.human_oversight_type_id",
             ),
         )
         for label_prefix, model, fk_id, ref in _fk_dimensions:
@@ -657,10 +657,10 @@ def create_feeder(
     snapshot_count = 0
     proposed: list[ProposedRisk] = []
 
-    if system is not None and feeder_type == AssessmentType.FRIA:
+    if use_case is not None and feeder_type == AssessmentType.FRIA:
         for link in db.scalars(
-            select(SystemAffectedParty).where(
-                SystemAffectedParty.system_id == system.id
+            select(UseCaseAffectedParty).where(
+                UseCaseAffectedParty.use_case_id == use_case.id
             )
         ):
             label = _resolve_label(db, AffectedParty, link.affected_party_id)
@@ -673,13 +673,13 @@ def create_feeder(
                 section_key=FRIA_AFFECTED_PERSONS_SECTION_KEY,
                 prompt=f"Affected party: {label}",
                 response=label,
-                source_ref=f"system_affected_party:{link.affected_party_id}",
+                source_ref=f"use_case_affected_party:{link.id}",
             )
             snapshot_count += 1
 
-    elif system is not None and feeder_type == AssessmentType.DPIA:
+    elif use_case is not None and feeder_type == AssessmentType.DPIA:
         for link in db.scalars(
-            select(SystemDataCategory).where(SystemDataCategory.system_id == system.id)
+            select(UseCaseDataCategory).where(UseCaseDataCategory.use_case_id == use_case.id)
         ):
             label = _resolve_label(db, DataCategory, link.data_category_id)
             if label is None:
@@ -691,7 +691,7 @@ def create_feeder(
                 section_key=DPIA_DATA_CATEGORIES_SECTION_KEY,
                 prompt=f"Data category: {label}",
                 response=label,
-                source_ref=f"system_data_category:{link.data_category_id}",
+                source_ref=f"use_case_data_category:{link.id}",
             )
             snapshot_count += 1
 
@@ -938,15 +938,15 @@ def feeder_recommendations_for(
 
     has_data_category = False
     has_special_category = False
-    if system is not None:
+    if use_case is not None:
         categories = list(
             db.scalars(
                 select(DataCategory)
                 .join(
-                    SystemDataCategory,
-                    SystemDataCategory.data_category_id == DataCategory.id,
+                    UseCaseDataCategory,
+                    UseCaseDataCategory.data_category_id == DataCategory.id,
                 )
-                .where(SystemDataCategory.system_id == system.id)
+                .where(UseCaseDataCategory.use_case_id == use_case.id)
             )
         )
         has_data_category = len(categories) > 0

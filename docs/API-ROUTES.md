@@ -53,19 +53,19 @@ The product/category/vendor/subcategory reads are intentionally `anon` — they 
 
 | Method · Path | Gate | Request | Response | If-Match | Notes |
 |---|---|---|---|---|---|
-| `POST /systems` | `gov:system_owner` | `SystemCreate` | `SystemDetail` (201) | — | `is_custom` ⊕ catalogue link is a 422 check constraint (`ck_system_custom_no_catalogue`), not app code. |
+| `POST /systems` | `gov:system_owner` | `SystemCreate` | `SystemDetail` (201) | — | `is_custom` ⊕ catalogue link is a 422 check constraint (`ck_system_custom_no_catalogue`), not app code. `SystemCreate` fields: `name`, `is_custom`, `catalogue_product_id`, `catalogue_vendor_id`, `owner_user_id`, `operator_role_id`, `hosting_model_id`, `lifecycle_stage`, `purpose`. **DM-S1:** `usage_context_id`, `human_oversight_type_id`, `data_category_ids`, `affected_party_ids` removed from `SystemCreate`/`SystemDetail`; moved to `UseCaseCreate`/`UseCaseRead`. |
 | `GET /systems` | `member` | — | `SystemRead[]` | — | RLS-scoped list. |
 | `GET /systems/{system_id}` | `member` | — | `SystemDetail` | — | |
-| `PATCH /systems/{system_id}` | `gov:system_owner` | `SystemUpdate` | `SystemDetail` | — | Link arrays (`data_category_ids`/`affected_party_ids`) replace, not merge. Relinking `catalogue_product_id` with use cases present → 409. |
+| `PATCH /systems/{system_id}` | `gov:system_owner` | `SystemUpdate` | `SystemDetail` | — | Relinking `catalogue_product_id` with use cases present → 409. **DM-S1:** link-array replacement for `data_category_ids`/`affected_party_ids` removed (moved to use-case level). |
 | `GET /systems/{system_id}/prefill` | `member` | — | `PrefillResponse` | — | `200` with `facts: []` when no product (incl. `is_custom`) — never `404`. |
 
 ### Use cases & classification — gate 1 (the bridge) — `app/routers/v1/use_cases.py`
 
 | Method · Path | Gate | Request | Response | If-Match | Notes |
 |---|---|---|---|---|---|
-| `POST /use-cases` | `gov:system_owner` | `UseCaseCreate` | `UseCaseWithClassification` (201) | — | Auto-derives + snapshots the classification in the same call (the bridge: `system → product → product_category → eu_ai_act_subcategory`). |
+| `POST /use-cases` | `gov:system_owner` | `UseCaseCreate` | `UseCaseWithClassification` (201) | — | Auto-derives + snapshots the classification in the same call (the bridge: `system → product → product_category → eu_ai_act_subcategory`). **DM-S1:** `UseCaseCreate` gains `usage_context_id`, `human_oversight_type_id`, `data_category_ids`, `affected_party_ids`; `UseCaseRead` returns resolved `usage_context`, `human_oversight_type`, `data_categories`, `affected_parties`. |
 | `GET /use-cases` | `member` | — | `UseCaseRead[]` | — | |
-| `GET /use-cases/{use_case_id}` | `member` | — | `UseCaseWithClassification` | — | 404 if no current classification snapshot exists. |
+| `GET /use-cases/{use_case_id}` | `member` | — | `UseCaseWithClassification` | — | 404 if no current classification snapshot exists. `UseCaseRead` includes the four resolved context fields (DM-S1). |
 | `POST /use-cases/{use_case_id}/classify/override` | `gov:system_owner` | `OverrideRequest` | `UseCaseWithClassification` | — | 422 on unknown `subcategory_code` or `tier` ≠ `subcategory.tier`. New current snapshot; prior preserved `is_current=False`. |
 
 `ClassificationRead` (the gate-1 projection, embedded in both responses above) carries `requires_context`, never `status`.

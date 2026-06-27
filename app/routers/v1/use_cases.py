@@ -15,8 +15,8 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, select
+from sqlalchemy.orm import Session, selectinload
 
 from app.auth.context import (
     TenantContext,
@@ -27,7 +27,12 @@ from app.auth.context import (
 from app.models.assessment import Classification
 from app.models.base import EUAIActTier
 from app.models.domain import System, UseCase
+from app.models.intake import (
+    AffectedParty, DataCategory, HumanOversightType, UsageContext,
+    UseCaseAffectedParty, UseCaseDataCategory,
+)
 from app.models.taxonomy import EUAIActSubcategory
+from app.schemas.system import AffectedPartyOut, DataCategoryOut, VocabItemOut
 from app.schemas.use_cases import (
     ClassificationRead,
     OverrideRequest,
@@ -42,6 +47,85 @@ from app.services.classification import (
 )
 
 router = APIRouter(prefix="/use-cases", tags=["use-cases"])
+
+
+def _replace_use_case_data_categories(
+    db: Session,
+    use_case_id: uuid.UUID,
+    tenant_id: uuid.UUID,
+    data_category_ids: list[uuid.UUID],
+) -> None:
+    db.execute(delete(UseCaseDataCategory).where(UseCaseDataCategory.use_case_id == use_case_id))
+    for dc_id in data_category_ids:
+        db.add(UseCaseDataCategory(
+            id=uuid.uuid4(),
+            tenant_id=tenant_id,
+            use_case_id=use_case_id,
+            data_category_id=dc_id,
+        ))
+
+
+def _replace_use_case_affected_parties(
+    db: Session,
+    use_case_id: uuid.UUID,
+    tenant_id: uuid.UUID,
+    affected_party_ids: list[uuid.UUID],
+) -> None:
+    db.execute(delete(UseCaseAffectedParty).where(UseCaseAffectedParty.use_case_id == use_case_id))
+    for ap_id in affected_party_ids:
+        db.add(UseCaseAffectedParty(
+            id=uuid.uuid4(),
+            tenant_id=tenant_id,
+            use_case_id=use_case_id,
+            affected_party_id=ap_id,
+        ))
+
+
+def _build_use_case_read(use_case: UseCase, db: Session) -> UseCaseRead:
+    """Build UseCaseRead with resolved vocab labels for the four context fields."""
+    uc_vocab = db.get(UsageContext, use_case.usage_context_id) if use_case.usage_context_id else None
+    hot_vocab = db.get(HumanOversightType, use_case.human_oversight_type_id) if use_case.human_oversight_type_id else None
+
+    dc_links = list(db.scalars(
+        select(UseCaseDataCategory)
+        .where(UseCaseDataCategory.use_case_id == use_case.id)
+        .options(selectinload(UseCaseDataCategory.data_category))
+    ))
+    ap_links = list(db.scalars(
+        select(UseCaseAffectedParty)
+        .where(UseCaseAffectedParty.use_case_id == use_case.id)
+        .options(selectinload(UseCaseAffectedParty.affected_party))
+    ))
+
+    return UseCaseRead(
+        id=use_case.id,
+        tenant_id=use_case.tenant_id,
+        system_id=use_case.system_id,
+        title=use_case.title,
+        purpose=use_case.purpose,
+        state=use_case.state,
+        eu_tier=use_case.eu_tier,
+        usage_context=VocabItemOut(id=uc_vocab.id, code=uc_vocab.code, label=uc_vocab.label) if uc_vocab else None,
+        human_oversight_type=VocabItemOut(id=hot_vocab.id, code=hot_vocab.code, label=hot_vocab.label) if hot_vocab else None,
+        data_categories=[
+            DataCategoryOut(
+                id=link.data_category.id,
+                code=link.data_category.code,
+                label=link.data_category.label,
+                is_special_category=link.data_category.is_special_category,
+            )
+            for link in dc_links
+        ],
+        affected_parties=[
+            AffectedPartyOut(
+                id=link.affected_party.id,
+                code=link.affected_party.code,
+                label=link.affected_party.label,
+                is_vulnerable_group=link.affected_party.is_vulnerable_group,
+            )
+            for link in ap_links
+        ],
+    )
 
 
 def _current_classification(
@@ -91,8 +175,14 @@ def register_use_case(
         title=payload.title,
         purpose=payload.purpose,
         context_blob=payload.context_blob,
+        usage_context_id=payload.usage_context_id,
+        human_oversight_type_id=payload.human_oversight_type_id,
     )
     db.add(use_case)
+    db.flush()
+
+    _replace_use_case_data_categories(db, use_case.id, ctx.tenant_id, payload.data_category_ids)
+    _replace_use_case_affected_parties(db, use_case.id, ctx.tenant_id, payload.affected_party_ids)
     db.flush()
 
     proposal = resolve_classification(payload.system_id, db)
@@ -104,7 +194,7 @@ def register_use_case(
     )
 
     return UseCaseWithClassification(
-        use_case=UseCaseRead.model_validate(use_case),
+        use_case=_build_use_case_read(use_case, db),
         classification=_classification_read(classification),
     )
 
@@ -151,7 +241,7 @@ def get_use_case(
         )
 
     return UseCaseWithClassification(
-        use_case=UseCaseRead.model_validate(use_case),
+        use_case=_build_use_case_read(use_case, db),
         classification=_classification_read(classification),
     )
 

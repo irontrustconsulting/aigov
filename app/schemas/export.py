@@ -34,7 +34,7 @@ from app.schemas.assessment import (
 )
 from app.schemas.coverage import CoverageMatrixRead
 from app.schemas.lifecycle import DeploymentAuthorisationRead
-from app.schemas.system import SystemDetail
+from app.schemas.system import AffectedPartyOut, DataCategoryOut, SystemDetail, VocabItemOut
 
 
 class ActorRef(BaseModel):
@@ -131,6 +131,11 @@ class UseCaseExportSectionsRead(BaseModel):
 
     use_case_id: uuid.UUID
     system: SystemDetail
+    # Use-distinguishing context (relocated from system in DM-S1)
+    usage_context: VocabItemOut | None = None
+    human_oversight_type: VocabItemOut | None = None
+    data_categories: list[DataCategoryOut] = []
+    affected_parties: list[AffectedPartyOut] = []
     classification_history: list[ClassificationHistoryEntryRead]
     assessment: AssessmentExportRead
     evidence_manifest: list[EvidenceManifestEntryRead]

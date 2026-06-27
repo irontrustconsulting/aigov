@@ -65,8 +65,12 @@ from app.schemas.export import (
     UseCaseExportRead,
     UseCaseExportSectionsRead,
 )
+from app.models.intake import (
+    AffectedParty, DataCategory, HumanOversightType, UsageContext,
+    UseCaseAffectedParty, UseCaseDataCategory,
+)
 from app.schemas.lifecycle import DeploymentAuthorisationRead
-from app.schemas.system import SystemDetail
+from app.schemas.system import AffectedPartyOut, DataCategoryOut, SystemDetail, VocabItemOut
 from app.services.coverage_service import compute_coverage
 from app.services.system_service import get_system_detail
 
@@ -477,6 +481,42 @@ def _empty_coverage(
     )
 
 
+def _load_use_case_context(
+    db: Session, use_case: UseCase
+) -> tuple[VocabItemOut | None, VocabItemOut | None, list[DataCategoryOut], list[AffectedPartyOut]]:
+    uc_vocab = db.get(UsageContext, use_case.usage_context_id) if use_case.usage_context_id else None
+    hot_vocab = db.get(HumanOversightType, use_case.human_oversight_type_id) if use_case.human_oversight_type_id else None
+
+    dc_links = db.scalars(
+        select(UseCaseDataCategory).where(UseCaseDataCategory.use_case_id == use_case.id)
+    ).all()
+    ap_links = db.scalars(
+        select(UseCaseAffectedParty).where(UseCaseAffectedParty.use_case_id == use_case.id)
+    ).all()
+
+    data_categories = [
+        DataCategoryOut(
+            id=dc.id, code=dc.code, label=dc.label, is_special_category=dc.is_special_category,
+        )
+        for link in dc_links
+        if (dc := db.get(DataCategory, link.data_category_id)) is not None
+    ]
+    affected_parties = [
+        AffectedPartyOut(
+            id=ap.id, code=ap.code, label=ap.label, is_vulnerable_group=ap.is_vulnerable_group,
+        )
+        for link in ap_links
+        if (ap := db.get(AffectedParty, link.affected_party_id)) is not None
+    ]
+
+    return (
+        VocabItemOut(id=uc_vocab.id, code=uc_vocab.code, label=uc_vocab.label) if uc_vocab else None,
+        VocabItemOut(id=hot_vocab.id, code=hot_vocab.code, label=hot_vocab.label) if hot_vocab else None,
+        data_categories,
+        affected_parties,
+    )
+
+
 def _use_case_record(
     db: Session,
     tenant_id: uuid.UUID,
@@ -571,9 +611,14 @@ def _use_case_record(
     }
     entity_ids.update(c.id for c in classifications)
 
+    uc_context, hot_context, dc_out, ap_out = _load_use_case_context(db, use_case)
     sections = UseCaseExportSectionsRead(
         use_case_id=use_case.id,
         system=system_detail,
+        usage_context=uc_context,
+        human_oversight_type=hot_context,
+        data_categories=dc_out,
+        affected_parties=ap_out,
         classification_history=classification_history,
         assessment=assessment_record,
         evidence_manifest=evidence_manifest,

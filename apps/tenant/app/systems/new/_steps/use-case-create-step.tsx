@@ -7,6 +7,10 @@ import { useCreateUseCase } from "@/lib/intake";
 
 export interface UseCaseCreateStepProps {
   systemId: string;
+  usageContextId: string | null;
+  humanOversightTypeId: string | null;
+  dataCategoryIds: string[];
+  affectedPartyIds: string[];
   onCreated: (useCaseId: string, classification: ClassificationRead) => void;
 }
 
@@ -17,7 +21,14 @@ export interface UseCaseCreateStepProps {
  * hands the result up; it never reads `/lifecycle` itself (would mislabel
  * the court while requires_context is still open).
  */
-export function UseCaseCreateStep({ systemId, onCreated }: UseCaseCreateStepProps) {
+export function UseCaseCreateStep({
+  systemId,
+  usageContextId,
+  humanOversightTypeId,
+  dataCategoryIds,
+  affectedPartyIds,
+  onCreated,
+}: UseCaseCreateStepProps) {
   const [title, setTitle] = useState("");
   const [purpose, setPurpose] = useState("");
   const createUseCase = useCreateUseCase();
@@ -25,7 +36,16 @@ export function UseCaseCreateStep({ systemId, onCreated }: UseCaseCreateStepProp
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     createUseCase.mutate(
-      { system_id: systemId, title, purpose: purpose || null, context_blob: {} },
+      {
+        system_id: systemId,
+        title,
+        purpose: purpose || null,
+        context_blob: {},
+        usage_context_id: usageContextId,
+        human_oversight_type_id: humanOversightTypeId,
+        data_category_ids: dataCategoryIds,
+        affected_party_ids: affectedPartyIds,
+      },
       {
         onSuccess: (data) => onCreated(data.use_case.id, data.classification),
       }

@@ -59,7 +59,14 @@ export default function NewSystemPage() {
         <IntakeCaptureStep
           isCustom={state.isCustom}
           catalogueProductId={state.catalogueProductId}
-          onSubmit={(system) => dispatch({ type: "SYSTEM_CREATED", system })}
+          onSubmit={(system, context) => dispatch({
+            type: "SYSTEM_CREATED",
+            system,
+            usageContextId: context.usageContextId,
+            humanOversightTypeId: context.humanOversightTypeId,
+            dataCategoryIds: context.dataCategoryIds,
+            affectedPartyIds: context.affectedPartyIds,
+          })}
         />
       );
 
@@ -75,6 +82,10 @@ export default function NewSystemPage() {
       return (
         <UseCaseCreateStep
           systemId={state.system!.id}
+          usageContextId={state.usageContextId}
+          humanOversightTypeId={state.humanOversightTypeId}
+          dataCategoryIds={state.dataCategoryIds}
+          affectedPartyIds={state.affectedPartyIds}
           onCreated={(useCaseId, classification) =>
             dispatch({ type: "USE_CASE_CREATED", useCaseId, classification })
           }

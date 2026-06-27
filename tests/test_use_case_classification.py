@@ -820,3 +820,115 @@ class TestCrossTenantIsolation:
 
         assert r.status_code == 200
         assert r.json() == []
+
+
+# ---------------------------------------------------------------------------
+# 6. WI-9 — Classifier reads no context fields (D-63, INV-76)
+# ---------------------------------------------------------------------------
+
+class TestClassifierContextIsolation:
+    def test_resolve_classification_ignores_context_fields(
+        self, db_session, tenant, product_high
+    ):
+        """resolve_classification result is driven solely by product/taxonomy
+        mapping; usage_context_id, human_oversight_type_id, data_category_ids,
+        and affected_party_ids on the use case must not influence it (D-63)."""
+        from app.models.intake import (
+            AffectedParty, DataCategory, UsageContext, HumanOversightType,
+            UseCaseAffectedParty, UseCaseDataCategory,
+        )
+
+        system = _make_system(db_session, tenant, product_high)
+        uc = _make_use_case(db_session, tenant, system)
+
+        # Populate all four context fields on the use case.
+        uc_obj = db_session.get(UseCase, uc.id)
+        usage_ctx = UsageContext(id=uuid.uuid4(), code="internal_only", label="Internal only", sort_order=0)
+        hot = HumanOversightType(id=uuid.uuid4(), code="fully_autonomous", label="Fully autonomous", sort_order=0)
+        dc = DataCategory(id=uuid.uuid4(), code="dc_wi9", label="WI-9 DC", sort_order=0, is_special_category=True)
+        ap = AffectedParty(id=uuid.uuid4(), code="ap_wi9", label="WI-9 AP", sort_order=0)
+        db_session.add_all([usage_ctx, hot, dc, ap])
+        db_session.flush()
+        uc_obj.usage_context_id = usage_ctx.id
+        uc_obj.human_oversight_type_id = hot.id
+        db_session.add(UseCaseDataCategory(id=uuid.uuid4(), tenant_id=tenant.id, use_case_id=uc.id, data_category_id=dc.id))
+        db_session.add(UseCaseAffectedParty(id=uuid.uuid4(), tenant_id=tenant.id, use_case_id=uc.id, affected_party_id=ap.id))
+        db_session.flush()
+
+        # Classification must still resolve from the product mapping alone.
+        proposal = resolve_classification(system.id, db_session)
+        assert proposal.tier == EUAIActTier.HIGH
+
+
+# ---------------------------------------------------------------------------
+# 7. WI-10 — Cross-tenant isolation for use_case_data_category/affected_party
+# ---------------------------------------------------------------------------
+
+class TestContextLinkIsolation:
+    def test_use_case_data_category_tenant_isolation(self, db_session):
+        """Rows belonging to tenant A are not returned when filtering by
+        tenant B's id — mirrors what RLS enforces in production (INV-77)."""
+        from sqlalchemy import select
+        from app.models.intake import DataCategory, UseCaseDataCategory
+
+        tenant_a = Tenant(id=uuid.uuid4(), name="TCA", slug=f"tca-{uuid.uuid4().hex[:6]}")
+        tenant_b = Tenant(id=uuid.uuid4(), name="TCB", slug=f"tcb-{uuid.uuid4().hex[:6]}")
+        db_session.add_all([tenant_a, tenant_b])
+        db_session.flush()
+
+        system_a = System(
+            id=uuid.uuid4(), tenant_id=tenant_a.id, name="SysA", metadata_blob={},
+        )
+        db_session.add(system_a)
+        db_session.flush()
+        uc_a = UseCase(
+            id=uuid.uuid4(), tenant_id=tenant_a.id, system_id=system_a.id,
+            title="UC A", context_blob={},
+        )
+        dc = DataCategory(id=uuid.uuid4(), code="dc_iso", label="DC Iso", sort_order=0)
+        db_session.add_all([uc_a, dc])
+        db_session.flush()
+
+        db_session.add(UseCaseDataCategory(
+            id=uuid.uuid4(), tenant_id=tenant_a.id, use_case_id=uc_a.id, data_category_id=dc.id,
+        ))
+        db_session.flush()
+
+        rows = db_session.scalars(
+            select(UseCaseDataCategory).where(UseCaseDataCategory.tenant_id == tenant_b.id)
+        ).all()
+        assert rows == []
+
+    def test_use_case_affected_party_tenant_isolation(self, db_session):
+        """Rows belonging to tenant A are not returned when filtering by
+        tenant B's id — mirrors what RLS enforces in production (INV-77)."""
+        from sqlalchemy import select
+        from app.models.intake import AffectedParty, UseCaseAffectedParty
+
+        tenant_a = Tenant(id=uuid.uuid4(), name="TAP_A", slug=f"tapa-{uuid.uuid4().hex[:6]}")
+        tenant_b = Tenant(id=uuid.uuid4(), name="TAP_B", slug=f"tapb-{uuid.uuid4().hex[:6]}")
+        db_session.add_all([tenant_a, tenant_b])
+        db_session.flush()
+
+        system_a = System(
+            id=uuid.uuid4(), tenant_id=tenant_a.id, name="SysAP", metadata_blob={},
+        )
+        db_session.add(system_a)
+        db_session.flush()
+        uc_a = UseCase(
+            id=uuid.uuid4(), tenant_id=tenant_a.id, system_id=system_a.id,
+            title="UC AP A", context_blob={},
+        )
+        ap = AffectedParty(id=uuid.uuid4(), code="ap_iso", label="AP Iso", sort_order=0)
+        db_session.add_all([uc_a, ap])
+        db_session.flush()
+
+        db_session.add(UseCaseAffectedParty(
+            id=uuid.uuid4(), tenant_id=tenant_a.id, use_case_id=uc_a.id, affected_party_id=ap.id,
+        ))
+        db_session.flush()
+
+        rows = db_session.scalars(
+            select(UseCaseAffectedParty).where(UseCaseAffectedParty.tenant_id == tenant_b.id)
+        ).all()
+        assert rows == []

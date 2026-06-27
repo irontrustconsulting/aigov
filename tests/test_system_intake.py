@@ -30,7 +30,7 @@ from app.models.governance import GovernanceRole, GovernanceRoleAssignment
 from app.models.identity import Membership, Tenant, User
 from app.models.intake import (
     AffectedParty, DataCategory, EUOperatorRole, HostingModel,
-    HumanOversightType, SystemAffectedParty, SystemDataCategory, UsageContext,
+    UseCaseAffectedParty, UseCaseDataCategory,
 )
 from app.models.lifecycle import AuditEvent
 from app.models.base import LifecycleState, ProvenanceConfidence
@@ -206,8 +206,6 @@ class TestPostSystems:
         body = r.json()
         assert body["name"] == "Minimal System"
         assert body["is_custom"] is False
-        assert body["data_categories"] == []
-        assert body["affected_parties"] == []
 
     def test_full_payload_creates_system(
         self, client, db_session, tenant, system_owner_ctx,
@@ -223,8 +221,6 @@ class TestPostSystems:
                 "operator_role_id": str(eu_op_role.id),
                 "hosting_model_id": str(hosting.id),
                 "lifecycle_stage": "pilot",
-                "data_category_ids": [str(data_cats["health"].id)],
-                "affected_party_ids": [str(affected_parties_data["children"].id)],
                 "purpose": "Automate contract review",
             })
         finally:
@@ -238,10 +234,6 @@ class TestPostSystems:
         assert body["operator_role"]["code"] == "deployer"
         assert body["hosting_model"]["code"] == "cloud_saas"
         assert body["lifecycle_stage"] == "pilot"
-        assert body["data_categories"][0]["code"] == "health"
-        assert body["data_categories"][0]["is_special_category"] is True
-        assert body["affected_parties"][0]["code"] == "children"
-        assert body["affected_parties"][0]["is_vulnerable_group"] is True
         assert body["purpose"] == "Automate contract review"
 
     def test_audit_event_created(
@@ -370,7 +362,6 @@ class TestGetSystemDetail:
                 "name": "Detail System",
                 "catalogue_product_id": str(product.id),
                 "operator_role_id": str(eu_op_role.id),
-                "data_category_ids": [str(data_cats["health"].id)],
             })
         finally:
             app.dependency_overrides.pop(get_tenant_context, None)
@@ -391,7 +382,6 @@ class TestGetSystemDetail:
         body = r.json()
         assert body["operator_role"]["code"] == "deployer"
         assert body["catalogue_product"]["name"] == "Acme LLM"
-        assert body["data_categories"][0]["is_special_category"] is True
         assert body["use_case_count"] == 0
 
     def test_cross_tenant_returns_404(
@@ -531,29 +521,22 @@ class TestPatchSystem:
         assert r.status_code == 200
         assert r.json()["catalogue_vendor"]["id"] == str(new_vendor.id)
 
-    def test_link_array_replacement(
-        self, client, db_session, tenant, system_owner_ctx, data_cats,
+    def test_lifecycle_stage_update(
+        self, client, db_session, tenant, system_owner_ctx,
     ):
-        """data_category_ids when supplied replaces the full set."""
-        system_id = self._create_system(
-            client, db_session, system_owner_ctx,
-            data_category_ids=[str(data_cats["health"].id)],
-        )
+        """PATCH can update lifecycle_stage independently."""
+        system_id = self._create_system(client, db_session, system_owner_ctx)
 
         app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
         app.dependency_overrides[get_tenant_db] = _db_override(db_session)
         try:
-            r = client.patch(f"/v1/systems/{system_id}", json={
-                "data_category_ids": [str(data_cats["identifiers"].id)],
-            })
+            r = client.patch(f"/v1/systems/{system_id}", json={"lifecycle_stage": "production"})
         finally:
             app.dependency_overrides.pop(get_tenant_context, None)
             app.dependency_overrides.pop(get_tenant_db, None)
 
         assert r.status_code == 200
-        codes = [dc["code"] for dc in r.json()["data_categories"]]
-        assert codes == ["identifiers"]
-        assert "health" not in codes
+        assert r.json()["lifecycle_stage"] == "production"
 
 
 # ---------------------------------------------------------------------------
@@ -711,44 +694,52 @@ class TestReferenceProductDetail:
 
 class TestConstraints:
     def test_unique_data_category_link(self, db_session, tenant):
-        """Duplicate (system_id, data_category_id) → IntegrityError."""
+        """Duplicate (use_case_id, data_category_id) → IntegrityError."""
         import pytest
         from sqlalchemy.exc import IntegrityError
 
         system = System(
             id=uuid.uuid4(), tenant_id=tenant.id, name="Dup Test", metadata_blob={},
         )
+        uc = UseCase(
+            id=uuid.uuid4(), tenant_id=tenant.id, system_id=system.id,
+            title="Dup UC", context_blob={},
+        )
         dc = DataCategory(id=uuid.uuid4(), code="dc_dup", label="DC Dup", sort_order=0)
-        db_session.add_all([system, dc])
+        db_session.add_all([system, uc, dc])
         db_session.flush()
 
-        link1 = SystemDataCategory(id=uuid.uuid4(), system_id=system.id, data_category_id=dc.id)
+        link1 = UseCaseDataCategory(id=uuid.uuid4(), tenant_id=tenant.id, use_case_id=uc.id, data_category_id=dc.id)
         db_session.add(link1)
         db_session.flush()
 
-        link2 = SystemDataCategory(id=uuid.uuid4(), system_id=system.id, data_category_id=dc.id)
+        link2 = UseCaseDataCategory(id=uuid.uuid4(), tenant_id=tenant.id, use_case_id=uc.id, data_category_id=dc.id)
         db_session.add(link2)
         with pytest.raises(IntegrityError):
             db_session.flush()
         db_session.rollback()
 
     def test_unique_affected_party_link(self, db_session, tenant):
-        """Duplicate (system_id, affected_party_id) → IntegrityError."""
+        """Duplicate (use_case_id, affected_party_id) → IntegrityError."""
         import pytest
         from sqlalchemy.exc import IntegrityError
 
         system = System(
             id=uuid.uuid4(), tenant_id=tenant.id, name="Dup AP Test", metadata_blob={},
         )
+        uc = UseCase(
+            id=uuid.uuid4(), tenant_id=tenant.id, system_id=system.id,
+            title="Dup AP UC", context_blob={},
+        )
         ap = AffectedParty(id=uuid.uuid4(), code="ap_dup", label="AP Dup", sort_order=0)
-        db_session.add_all([system, ap])
+        db_session.add_all([system, uc, ap])
         db_session.flush()
 
-        link1 = SystemAffectedParty(id=uuid.uuid4(), system_id=system.id, affected_party_id=ap.id)
+        link1 = UseCaseAffectedParty(id=uuid.uuid4(), tenant_id=tenant.id, use_case_id=uc.id, affected_party_id=ap.id)
         db_session.add(link1)
         db_session.flush()
 
-        link2 = SystemAffectedParty(id=uuid.uuid4(), system_id=system.id, affected_party_id=ap.id)
+        link2 = UseCaseAffectedParty(id=uuid.uuid4(), tenant_id=tenant.id, use_case_id=uc.id, affected_party_id=ap.id)
         db_session.add(link2)
         with pytest.raises(IntegrityError):
             db_session.flush()

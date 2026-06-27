@@ -36,10 +36,10 @@
 ### Register — `domain.py` + link tables
 | Table | Plane | Notes |
 |---|---|---|
-| `system` | TENANT (RLS) | Check constraint `ck_system_custom_no_catalogue` (is_custom + catalogue FK rejected). |
-| `use_case` | TENANT (RLS) | Carries `state` (`LifecycleState`) and `eu_tier`. `state` written only by `apply_transition` (INV-24). |
-| `system_data_category` | LINK — **no RLS** | Link `system ↔ data_category`. `relrowsecurity=f` (confirmed live). Isolation is **not** via RLS — see §5 (isolation question, unresolved). |
-| `system_affected_party` | LINK — **no RLS** | Link `system ↔ affected_party`. `relrowsecurity=f` (confirmed live). Isolation **not** via RLS — see §5. |
+| `system` | TENANT (RLS) | Check constraint `ck_system_custom_no_catalogue` (is_custom + catalogue FK rejected). Deployment-stable fields only: `operator_role_id`, `hosting_model_id`, `catalogue_product_id`, `lifecycle_stage`. `usage_context_id` and `human_oversight_type_id` removed in DM-S1 (D-63). |
+| `use_case` | TENANT (RLS) | Carries `state` (`LifecycleState`) and `eu_tier`. `state` written only by `apply_transition` (INV-24). **DM-S1:** gains `usage_context_id` (FK `usage_context`, SET NULL) and `human_oversight_type_id` (FK `human_oversight_type`, SET NULL) — use-distinguishing context (D-63). |
+| `use_case_data_category` | TENANT (RLS) | **DM-S1 addition.** Link `use_case ↔ data_category`. `tenant_id` FK; RLS policy `tenant_id = current_setting('app.current_tenant', true)::uuid`; unique `(use_case_id, data_category_id)`. Isolation via RLS (INV-77). |
+| `use_case_affected_party` | TENANT (RLS) | **DM-S1 addition.** Link `use_case ↔ affected_party`. Same shape and RLS policy as `use_case_data_category` (INV-77). |
 
 ### Approvals — `domain.py` (confirmed)
 | Table | Plane | Notes |
@@ -197,9 +197,9 @@ Hand-written in migrations, skipped by autogenerate (`alembic/env.py` `include_o
 ## 5. Drift & verification notes
 
 - **RLS verified live** (`pg_class.relrowsecurity`): the 17 tenant tables are RLS-on; all reference/platform/identity tables are RLS-off — matching the documented rules exactly, with two exceptions below.
-- **`system_data_category` / `system_affected_party` carry no RLS — intentional** (per design history). These junctions are not independently RLS-protected; isolation is via the RLS-protected `system` parent (the `app_user`/INV-2 parent-join pattern) — reach them only through `system`, never bare. Confirm the access path always joins through `system`; candidate for promotion to a numbered invariant once code-confirmed.
+- **`system_data_category` / `system_affected_party` dropped in DM-S1.** Both tables and their FKs on `system` (`usage_context_id`, `human_oversight_type_id`) were removed by migration `d82c389d1f07_context_relocation_use_case`. The replacement tables (`use_case_data_category`, `use_case_affected_party`) carry their own `tenant_id` FK and are independently RLS-protected (INV-77, D-63). The prior unresolved isolation question for the old junction tables is now closed: the new tables are correctly RLS-isolated by design.
 - **`provenance_confidence` is 4-value by design — confirmed V-2 (UI-V0-VISUAL-FOUNDATION).** `USER_PROVIDED` was considered and **not** added; the four live labels are `AI_SUGGESTED`, `CATALOGUE_CURATED`, `USER_CONFIRMED`, `USER_AMENDED`. Register-derived facts are handled without a `USER_PROVIDED` tag. `PAT-8` is the authoritative implementation shape. No fifth label exists in `pg_enum` and none must be added without a design-review decision.
-- **~16 tables post-date CLAUDE §3.1's map** (the six vocab tables, the three decision-tree tables, the three governance-role tables, the two `system_*` link tables, `assessment_review`, `deployment_authorisation`). This file is now their only documented home — keep it current each sprint.
+- **~16 tables post-date CLAUDE §3.1's map** (the six vocab tables, the three decision-tree tables, the three governance-role tables, `assessment_review`, `deployment_authorisation`, `use_case_data_category`, `use_case_affected_party`). This file is now their only documented home — keep it current each sprint.
 - **Column detail is intentionally absent** — read the ORM models. If a column-level map is ever wanted, generate it from the models, never hand-maintain it here.
 - **`UI-F0-FOUNDATION` touched no schema/DB.** The sprint's one backend addition, `GET /v1/me`, is a read-only composition over `membership`/`governance_role`/`governance_role_assignment` (all pre-existing) — no migration, no new table, no new enum.
 - **`MeRead` gains `tenant_name: str` (UI-C1-PORTFOLIO-IDENTITY).** Read-only response-schema composition from `tenant.name` at handler time (`db.get(Tenant, ctx.tenant_id).name` on the existing RLS session — M-1 confirmed). No migration; no new table, enum, or route. Precedent: `DF3-7` (additive response-schema field, non-breaking, distinct from a DB/route/enum delta).

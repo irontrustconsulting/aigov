@@ -25,6 +25,11 @@ export interface WizardState {
   system: SystemDetail | null;
   useCaseId: string | null;
   classification: ClassificationRead | null;
+  /** Use-distinguishing context captured in intake step, written on use-case create (DM-S1/DF-D1-2). */
+  usageContextId: string | null;
+  humanOversightTypeId: string | null;
+  dataCategoryIds: string[];
+  affectedPartyIds: string[];
 }
 
 export const initialWizardState: WizardState = {
@@ -35,11 +40,15 @@ export const initialWizardState: WizardState = {
   system: null,
   useCaseId: null,
   classification: null,
+  usageContextId: null,
+  humanOversightTypeId: null,
+  dataCategoryIds: [],
+  affectedPartyIds: [],
 };
 
 export type WizardAction =
   | { type: "DRILL_DOWN_COMPLETE"; isCustom: boolean; catalogueProductId: string | null; catalogueProductName: string | null }
-  | { type: "SYSTEM_CREATED"; system: SystemDetail }
+  | { type: "SYSTEM_CREATED"; system: SystemDetail; usageContextId: string | null; humanOversightTypeId: string | null; dataCategoryIds: string[]; affectedPartyIds: string[] }
   | { type: "PREFILL_DONE" }
   | { type: "USE_CASE_CREATED"; useCaseId: string; classification: ClassificationRead }
   | { type: "CONTEXT_RESOLVED"; useCaseId: string }
@@ -58,7 +67,15 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         catalogueProductName: action.catalogueProductName,
       };
     case "SYSTEM_CREATED":
-      return { ...state, step: "prefill", system: action.system };
+      return {
+        ...state,
+        step: "prefill",
+        system: action.system,
+        usageContextId: action.usageContextId,
+        humanOversightTypeId: action.humanOversightTypeId,
+        dataCategoryIds: action.dataCategoryIds,
+        affectedPartyIds: action.affectedPartyIds,
+      };
     case "PREFILL_DONE":
       return { ...state, step: "use-case" };
     case "USE_CASE_CREATED": {

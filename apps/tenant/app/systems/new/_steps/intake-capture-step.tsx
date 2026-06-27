@@ -20,10 +20,17 @@ const LIFECYCLE_STAGE_OPTIONS: SelectOption[] = [
   { value: "retired", label: "Retired" },
 ];
 
+export interface IntakeCaptureContext {
+  usageContextId: string | null;
+  humanOversightTypeId: string | null;
+  dataCategoryIds: string[];
+  affectedPartyIds: string[];
+}
+
 export interface IntakeCaptureStepProps {
   isCustom: boolean;
   catalogueProductId: string | null;
-  onSubmit: (system: SystemDetail) => void;
+  onSubmit: (system: SystemDetail, context: IntakeCaptureContext) => void;
 }
 
 /**
@@ -83,14 +90,17 @@ export function IntakeCaptureStep({ isCustom, catalogueProductId, onSubmit }: In
       owner_user_id: null,
       operator_role_id: operatorRoleId || null,
       hosting_model_id: hostingModelId || null,
-      usage_context_id: usageContextId || null,
-      human_oversight_type_id: humanOversightTypeId || null,
       lifecycle_stage: lifecycleStage || null,
-      data_category_ids: dataCategoryIds,
-      affected_party_ids: affectedPartyIds,
       purpose: purpose || null,
     };
-    createSystem.mutate(body, { onSuccess: onSubmit });
+    // Use-distinguishing context captured here, threaded to the use-case step (DF-D1-2).
+    const context: IntakeCaptureContext = {
+      usageContextId: usageContextId || null,
+      humanOversightTypeId: humanOversightTypeId || null,
+      dataCategoryIds,
+      affectedPartyIds,
+    };
+    createSystem.mutate(body, { onSuccess: (system) => onSubmit(system, context) });
   }
 
   return (

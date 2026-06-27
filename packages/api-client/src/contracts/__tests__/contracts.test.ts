@@ -19,11 +19,7 @@ describe("F1 mutation bodies reject forbidden fields at the runtime boundary", (
       owner_user_id: null,
       operator_role_id: null,
       hosting_model_id: null,
-      usage_context_id: null,
-      human_oversight_type_id: null,
       lifecycle_stage: null,
-      data_category_ids: [],
-      affected_party_ids: [],
       purpose: null,
       tenant_id: "evil",
     } as SystemCreate & { tenant_id: string };

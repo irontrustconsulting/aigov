@@ -60,11 +60,7 @@ class SystemCreate(BaseModel):
     owner_user_id: uuid.UUID | None = None
     operator_role_id: uuid.UUID | None = None
     hosting_model_id: uuid.UUID | None = None
-    usage_context_id: uuid.UUID | None = None
-    human_oversight_type_id: uuid.UUID | None = None
     lifecycle_stage: SystemLifecycleStage | None = None
-    data_category_ids: list[uuid.UUID] = Field(default_factory=list)
-    affected_party_ids: list[uuid.UUID] = Field(default_factory=list)
     purpose: str | None = None
 
 
@@ -77,11 +73,7 @@ class SystemUpdate(BaseModel):
     owner_user_id: uuid.UUID | None = None
     operator_role_id: uuid.UUID | None = None
     hosting_model_id: uuid.UUID | None = None
-    usage_context_id: uuid.UUID | None = None
-    human_oversight_type_id: uuid.UUID | None = None
     lifecycle_stage: SystemLifecycleStage | None = None
-    data_category_ids: list[uuid.UUID] | None = None
-    affected_party_ids: list[uuid.UUID] | None = None
     purpose: str | None = None
 
 
@@ -111,11 +103,7 @@ class SystemDetail(BaseModel):
     owner_user_id: uuid.UUID | None
     operator_role: VocabItemOut | None
     hosting_model: VocabItemOut | None
-    usage_context: VocabItemOut | None
-    human_oversight_type: VocabItemOut | None
     lifecycle_stage: SystemLifecycleStage | None
-    data_categories: list[DataCategoryOut]
-    affected_parties: list[AffectedPartyOut]
     purpose: str | None
     use_case_count: int
     use_case_lifecycle_states: list[UseCaseStateSummary]

@@ -40,7 +40,7 @@ test("a successful create hands the use case id and classification up via onCrea
   });
   const onCreated = jest.fn();
 
-  render(<UseCaseCreateStep systemId="sys-1" onCreated={onCreated} />, { wrapper });
+  render(<UseCaseCreateStep systemId="sys-1" usageContextId={null} humanOversightTypeId={null} dataCategoryIds={[]} affectedPartyIds={[]} onCreated={onCreated} />, { wrapper });
 
   fireEvent.change(screen.getByLabelText(/what are you using this for/i), { target: { value: "Support chatbot" } });
   fireEvent.click(screen.getByRole("button", { name: /continue/i }));

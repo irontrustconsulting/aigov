@@ -16,21 +16,17 @@ from __future__ import annotations
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth.context import TenantContext
 from app.models import Membership, System, User
 from app.models.domain import CatalogueProduct, CatalogueVendor
-from app.models.intake import (
-    AffectedParty, DataCategory, EUOperatorRole,
-    HostingModel, HumanOversightType, SystemAffectedParty,
-    SystemDataCategory, UsageContext,
-)
+from app.models.intake import EUOperatorRole, HostingModel
 from app.models.lifecycle import AuditEvent
 from app.schemas.system import (
-    AffectedPartyOut, CatalogueProductRef, CatalogueVendorRef,
-    DataCategoryOut, SystemCreate, SystemDetail, SystemUpdate,
+    CatalogueProductRef, CatalogueVendorRef,
+    SystemCreate, SystemDetail, SystemUpdate,
     UseCaseStateSummary, VocabItemOut,
 )
 
@@ -60,14 +56,6 @@ def _validate_vocab_fks(db: Session, payload: SystemCreate | SystemUpdate) -> No
         _assert_active(db, EUOperatorRole, payload.operator_role_id, "operator_role_id")
     if payload.hosting_model_id is not None:
         _assert_active(db, HostingModel, payload.hosting_model_id, "hosting_model_id")
-    if payload.usage_context_id is not None:
-        _assert_active(db, UsageContext, payload.usage_context_id, "usage_context_id")
-    if payload.human_oversight_type_id is not None:
-        _assert_active(db, HumanOversightType, payload.human_oversight_type_id, "human_oversight_type_id")
-    for dc_id in (payload.data_category_ids or []):
-        _assert_active(db, DataCategory, dc_id, "data_category_id")
-    for ap_id in (payload.affected_party_ids or []):
-        _assert_active(db, AffectedParty, ap_id, "affected_party_id")
 
 
 def _validate_owner(db: Session, owner_user_id: uuid.UUID, tenant_id: uuid.UUID) -> None:
@@ -104,34 +92,6 @@ def _derive_vendor_id(
     return product.vendor_id
 
 
-def _replace_data_categories(
-    db: Session,
-    system_id: uuid.UUID,
-    data_category_ids: list[uuid.UUID],
-) -> None:
-    db.execute(delete(SystemDataCategory).where(SystemDataCategory.system_id == system_id))
-    for dc_id in data_category_ids:
-        db.add(SystemDataCategory(
-            id=uuid.uuid4(),
-            system_id=system_id,
-            data_category_id=dc_id,
-        ))
-
-
-def _replace_affected_parties(
-    db: Session,
-    system_id: uuid.UUID,
-    affected_party_ids: list[uuid.UUID],
-) -> None:
-    db.execute(delete(SystemAffectedParty).where(SystemAffectedParty.system_id == system_id))
-    for ap_id in affected_party_ids:
-        db.add(SystemAffectedParty(
-            id=uuid.uuid4(),
-            system_id=system_id,
-            affected_party_id=ap_id,
-        ))
-
-
 def _stage_audit(
     db: Session,
     *,
@@ -158,8 +118,6 @@ def _build_detail(
     vendor=None,
     op_role=None,
     hm=None,
-    uc=None,
-    hot=None,
 ) -> SystemDetail:
     """Assemble a SystemDetail from a loaded System ORM object and pre-fetched refs."""
     use_cases = system.use_cases or []
@@ -180,31 +138,7 @@ def _build_detail(
         hosting_model=VocabItemOut(
             id=hm.id, code=hm.code, label=hm.label,
         ) if hm else None,
-        usage_context=VocabItemOut(
-            id=uc.id, code=uc.code, label=uc.label,
-        ) if uc else None,
-        human_oversight_type=VocabItemOut(
-            id=hot.id, code=hot.code, label=hot.label,
-        ) if hot else None,
         lifecycle_stage=system.lifecycle_stage,
-        data_categories=[
-            DataCategoryOut(
-                id=link.data_category.id,
-                code=link.data_category.code,
-                label=link.data_category.label,
-                is_special_category=link.data_category.is_special_category,
-            )
-            for link in (system.data_categories or [])
-        ],
-        affected_parties=[
-            AffectedPartyOut(
-                id=link.affected_party.id,
-                code=link.affected_party.code,
-                label=link.affected_party.label,
-                is_vulnerable_group=link.affected_party.is_vulnerable_group,
-            )
-            for link in (system.affected_parties or [])
-        ],
         purpose=system.metadata_blob.get("purpose") if system.metadata_blob else None,
         use_case_count=len(use_cases),
         use_case_lifecycle_states=[
@@ -221,11 +155,7 @@ def _load_system_full(system_id: uuid.UUID, db: Session) -> System:
     system = db.scalar(
         select(System)
         .where(System.id == system_id)
-        .options(
-            selectinload(System.data_categories).selectinload(SystemDataCategory.data_category),
-            selectinload(System.affected_parties).selectinload(SystemAffectedParty.affected_party),
-            selectinload(System.use_cases),
-        )
+        .options(selectinload(System.use_cases))
     )
     if system is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="System not found")
@@ -278,19 +208,13 @@ def create_system(
         owner_user_id=payload.owner_user_id,
         operator_role_id=payload.operator_role_id,
         hosting_model_id=payload.hosting_model_id,
-        usage_context_id=payload.usage_context_id,
-        human_oversight_type_id=payload.human_oversight_type_id,
         lifecycle_stage=payload.lifecycle_stage,
         metadata_blob=metadata_blob,
     )
     db.add(system)
-    db.flush()  # get system.id before inserting link rows
+    db.flush()
 
-    # 5. Insert link rows
-    _replace_data_categories(db, system.id, payload.data_category_ids)
-    _replace_affected_parties(db, system.id, payload.affected_party_ids)
-
-    # 6. Stage audit event
+    # 5. Stage audit event
     _stage_audit(db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
                  action="system.created", system=system)
 
@@ -370,10 +294,6 @@ def update_system(
         system.operator_role_id = payload.operator_role_id
     if payload.hosting_model_id is not None:
         system.hosting_model_id = payload.hosting_model_id
-    if payload.usage_context_id is not None:
-        system.usage_context_id = payload.usage_context_id
-    if payload.human_oversight_type_id is not None:
-        system.human_oversight_type_id = payload.human_oversight_type_id
     if payload.lifecycle_stage is not None:
         system.lifecycle_stage = payload.lifecycle_stage
 
@@ -382,12 +302,6 @@ def update_system(
     if payload.purpose is not None:
         blob["purpose"] = payload.purpose
     system.metadata_blob = blob
-
-    # Replace link rows if supplied
-    if payload.data_category_ids is not None:
-        _replace_data_categories(db, system.id, payload.data_category_ids)
-    if payload.affected_party_ids is not None:
-        _replace_affected_parties(db, system.id, payload.affected_party_ids)
 
     # Stage audit event
     _stage_audit(db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
@@ -413,6 +327,4 @@ def get_system_detail(
         vendor=db.get(CatalogueVendor, system.catalogue_vendor_id) if system.catalogue_vendor_id else None,
         op_role=db.get(EUOperatorRole, system.operator_role_id) if system.operator_role_id else None,
         hm=db.get(HostingModel, system.hosting_model_id) if system.hosting_model_id else None,
-        uc=db.get(UsageContext, system.usage_context_id) if system.usage_context_id else None,
-        hot=db.get(HumanOversightType, system.human_oversight_type_id) if system.human_oversight_type_id else None,
     )

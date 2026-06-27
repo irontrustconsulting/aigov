@@ -26,7 +26,7 @@ import uuid
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
-    from .intake import SystemDataCategory, SystemAffectedParty
+    from .intake import UseCaseDataCategory, UseCaseAffectedParty
 
 from sqlalchemy import (
     String, Text, ForeignKey, Enum as SAEnum, UniqueConstraint, DateTime,
@@ -178,14 +178,6 @@ class System(Base, TimestampMixin):
         PGUUID(as_uuid=True), ForeignKey("hosting_model.id", ondelete="SET NULL"),
         index=True,
     )
-    usage_context_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("usage_context.id", ondelete="SET NULL"),
-        index=True,
-    )
-    human_oversight_type_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("human_oversight_type.id", ondelete="SET NULL"),
-        index=True,
-    )
     lifecycle_stage: Mapped[SystemLifecycleStage | None] = mapped_column(
         SAEnum(SystemLifecycleStage, name="system_lifecycle_stage"), nullable=True,
     )
@@ -193,12 +185,6 @@ class System(Base, TimestampMixin):
 
     use_cases: Mapped[List["UseCase"]] = relationship(
         back_populates="system", cascade="all, delete-orphan"
-    )
-    data_categories: Mapped[List["SystemDataCategory"]] = relationship(
-        cascade="all, delete-orphan",
-    )
-    affected_parties: Mapped[List["SystemAffectedParty"]] = relationship(
-        cascade="all, delete-orphan",
     )
 
 
@@ -235,7 +221,23 @@ class UseCase(Base, TimestampMixin):
     # the universal up-front capture (PRD 4.1.3 IXN-1).
     context_blob: Mapped[dict] = mapped_column(JSONB, default=dict)
 
+    # Use-distinguishing context (D-63/INV-76) — relocated from system in DM-S1.
+    usage_context_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("usage_context.id", ondelete="SET NULL"),
+        index=True,
+    )
+    human_oversight_type_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("human_oversight_type.id", ondelete="SET NULL"),
+        index=True,
+    )
+
     system: Mapped["System"] = relationship(back_populates="use_cases")
+    data_category_links: Mapped[List["UseCaseDataCategory"]] = relationship(
+        cascade="all, delete-orphan",
+    )
+    affected_party_links: Mapped[List["UseCaseAffectedParty"]] = relationship(
+        cascade="all, delete-orphan",
+    )
     classifications: Mapped[List["Classification"]] = relationship(
         back_populates="use_case", cascade="all, delete-orphan"
     )

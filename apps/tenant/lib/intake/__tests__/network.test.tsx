@@ -91,11 +91,7 @@ describe("intake mutation hooks call only the BFF proxy and never send If-Match"
         owner_user_id: null,
         operator_role_id: null,
         hosting_model_id: null,
-        usage_context_id: null,
-        human_oversight_type_id: null,
         lifecycle_stage: null,
-        data_category_ids: [],
-        affected_party_ids: [],
         purpose: null,
       });
     });
@@ -117,7 +113,7 @@ describe("intake mutation hooks call only the BFF proxy and never send If-Match"
     });
 
     await act(async () => {
-      result.current.mutate({ system_id: "sys-1", title: "t", purpose: null, context_blob: {} });
+      result.current.mutate({ system_id: "sys-1", title: "t", purpose: null, context_blob: {}, usage_context_id: null, human_oversight_type_id: null, data_category_ids: [], affected_party_ids: [] });
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 

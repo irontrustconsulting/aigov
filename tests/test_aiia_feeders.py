@@ -23,8 +23,8 @@ from app.models.intake import (
     AffectedParty,
     DataCategory,
     EUOperatorRole,
-    SystemAffectedParty,
-    SystemDataCategory,
+    UseCaseAffectedParty,
+    UseCaseDataCategory,
 )
 from app.models.lifecycle import AuditEvent
 from app.services.assessment_service import propose_risk_set
@@ -105,8 +105,9 @@ class TestCreateFeeder:
             client, db_session, tenant, member, gov_roles,
         )
         ap = _make_affected_party(db_session)
-        db_session.add(SystemAffectedParty(
-            id=uuid.uuid4(), system_id=system.id, affected_party_id=ap.id,
+        link_id = uuid.uuid4()
+        db_session.add(UseCaseAffectedParty(
+            id=link_id, tenant_id=tenant.id, use_case_id=use_case.id, affected_party_id=ap.id,
         ))
         db_session.flush()
         _seed_feeder_template(db_session, EUAIActTier.HIGH, AssessmentType.FRIA)
@@ -135,7 +136,7 @@ class TestCreateFeeder:
         ]
         assert any(i.response == "Job applicants" for i in snapshotted)
         assert any(
-            i.source_ref == f"system_affected_party:{ap.id}" for i in snapshotted
+            i.source_ref == f"use_case_affected_party:{link_id}" for i in snapshotted
         )
 
         events = list(db_session.scalars(
@@ -150,8 +151,8 @@ class TestCreateFeeder:
             client, db_session, tenant, member, gov_roles,
         )
         dc = _make_data_category(db_session, is_special=True)
-        db_session.add(SystemDataCategory(
-            id=uuid.uuid4(), system_id=system.id, data_category_id=dc.id,
+        db_session.add(UseCaseDataCategory(
+            id=uuid.uuid4(), tenant_id=tenant.id, use_case_id=use_case.id, data_category_id=dc.id,
         ))
         db_session.flush()
         _seed_feeder_template(db_session, EUAIActTier.HIGH, AssessmentType.DPIA)
@@ -320,8 +321,8 @@ class TestPropagation:
             client, db_session, tenant, member, gov_roles,
         )
         ap = _make_affected_party(db_session)
-        db_session.add(SystemAffectedParty(
-            id=uuid.uuid4(), system_id=system.id, affected_party_id=ap.id,
+        db_session.add(UseCaseAffectedParty(
+            id=uuid.uuid4(), tenant_id=tenant.id, use_case_id=use_case.id, affected_party_id=ap.id,
         ))
         db_session.flush()
         _seed_feeder_template(db_session, EUAIActTier.HIGH, AssessmentType.FRIA)
@@ -459,8 +460,8 @@ class TestFeederRecommendations:
         role = _make_deployer_role(db_session)
         system.operator_role_id = role.id
         dc = _make_data_category(db_session, is_special=True)
-        db_session.add(SystemDataCategory(
-            id=uuid.uuid4(), system_id=system.id, data_category_id=dc.id,
+        db_session.add(UseCaseDataCategory(
+            id=uuid.uuid4(), tenant_id=tenant.id, use_case_id=use_case.id, data_category_id=dc.id,
         ))
         db_session.flush()
 
