@@ -1,16 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Button, ErrorState, FreeText, MultiSelectInput, PageHeader, PageScaffold, SingleSelect, Skeleton, TextInput, type SelectOption } from "@irontrust/ui";
-import type { SystemCreate, SystemDetail, SystemLifecycleStage } from "@irontrust/api-client";
+import { Button, ErrorState, FreeText, PageHeader, PageScaffold, SingleSelect, Skeleton, TextInput, type SelectOption } from "@irontrust/ui";
+import type { SystemLifecycleStage } from "@irontrust/api-client";
 import {
-  useAffectedParties,
-  useCreateSystem,
-  useDataCategories,
   useHostingModels,
-  useHumanOversightTypes,
   useOperatorRoles,
-  useUsageContexts,
 } from "@/lib/intake";
 
 const LIFECYCLE_STAGE_OPTIONS: SelectOption[] = [
@@ -20,47 +15,38 @@ const LIFECYCLE_STAGE_OPTIONS: SelectOption[] = [
   { value: "retired", label: "Retired" },
 ];
 
-export interface IntakeCaptureContext {
-  usageContextId: string | null;
-  humanOversightTypeId: string | null;
-  dataCategoryIds: string[];
-  affectedPartyIds: string[];
+export interface IntakeCaptureFacts {
+  name: string;
+  operatorRoleId: string | null;
+  hostingModelId: string | null;
+  lifecycleStage: SystemLifecycleStage | null;
+  purpose: string | null;
 }
 
 export interface IntakeCaptureStepProps {
   isCustom: boolean;
   catalogueProductId: string | null;
-  onSubmit: (system: SystemDetail, context: IntakeCaptureContext) => void;
+  onSubmit: (facts: IntakeCaptureFacts) => void;
 }
 
 /**
- * WI-5: structured capture (FE-4) — four single-selects, two multi-selects,
- * lifecycle_stage, and `purpose` as the contained last-resort free text.
- * Mirrors the server's `is_custom XOR catalogue_product_id` guard
- * structurally — when WI-4 set is_custom, the catalogue fields are never
- * part of the payload at all, not merely hidden.
+ * WI-7 (DM-S2): system-stable capture only — name, operator role, hosting
+ * model, lifecycle stage, purpose. No network call here; facts are held in
+ * wizard state and sent with the use-case facts in POST /v1/registrations
+ * at the use-case step (DF-D2-3). The four use-distinguishing context
+ * controls moved to use-case-create-step (DF-D2-1, closes DF-D1-2).
  */
 export function IntakeCaptureStep({ isCustom, catalogueProductId, onSubmit }: IntakeCaptureStepProps) {
   const [name, setName] = useState("");
   const [operatorRoleId, setOperatorRoleId] = useState("");
   const [hostingModelId, setHostingModelId] = useState("");
-  const [usageContextId, setUsageContextId] = useState("");
-  const [humanOversightTypeId, setHumanOversightTypeId] = useState("");
   const [lifecycleStage, setLifecycleStage] = useState<SystemLifecycleStage | "">("");
-  const [dataCategoryIds, setDataCategoryIds] = useState<string[]>([]);
-  const [affectedPartyIds, setAffectedPartyIds] = useState<string[]>([]);
   const [purpose, setPurpose] = useState("");
 
   const operatorRoles = useOperatorRoles();
   const hostingModels = useHostingModels();
-  const usageContexts = useUsageContexts();
-  const humanOversightTypes = useHumanOversightTypes();
-  const dataCategories = useDataCategories();
-  const affectedParties = useAffectedParties();
 
-  const createSystem = useCreateSystem();
-
-  const vocabQueries = [operatorRoles, hostingModels, usageContexts, humanOversightTypes, dataCategories, affectedParties];
+  const vocabQueries = [operatorRoles, hostingModels];
   if (vocabQueries.some((q) => q.isLoading)) return <Skeleton />;
   if (vocabQueries.some((q) => q.isError)) {
     return (
@@ -80,96 +66,49 @@ export function IntakeCaptureStep({ isCustom, catalogueProductId, onSubmit }: In
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const body: SystemCreate = {
+    onSubmit({
       name,
-      is_custom: isCustom,
-      // Structurally XOR with is_custom — never both populated (mirrors the
-      // server's ck_system_custom_no_catalogue guard, client-side).
-      catalogue_product_id: isCustom ? null : catalogueProductId,
-      catalogue_vendor_id: null, // server derives this from the product
-      owner_user_id: null,
-      operator_role_id: operatorRoleId || null,
-      hosting_model_id: hostingModelId || null,
-      lifecycle_stage: lifecycleStage || null,
+      operatorRoleId: operatorRoleId || null,
+      hostingModelId: hostingModelId || null,
+      lifecycleStage: (lifecycleStage || null) as SystemLifecycleStage | null,
       purpose: purpose || null,
-    };
-    // Use-distinguishing context captured here, threaded to the use-case step (DF-D1-2).
-    const context: IntakeCaptureContext = {
-      usageContextId: usageContextId || null,
-      humanOversightTypeId: humanOversightTypeId || null,
-      dataCategoryIds,
-      affectedPartyIds,
-    };
-    createSystem.mutate(body, { onSuccess: (system) => onSubmit(system, context) });
+    });
   }
 
   return (
     <PageScaffold>
-    <PageHeader title="Register a system" />
-    <form aria-label="intake-capture" onSubmit={handleSubmit} className="border-hairline space-y-4 rounded-lg border p-4">
-      <TextInput id="system-name" label="System name" value={name} onChange={setName} />
+      <PageHeader title="Register a system" />
+      <form aria-label="intake-capture" onSubmit={handleSubmit} className="border-hairline space-y-4 rounded-lg border p-4">
+        <TextInput id="system-name" label="System name" value={name} onChange={setName} />
 
-      <SingleSelect
-        id="operator-role"
-        label="Operator role"
-        value={operatorRoleId}
-        options={toOptions(operatorRoles.data)}
-        onChange={setOperatorRoleId}
-      />
-      <SingleSelect
-        id="hosting-model"
-        label="Hosting model"
-        value={hostingModelId}
-        options={toOptions(hostingModels.data)}
-        onChange={setHostingModelId}
-      />
-      <SingleSelect
-        id="usage-context"
-        label="Usage context"
-        value={usageContextId}
-        options={toOptions(usageContexts.data)}
-        onChange={setUsageContextId}
-      />
-      <SingleSelect
-        id="human-oversight-type"
-        label="Human oversight"
-        value={humanOversightTypeId}
-        options={toOptions(humanOversightTypes.data)}
-        onChange={setHumanOversightTypeId}
-      />
-      <SingleSelect
-        id="lifecycle-stage"
-        label="Lifecycle stage"
-        value={lifecycleStage}
-        options={LIFECYCLE_STAGE_OPTIONS}
-        onChange={(v) => setLifecycleStage(v as SystemLifecycleStage)}
-      />
+        <SingleSelect
+          id="operator-role"
+          label="Operator role"
+          value={operatorRoleId}
+          options={toOptions(operatorRoles.data)}
+          onChange={setOperatorRoleId}
+        />
+        <SingleSelect
+          id="hosting-model"
+          label="Hosting model"
+          value={hostingModelId}
+          options={toOptions(hostingModels.data)}
+          onChange={setHostingModelId}
+        />
+        <SingleSelect
+          id="lifecycle-stage"
+          label="Lifecycle stage"
+          value={lifecycleStage}
+          options={LIFECYCLE_STAGE_OPTIONS}
+          onChange={(v) => setLifecycleStage(v as SystemLifecycleStage)}
+        />
 
-      <MultiSelectInput
-        id="data-categories"
-        label="Data categories"
-        values={dataCategoryIds}
-        options={toOptions(dataCategories.data)}
-        onChange={setDataCategoryIds}
-      />
-      <MultiSelectInput
-        id="affected-parties"
-        label="Affected parties"
-        values={affectedPartyIds}
-        options={toOptions(affectedParties.data)}
-        onChange={setAffectedPartyIds}
-      />
+        <FreeText id="purpose" label="Purpose (optional)" value={purpose} onChange={setPurpose} />
 
-      <FreeText id="purpose" label="Purpose (optional)" value={purpose} onChange={setPurpose} />
-
-      {createSystem.isError && (
-        <div role="alert" className="text-sm text-danger">Could not register this system. Check the form and try again.</div>
-      )}
-
-      <Button type="submit" disabled={createSystem.isPending}>
-        Continue
-      </Button>
-    </form>
+        <Button type="submit">
+          Continue
+        </Button>
+      </form>
     </PageScaffold>
   );
 }

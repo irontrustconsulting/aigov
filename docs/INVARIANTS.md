@@ -324,3 +324,8 @@ The five verdict-family enums (`approval_status`, `assessment_status`, `classifi
 **INV-77** · DB · `use_case_data_category` and `use_case_affected_party` carry `tenant_id` and are RLS-isolated
 Both DM-S1 junction tables include a `tenant_id uuid FK tenant NOT NULL` column and an RLS policy `tenant_id = current_setting('app.current_tenant', true)::uuid`. Rows for tenant A are never returned in a session scoped to tenant B. This closes the unresolved isolation question that applied to the former `system_data_category`/`system_affected_party` tables (see DATA-MODEL §5). Cross-tenant isolation is asserted by `tests/test_use_case_classification.py::TestContextLinkIsolation`.
 ↳ origin: DM-S1 · locus: `alembic/versions/d82c389d1f07_context_relocation_use_case.py`, `app/models/intake.py` · refs: D-63, INV-76
+
+
+**INV-78** · CODE · No route may construct a `System` outside `POST /v1/registrations`
+`POST /v1/systems` is removed (DM-S2). The only route that instantiates a `System` model is `POST /v1/registrations`. This closes the orphan-system seam (REG-2): a `System` cannot exist without a first `UseCase` and a `Classification` snapshot, because all three are created atomically in one transaction. Any other route (test fixtures excluded) that calls `System(...)` or `system_service.create_system(...)` is a violation. Asserted by `tests/test_systems.py::TestPostSystemsAbsent` (404/405) and `tests/test_registrations.py::TestRegistrationAtomicity` (rollback leaves no orphan row).
+↳ origin: DM-S2 · locus: `app/routers/v1/registrations.py`, `app/routers/v1/systems.py` · refs: D-65, INV-27

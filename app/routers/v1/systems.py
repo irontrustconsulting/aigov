@@ -1,19 +1,21 @@
 """
-Systems endpoints (v1) — tenant-scoped AI system registration and intake.
+Systems endpoints (v1) — tenant-scoped AI system reads and updates.
 
-Gate rules (sprint constraint §7):
-  POST / (create):      require_governance_role("system_owner")
+Gate rules:
   GET  / (list):        any authenticated member (RLS scopes)
   GET  /{id}:           any authenticated member (RLS scopes)
   PATCH /{id}:          require_governance_role("system_owner")
   GET  /{id}/prefill:   any authenticated member (RLS scopes)
+
+POST / (create) was removed in DM-S2 (INV-78). System creation now happens
+only through POST /v1/registrations — see app/routers/v1/registrations.py.
 """
 
 from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,7 +23,6 @@ from app.auth.context import TenantContext, get_tenant_db, require_governance_ro
 from app.models import System
 from app.schemas.system import (
     PrefillResponse,
-    SystemCreate,
     SystemDetail,
     SystemRead,
     SystemUpdate,
@@ -35,17 +36,6 @@ router = APIRouter(prefix="/systems", tags=["systems"])
 def list_systems(db: Session = Depends(get_tenant_db)) -> list[System]:
     """List systems in the caller's tenant. RLS scopes this automatically."""
     return list(db.scalars(select(System).order_by(System.created_at)))
-
-
-@router.post("", response_model=SystemDetail, status_code=status.HTTP_201_CREATED)
-def create_system(
-    payload: SystemCreate,
-    ctx: TenantContext = Depends(require_governance_role("system_owner")),
-    db: Session = Depends(get_tenant_db),
-) -> SystemDetail:
-    """Register a new AI system. Gated by the system_owner governance role."""
-    system = system_service.create_system(payload, ctx, db)
-    return system_service.get_system_detail(system.id, db)
 
 
 @router.get("/{system_id}/prefill", response_model=PrefillResponse)

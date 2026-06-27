@@ -11,8 +11,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import {
   useAffectedParties,
-  useCreateSystem,
-  useCreateUseCase,
   useDataCategories,
   useEUSubcategories,
   useHostingModels,
@@ -23,6 +21,7 @@ import {
   usePreviewContext,
   useProductCategories,
   usePrefill,
+  useRegister,
   useSubmitContext,
   useUsageContexts,
   useUseCaseLifecycle,
@@ -57,7 +56,7 @@ describe("intake hooks call only the BFF proxy, never the API directly", () => {
     ["useHumanOversightTypes", () => useHumanOversightTypes()],
     ["useDataCategories", () => useDataCategories()],
     ["useAffectedParties", () => useAffectedParties()],
-    ["usePrefill", () => usePrefill("sys-1")],
+    ["usePrefill", () => usePrefill("prod-1")],
     ["useMe", () => useMe()],
     ["useUseCaseLifecycle", () => useUseCaseLifecycle("uc-1")],
   ])("%s", async (_name, hook) => {
@@ -79,44 +78,32 @@ describe("intake hooks call only the BFF proxy, never the API directly", () => {
 });
 
 describe("intake mutation hooks call only the BFF proxy and never send If-Match", () => {
-  test("useCreateSystem", async () => {
-    const fetchSpy = (global.fetch = mockFetchOk({ id: "sys-1" }));
-    const { result } = renderHook(() => useCreateSystem(), { wrapper });
-    await act(async () => {
-      result.current.mutate({
-        name: "x",
-        is_custom: true,
-        catalogue_product_id: null,
-        catalogue_vendor_id: null,
-        owner_user_id: null,
-        operator_role_id: null,
-        hosting_model_id: null,
-        lifecycle_stage: null,
-        purpose: null,
-      });
-    });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    expect(url.startsWith("/api/proxy")).toBe(true);
-    expect((init.headers as Record<string, string>)["If-Match"]).toBeUndefined();
-  });
-
-  test("useCreateUseCase invalidates the lifecycle live-state query on success", async () => {
+  test("useRegister invalidates the lifecycle live-state query on success", async () => {
     global.fetch = mockFetchOk({
-      use_case: { id: "uc-1", state: "intake" },
-      classification: { requires_context: false, tier: "minimal_risk" },
+      system: { id: "sys-1", name: "x", is_custom: true, catalogue_product: null, catalogue_vendor: null, owner_user_id: null, operator_role: null, hosting_model: null, lifecycle_stage: null, purpose: null, use_case_count: 0, use_case_lifecycle_states: [], created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" },
+      use_case: { id: "uc-1", tenant_id: "t1", system_id: "sys-1", title: "t", purpose: null, state: "intake", eu_tier: "unclassified", usage_context: null, human_oversight_type: null, data_categories: [], affected_parties: [] },
+      classification: { id: "c1", use_case_id: "uc-1", tier: "minimal_risk", rationale: "r", version: 1, is_current: true, overridden: false, proposed_tier: null, basis_subcategory_code: null, basis_legal_ref: null, requires_context: false },
     });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const invalidateSpy = jest.spyOn(client, "invalidateQueries");
-    const { result } = renderHook(() => useCreateUseCase(), {
+    const { result } = renderHook(() => useRegister(), {
       wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
     });
 
     await act(async () => {
-      result.current.mutate({ system_id: "sys-1", title: "t", purpose: null, context_blob: {}, usage_context_id: null, human_oversight_type_id: null, data_category_ids: [], affected_party_ids: [] });
+      result.current.mutate({
+        name: "x", is_custom: true, catalogue_product_id: null, operator_role_id: null,
+        hosting_model_id: null, lifecycle_stage: null, owner_user_id: null, purpose: null,
+        title: "t", use_case_purpose: null, context_blob: {},
+        usage_context_id: null, human_oversight_type_id: null,
+        data_category_ids: [], affected_party_ids: [],
+      });
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
+    const [url, init] = (global.fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+    expect(url.startsWith("/api/proxy")).toBe(true);
+    expect((init.headers as Record<string, string>)["If-Match"]).toBeUndefined();
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["lifecycle-state", "uc-1"] });
   });
 

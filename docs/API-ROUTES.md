@@ -49,15 +49,27 @@
 
 The product/category/vendor/subcategory reads are intentionally `anon` — they back the pre-auth, sales-led catalogue drill-down (`UX.md` §4). The six `member`-gated vocab/risk/control reads are not — they're consumed mid-flow, after the caller is already a signed-in tenant member.
 
+### Registrations — `app/routers/v1/registrations.py` (DM-S2)
+
+| Method · Path | Gate | Request | Response | If-Match | Notes |
+|---|---|---|---|---|---|
+| `POST /registrations` | `gov:system_owner` | `RegistrationCreate` | `RegistrationRead` (201) | — | Atomic: system + first use case + classification snapshot in one transaction. `RegistrationCreate` system-stable fields: `name`, `is_custom`, `catalogue_product_id`, `operator_role_id`, `hosting_model_id`, `lifecycle_stage`, `owner_user_id`, `purpose`. Use-case fields: `title`, `use_case_purpose`, `context_blob`, `usage_context_id`, `human_oversight_type_id`, `data_category_ids`, `affected_party_ids`. Response `RegistrationRead = { system: SystemDetail, use_case: UseCaseRead, classification: ClassificationRead }`. INV-78: the only route that constructs a System. D-65. |
+
+### Catalogue prefill — `app/routers/v1/catalogue.py` (DM-S2)
+
+| Method · Path | Gate | Request | Response | If-Match | Notes |
+|---|---|---|---|---|---|
+| `GET /catalogue/products/{product_id}/prefill` | `member` | — | `PrefillResponse` | — | By-product prefill before system exists (DF-D2-2). `facts: []` when product has no facts. Shared resolver with `GET /systems/{id}/prefill`. No audit. |
+
 ### Systems — `app/routers/v1/systems.py`
 
 | Method · Path | Gate | Request | Response | If-Match | Notes |
 |---|---|---|---|---|---|
-| `POST /systems` | `gov:system_owner` | `SystemCreate` | `SystemDetail` (201) | — | `is_custom` ⊕ catalogue link is a 422 check constraint (`ck_system_custom_no_catalogue`), not app code. `SystemCreate` fields: `name`, `is_custom`, `catalogue_product_id`, `catalogue_vendor_id`, `owner_user_id`, `operator_role_id`, `hosting_model_id`, `lifecycle_stage`, `purpose`. **DM-S1:** `usage_context_id`, `human_oversight_type_id`, `data_category_ids`, `affected_party_ids` removed from `SystemCreate`/`SystemDetail`; moved to `UseCaseCreate`/`UseCaseRead`. |
+| ~~`POST /systems`~~ | — | — | — | — | **Removed in DM-S2 (INV-78).** System construction is now only via `POST /registrations`. Returns 404/405. |
 | `GET /systems` | `member` | — | `SystemRead[]` | — | RLS-scoped list. |
 | `GET /systems/{system_id}` | `member` | — | `SystemDetail` | — | |
-| `PATCH /systems/{system_id}` | `gov:system_owner` | `SystemUpdate` | `SystemDetail` | — | Relinking `catalogue_product_id` with use cases present → 409. **DM-S1:** link-array replacement for `data_category_ids`/`affected_party_ids` removed (moved to use-case level). |
-| `GET /systems/{system_id}/prefill` | `member` | — | `PrefillResponse` | — | `200` with `facts: []` when no product (incl. `is_custom`) — never `404`. |
+| `PATCH /systems/{system_id}` | `gov:system_owner` | `SystemUpdate` | `SystemDetail` | — | Relinking `catalogue_product_id` with use cases present → 409. |
+| `GET /systems/{system_id}/prefill` | `member` | — | `PrefillResponse` | — | `200` with `facts: []` when no product (incl. `is_custom`) — never `404`. Delegates to `get_prefill_by_product` shared resolver (DM-S2). |
 
 ### Use cases & classification — gate 1 (the bridge) — `app/routers/v1/use_cases.py`
 

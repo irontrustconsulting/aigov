@@ -18,19 +18,19 @@ function factValueLabel(value: Record<string, unknown>): string {
 const NOT_APPLICABLE_OPTION = [{ value: "not_applicable", label: "Not applicable to my system" }];
 
 export interface PrefillStepProps {
-  systemId: string;
+  catalogueProductId: string | null;
   onContinue: () => void;
 }
 
 /**
- * WI-6: confirm/amend panel over GET /systems/{id}/prefill. Per DF1-8,
- * "amend" is presentational only — the structured WI-5 fields already
- * submitted are the capture of record, so an override here updates only
- * local display state and never issues a mutation. facts == [] (custom
- * system, or no catalogue facts yet) → panel absent, never an error.
+ * WI-8 (DM-S2): confirm/amend panel over GET /catalogue/products/{id}/prefill.
+ * Re-keyed to catalogueProductId so the step works before a system exists
+ * (DF-D2-2). Per DF1-8, "amend" is presentational only — structured intake
+ * fields are the capture of record. facts == [] (custom / no product) →
+ * panel absent, never an error.
  */
-export function PrefillStep({ systemId, onContinue }: PrefillStepProps) {
-  const prefill = usePrefill(systemId);
+export function PrefillStep({ catalogueProductId, onContinue }: PrefillStepProps) {
+  const prefill = usePrefill(catalogueProductId);
   const [amended, setAmended] = useState<Record<string, string | undefined>>({});
 
   if (prefill.isLoading) return <Skeleton />;

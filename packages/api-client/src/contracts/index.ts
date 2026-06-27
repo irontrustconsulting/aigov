@@ -1,6 +1,7 @@
 export * from "./enums";
 export * from "./reference";
 export * from "./system";
+export * from "./registration";
 export * from "./classification";
 export * from "./use-case";
 export * from "./classification-context";

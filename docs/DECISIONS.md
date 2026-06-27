@@ -632,3 +632,20 @@ Rejected for (1): clearing the cookie in middleware (middleware only checks cook
 The tenant name goes in the sidebar foot (wired from `MeRead.tenant_name`); the logged-in user (display name or email + sign-out) moves to a slim top utility bar at the head of the main content column (`apps/tenant/app/_components/top-utility-bar.tsx`). Nav stays in the sidebar — this is not a return to top-bar navigation; the C0 sidebar topology is unchanged. The canonical home of the tenant name is the `tenant.name` column; `MeRead` (tenant plane) and `GET /platform/tenants` (operator plane) are two plane-scoped projections of it, so the tenant-plane field is single-homed on `MeRead` with no second tenant-plane route needed or added.
 Rejected: (a) a dedicated tenant-plane `GET /v1/tenant` route (a second home for the same fact; `D-22`; no such route exists and none is added); (b) keeping user identity in the sidebar foot and adding tenant name beside it (two identities crowding one block). The reversal of `FE-20`'s "no top-bar" stance is scoped here: `FE-20` removed a top-bar *navigation*; this adds a top *utility* bar for identity only — nav remains in the sidebar.
 ↳ origin: UI-C1-PORTFOLIO-IDENTITY · refs: FE-20 ALTER, INV-68, D-22
+
+**D-65** · Registration is one atomic act — system, use case, and classification snapshot in a single transaction
+A `System` cannot exist without a first `UseCase` and a `Classification` snapshot (REG-2). `POST /v1/registrations` creates all three in one transaction via `db.flush()` calls inside the handler; `get_tenant_db` commits at request end. If any step fails, the entire transaction rolls back — no orphan rows. `POST /v1/systems` is removed (INV-78).
+Rejected: keeping `POST /v1/systems` and enforcing linkage via application logic (fragile; the seam can be exploited by any client that calls the old endpoint, or by a test fixture, or by a transient failure between the two calls). Rejected: a deferred job to link system → use case (eventual consistency for a workflow that is always synchronous in the UI is unnecessary complexity).
+↳ origin: DM-S2 · refs: INV-78, INV-27
+
+**DF-D2-1** · System-stable facts captured at intake step, no network call (sprint-local)
+In the DM-S2 wizard, the intake-capture step collects only system-stable facts (`name`, `operatorRoleId`, `hostingModelId`, `lifecycleStage`, `purpose`) and dispatches `INTAKE_DONE` directly without a network call. These facts are held in wizard state until `POST /v1/registrations` fires at the use-case step.
+↳ origin: DM-S2 (sprint-local DF) · refs: D-65, DF-D1-2
+
+**DF-D2-2** · By-product prefill re-keyed before system exists (sprint-local)
+The prefill step now calls `GET /v1/catalogue/products/{product_id}/prefill` (not the by-system route) because no system ID exists yet at this wizard step. `usePrefill` is re-keyed to `catalogueProductId`; `enabled: Boolean(catalogueProductId)` — disabled for custom/null product. The by-system prefill route (`GET /v1/systems/{id}/prefill`) is retained and delegates to the same shared resolver (`get_prefill_by_product`).
+↳ origin: DM-S2 (sprint-local DF) · refs: D-65
+
+**DF-D2-3** · Four use-distinguishing context controls relocated to use-case step (sprint-local)
+`usage_context_id`, `human_oversight_type_id`, `data_category_ids`, `affected_party_ids` are now captured at the use-case-create step (not the intake-capture step). The four vocab hooks and their form controls move from `IntakeCaptureStep` to `UseCaseCreateStep`. The transition arrangement from DF-D1-2 is resolved and closed. `IntakeCaptureFacts` type carries no context fields; `UseCaseCreateStep` holds local state for all four and includes them in the `RegistrationCreate` body.
+↳ origin: DM-S2 (sprint-local DF) · refs: DF-D1-2 (closed), D-65

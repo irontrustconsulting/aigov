@@ -25,9 +25,8 @@ afterEach(() => {
 
 describe("PrefillStep", () => {
   test("an empty facts list (custom system) renders no panel and no error", async () => {
-    mockFetchOk({ catalogue_product_id: null, facts: [] });
-
-    render(<PrefillStep systemId="sys-1" onContinue={jest.fn()} />, { wrapper });
+    // No fetch needed — catalogueProductId=null disables the query (enabled: false)
+    render(<PrefillStep catalogueProductId={null} onContinue={jest.fn()} />, { wrapper });
 
     await waitFor(() => expect(screen.getByRole("button", { name: /continue/i })).toBeInTheDocument());
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -49,7 +48,7 @@ describe("PrefillStep", () => {
       ],
     });
 
-    render(<PrefillStep systemId="sys-1" onContinue={jest.fn()} />, { wrapper });
+    render(<PrefillStep catalogueProductId="p1" onContinue={jest.fn()} />, { wrapper });
 
     await waitFor(() => expect(screen.getByText("EU")).toBeInTheDocument());
     expect(screen.getByText("Catalogue")).toBeInTheDocument(); // ProvenanceBadge label
@@ -76,7 +75,7 @@ describe("PrefillStep", () => {
       ],
     });
 
-    render(<PrefillStep systemId="sys-1" onContinue={jest.fn()} />, { wrapper });
+    render(<PrefillStep catalogueProductId="p1" onContinue={jest.fn()} />, { wrapper });
 
     await waitFor(() => expect(screen.getByText("EU")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Override" }));

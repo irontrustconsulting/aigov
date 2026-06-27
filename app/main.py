@@ -17,6 +17,7 @@ from app.routers.platform import operators as platform_operators
 from app.routers.platform import tenants as platform_tenants
 from app.routers.v1 import (
     assessments,
+    catalogue,
     classification_context,
     coverage,
     evidence,
@@ -26,6 +27,7 @@ from app.routers.v1 import (
     me,
     members,
     reference,
+    registrations,
     systems,
     use_cases,
 )
@@ -50,6 +52,8 @@ def whoami(claims: CognitoClaims = Depends(verify_cognito_token)) -> dict:
 
 
 app.include_router(reference.router, prefix="/v1")
+app.include_router(registrations.router, prefix="/v1")
+app.include_router(catalogue.router, prefix="/v1")
 app.include_router(systems.router, prefix="/v1")
 app.include_router(governance_roles.router, prefix="/v1")
 app.include_router(me.router, prefix="/v1")

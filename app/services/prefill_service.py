@@ -18,6 +18,26 @@ from app.models.domain import CatalogueFact
 from app.schemas.system import CatalogueFactOut, PrefillResponse
 
 
+def get_prefill_by_product(
+    catalogue_product_id: uuid.UUID | None,
+    db: Session,
+) -> PrefillResponse:
+    """Return catalogue facts for a product. Empty list when product is None."""
+    if catalogue_product_id is None:
+        return PrefillResponse(catalogue_product_id=None, facts=[])
+
+    facts = db.scalars(
+        select(CatalogueFact)
+        .where(CatalogueFact.product_id == catalogue_product_id)
+        .order_by(CatalogueFact.key)
+    ).all()
+
+    return PrefillResponse(
+        catalogue_product_id=catalogue_product_id,
+        facts=[CatalogueFactOut.model_validate(f) for f in facts],
+    )
+
+
 def get_prefill(
     system_id: uuid.UUID,
     db: Session,
@@ -33,13 +53,4 @@ def get_prefill(
     if not system.catalogue_product_id or system.is_custom:
         return PrefillResponse(catalogue_product_id=None, facts=[])
 
-    facts = db.scalars(
-        select(CatalogueFact)
-        .where(CatalogueFact.product_id == system.catalogue_product_id)
-        .order_by(CatalogueFact.key)
-    ).all()
-
-    return PrefillResponse(
-        catalogue_product_id=system.catalogue_product_id,
-        facts=[CatalogueFactOut.model_validate(f) for f in facts],
-    )
+    return get_prefill_by_product(system.catalogue_product_id, db)

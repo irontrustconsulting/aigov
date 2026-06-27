@@ -1,11 +1,8 @@
 """
-Tests for the systems endpoints — governance gate and ungated GET.
+Tests for the systems endpoints — read/update gates.
 
-POST /v1/systems is gated by require_governance_role("system_owner"):
-  - member with system_owner governance role → 201
-  - member without any governance role → 403
-  - admin without governance role → 403 (administrative role alone is not enough)
-  - member with a different governance role (e.g. reviewer) → 403
+POST /v1/systems was removed in DM-S2 (INV-78); this file asserts route absence
+and covers the remaining GET/PATCH surface.
 
 GET /v1/systems is open to any authenticated member. Role-scoped read access
 is deferred to the assessment sprint; this test confirms that floor is preserved.
@@ -110,16 +107,14 @@ def _db_override(session: Session):
 
 
 # ---------------------------------------------------------------------------
-# POST /v1/systems — governance gate
+# POST /v1/systems — route-absence (INV-78)
 # ---------------------------------------------------------------------------
 
-class TestCreateSystem:
-    def test_system_owner_can_create(
-        self, client, db_session, tenant, plain_member, gov_roles
-    ):
+class TestPostSystemsAbsent:
+    def test_post_systems_is_gone(self, client, db_session, tenant, plain_member, gov_roles):
+        """INV-78: POST /v1/systems removed in DM-S2; must return 404 or 405."""
         user, m = plain_member
         _grant(db_session, tenant, m, gov_roles["system_owner"])
-
         ctx = TenantContext(
             user_id=user.id, membership_id=m.id,
             tenant_id=tenant.id, role="member",
@@ -127,93 +122,12 @@ class TestCreateSystem:
         app.dependency_overrides[get_tenant_context] = _ctx_override(ctx)
         app.dependency_overrides[get_tenant_db] = _db_override(db_session)
         try:
-            r = client.post("/v1/systems", json={"name": "My AI System"})
+            r = client.post("/v1/systems", json={"name": "Should not exist"})
         finally:
             app.dependency_overrides.pop(get_tenant_context, None)
             app.dependency_overrides.pop(get_tenant_db, None)
 
-        assert r.status_code == 201
-        assert r.json()["name"] == "My AI System"
-
-    def test_member_without_governance_role_gets_403(
-        self, client, db_session, tenant, plain_member
-    ):
-        user, m = plain_member
-        # No governance role assigned
-        ctx = TenantContext(
-            user_id=user.id, membership_id=m.id,
-            tenant_id=tenant.id, role="member",
-        )
-        app.dependency_overrides[get_tenant_context] = _ctx_override(ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            r = client.post("/v1/systems", json={"name": "Blocked"})
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        assert r.status_code == 403
-
-    def test_admin_without_governance_role_gets_403(
-        self, client, db_session, tenant, admin_member
-    ):
-        """Administrative role alone does not confer governance power."""
-        user, m = admin_member
-        ctx = TenantContext(
-            user_id=user.id, membership_id=m.id,
-            tenant_id=tenant.id, role="admin",
-        )
-        app.dependency_overrides[get_tenant_context] = _ctx_override(ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            r = client.post("/v1/systems", json={"name": "Admin blocked"})
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        assert r.status_code == 403
-
-    def test_wrong_governance_role_gets_403(
-        self, client, db_session, tenant, plain_member, gov_roles
-    ):
-        """A member with reviewer governance role cannot create systems."""
-        user, m = plain_member
-        _grant(db_session, tenant, m, gov_roles["reviewer"])
-
-        ctx = TenantContext(
-            user_id=user.id, membership_id=m.id,
-            tenant_id=tenant.id, role="member",
-        )
-        app.dependency_overrides[get_tenant_context] = _ctx_override(ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            r = client.post("/v1/systems", json={"name": "Reviewer blocked"})
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        assert r.status_code == 403
-
-    def test_admin_with_system_owner_can_create(
-        self, client, db_session, tenant, admin_member, gov_roles
-    ):
-        """Admin who also holds system_owner governance role can create."""
-        user, m = admin_member
-        _grant(db_session, tenant, m, gov_roles["system_owner"])
-
-        ctx = TenantContext(
-            user_id=user.id, membership_id=m.id,
-            tenant_id=tenant.id, role="admin",
-        )
-        app.dependency_overrides[get_tenant_context] = _ctx_override(ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            r = client.post("/v1/systems", json={"name": "Admin+owner"})
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        assert r.status_code == 201
+        assert r.status_code in (404, 405)
 
 
 # ---------------------------------------------------------------------------

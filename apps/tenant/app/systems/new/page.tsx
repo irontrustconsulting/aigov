@@ -23,6 +23,9 @@ const ASSURANCE_ROLE_KEYS = new Set(["reviewer", "authoriser", "auditor"]);
  * state itself is never mutated client-side (the wizard only reads it,
  * WI-9), and the wizard's `step` is a navigation cursor, not a lifecycle
  * state.
+ *
+ * DM-S2: registration is atomic — POST /v1/registrations fires once at the
+ * use-case step (REGISTERED action). No early POST /systems.
  */
 export default function NewSystemPage() {
   const me = useMe();
@@ -59,21 +62,23 @@ export default function NewSystemPage() {
         <IntakeCaptureStep
           isCustom={state.isCustom}
           catalogueProductId={state.catalogueProductId}
-          onSubmit={(system, context) => dispatch({
-            type: "SYSTEM_CREATED",
-            system,
-            usageContextId: context.usageContextId,
-            humanOversightTypeId: context.humanOversightTypeId,
-            dataCategoryIds: context.dataCategoryIds,
-            affectedPartyIds: context.affectedPartyIds,
-          })}
+          onSubmit={(facts) =>
+            dispatch({
+              type: "INTAKE_DONE",
+              name: facts.name,
+              operatorRoleId: facts.operatorRoleId,
+              hostingModelId: facts.hostingModelId,
+              lifecycleStage: facts.lifecycleStage,
+              purpose: facts.purpose,
+            })
+          }
         />
       );
 
     case "prefill":
       return (
         <PrefillStep
-          systemId={state.system!.id}
+          catalogueProductId={state.catalogueProductId}
           onContinue={() => dispatch({ type: "PREFILL_DONE" })}
         />
       );
@@ -81,13 +86,22 @@ export default function NewSystemPage() {
     case "use-case":
       return (
         <UseCaseCreateStep
-          systemId={state.system!.id}
-          usageContextId={state.usageContextId}
-          humanOversightTypeId={state.humanOversightTypeId}
-          dataCategoryIds={state.dataCategoryIds}
-          affectedPartyIds={state.affectedPartyIds}
-          onCreated={(useCaseId, classification) =>
-            dispatch({ type: "USE_CASE_CREATED", useCaseId, classification })
+          name={state.name}
+          isCustom={state.isCustom}
+          catalogueProductId={state.catalogueProductId}
+          operatorRoleId={state.operatorRoleId}
+          hostingModelId={state.hostingModelId}
+          lifecycleStage={state.lifecycleStage}
+          purpose={state.purpose}
+          onCreated={(result, context) =>
+            dispatch({
+              type: "REGISTERED",
+              result,
+              usageContextId: context.usageContextId,
+              humanOversightTypeId: context.humanOversightTypeId,
+              dataCategoryIds: context.dataCategoryIds,
+              affectedPartyIds: context.affectedPartyIds,
+            })
           }
         />
       );

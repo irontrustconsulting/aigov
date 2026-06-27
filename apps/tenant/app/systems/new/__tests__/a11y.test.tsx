@@ -65,9 +65,9 @@ describe("WI-11 axe pass — wizard screens", () => {
       { wrapper }
     );
     await waitFor(() => getByLabelText("System name"));
-    // Six vocab-list reads fire on mount — let them all settle before the
-    // axe pass, otherwise a late state update lands after the test returns.
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    // Two vocab-list reads fire on mount (operatorRoles, hostingModels) — let
+    // them settle before the axe pass to avoid late state updates.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     await expectNoAxeViolations(container);
   });
 
@@ -87,7 +87,7 @@ describe("WI-11 axe pass — wizard screens", () => {
         ],
       })
     ) as jest.Mock;
-    const { container, getByText } = render(<PrefillStep systemId="sys-1" onContinue={jest.fn()} />, {
+    const { container, getByText } = render(<PrefillStep catalogueProductId="p1" onContinue={jest.fn()} />, {
       wrapper,
     });
     await waitFor(() => getByText("EU"));
@@ -97,7 +97,16 @@ describe("WI-11 axe pass — wizard screens", () => {
   test("UseCaseCreateStep", async () => {
     global.fetch = jest.fn(() => jsonResponse([])) as jest.Mock;
     const { container, getByLabelText } = render(
-      <UseCaseCreateStep systemId="sys-1" onCreated={jest.fn()} />,
+      <UseCaseCreateStep
+        name="Test"
+        isCustom={false}
+        catalogueProductId={null}
+        operatorRoleId={null}
+        hostingModelId={null}
+        lifecycleStage={null}
+        purpose={null}
+        onCreated={jest.fn()}
+      />,
       { wrapper }
     );
     await waitFor(() => getByLabelText(/what are you using this for/i));

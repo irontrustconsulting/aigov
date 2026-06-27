@@ -1,4 +1,4 @@
-/** app/schemas/system.py — SystemCreate/SystemRead/SystemDetail/PrefillResponse. */
+/** app/schemas/system.py — SystemRead/SystemDetail/PrefillResponse. */
 import type { ProvenanceConfidence, SystemLifecycleStage } from "./enums";
 import type { CatalogueVendorRef, VocabItemOut } from "./reference";
 
@@ -19,24 +19,6 @@ export interface SystemRead {
   lifecycle_stage: SystemLifecycleStage | null;
   created_at: string;
   updated_at: string;
-}
-
-/** The request body for POST /v1/systems. `is_custom` XOR a catalogue link
- * (`catalogue_product_id`) is a server guard (422) the client mirrors
- * structurally in WI-5 — never sends `catalogue_vendor_id` itself, the
- * server derives it from the product.
- * Use-distinguishing context (usage_context, human_oversight, data categories,
- * affected parties) lives on the use case as of DM-S1 — see UseCaseCreate. */
-export interface SystemCreate {
-  name: string;
-  is_custom: boolean;
-  catalogue_product_id: string | null;
-  catalogue_vendor_id: string | null;
-  owner_user_id: string | null;
-  operator_role_id: string | null;
-  hosting_model_id: string | null;
-  lifecycle_stage: SystemLifecycleStage | null;
-  purpose: string | null;
 }
 
 export interface UseCaseStateSummary {

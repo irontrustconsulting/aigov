@@ -121,11 +121,12 @@ export function useAffectedParties() {
 // Prefill (WI-6)
 // ---------------------------------------------------------------------------
 
-export function usePrefill(systemId: string | undefined) {
+export function usePrefill(catalogueProductId: string | null | undefined) {
   return useQuery({
-    queryKey: intakeKeys.prefill(systemId ?? ""),
-    queryFn: () => api.get<PrefillResponse>(`/v1/systems/${systemId}/prefill`),
-    enabled: Boolean(systemId),
+    queryKey: intakeKeys.prefill(catalogueProductId ?? ""),
+    queryFn: () =>
+      api.get<PrefillResponse>(`/v1/catalogue/products/${catalogueProductId}/prefill`),
+    enabled: Boolean(catalogueProductId),
   });
 }
 

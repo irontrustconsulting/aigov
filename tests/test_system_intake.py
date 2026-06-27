@@ -1,9 +1,10 @@
 """
-Tests for the System Intake sprint: structured registration, prefill, and
-reference product detail.
+Tests for system reads, PATCH, prefill, and reference product detail.
+
+POST /v1/systems was removed in DM-S2 — see test_registrations.py for the
+atomic registration endpoint. This file covers the remaining surface.
 
 Covers:
-  POST /v1/systems         — full payload, minimal regression, validation errors
   GET  /v1/systems/{id}    — detail with resolved labels, cross-tenant 404
   PATCH /v1/systems/{id}   — update, product relink lock, vendor re-derivation
   GET  /v1/systems/{id}/prefill — facts for linked product; empty for custom
@@ -187,161 +188,8 @@ def catalogue_facts(db_session, product):
     return facts
 
 
-# ---------------------------------------------------------------------------
-# POST /v1/systems — registration
-# ---------------------------------------------------------------------------
-
-class TestPostSystems:
-    def test_minimal_payload_succeeds(self, client, db_session, tenant, system_owner_ctx):
-        """Regression: name-only payload still works after intake additions."""
-        app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            r = client.post("/v1/systems", json={"name": "Minimal System"})
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        assert r.status_code == 201
-        body = r.json()
-        assert body["name"] == "Minimal System"
-        assert body["is_custom"] is False
-
-    def test_full_payload_creates_system(
-        self, client, db_session, tenant, system_owner_ctx,
-        eu_op_role, hosting, data_cats, affected_parties_data, product, vendor,
-    ):
-        """Full intake payload succeeds; vendor is derived from product."""
-        app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            r = client.post("/v1/systems", json={
-                "name": "Full System",
-                "catalogue_product_id": str(product.id),
-                "operator_role_id": str(eu_op_role.id),
-                "hosting_model_id": str(hosting.id),
-                "lifecycle_stage": "pilot",
-                "purpose": "Automate contract review",
-            })
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        assert r.status_code == 201
-        body = r.json()
-        assert body["catalogue_product"]["id"] == str(product.id)
-        assert body["catalogue_vendor"]["id"] == str(vendor.id)  # derived
-        assert body["operator_role"]["code"] == "deployer"
-        assert body["hosting_model"]["code"] == "cloud_saas"
-        assert body["lifecycle_stage"] == "pilot"
-        assert body["purpose"] == "Automate contract review"
-
-    def test_audit_event_created(
-        self, client, db_session, tenant, system_owner_ctx,
-    ):
-        """Exactly one system.created audit event per successful create."""
-        app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            r = client.post("/v1/systems", json={"name": "Audit System"})
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        assert r.status_code == 201
-        events = db_session.scalars(
-            select(AuditEvent).where(
-                AuditEvent.action == "system.created",
-                AuditEvent.tenant_id == tenant.id,
-            )
-        ).all()
-        assert len(events) == 1
-        assert events[0].entity_type == "system"
-
-    def test_is_custom_with_catalogue_product_rejected(
-        self, client, db_session, tenant, system_owner_ctx, product,
-    ):
-        """is_custom=true + catalogue_product_id → 422."""
-        app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            r = client.post("/v1/systems", json={
-                "name": "Bad Custom",
-                "is_custom": True,
-                "catalogue_product_id": str(product.id),
-            })
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        assert r.status_code == 422
-
-    def test_inactive_vocab_rejected(
-        self, client, db_session, tenant, system_owner_ctx,
-    ):
-        """Inactive vocab FK → 422."""
-        inactive = EUOperatorRole(
-            id=uuid.uuid4(), code="inactive_role", label="Inactive", sort_order=99, active=False,
-        )
-        db_session.add(inactive)
-        db_session.flush()
-
-        app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            r = client.post("/v1/systems", json={
-                "name": "Inactive Vocab",
-                "operator_role_id": str(inactive.id),
-            })
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        assert r.status_code == 422
-
-    def test_non_member_owner_rejected(
-        self, client, db_session, tenant, system_owner_ctx,
-    ):
-        """owner_user_id for a user not in this tenant → 422."""
-        outsider = User(id=uuid.uuid4(), cognito_sub=f"sub-out-{uuid.uuid4()}", email="out@other.io")
-        db_session.add(outsider)
-        db_session.flush()
-
-        app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            r = client.post("/v1/systems", json={
-                "name": "Bad Owner",
-                "owner_user_id": str(outsider.id),
-            })
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        assert r.status_code == 422
-
-    def test_vendor_derived_from_product(
-        self, client, db_session, tenant, system_owner_ctx, product, vendor,
-    ):
-        """client-supplied catalogue_vendor_id is overridden by the product's vendor."""
-        other_vendor = CatalogueVendor(id=uuid.uuid4(), name="Other Vendor")
-        db_session.add(other_vendor)
-        db_session.flush()
-
-        app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            r = client.post("/v1/systems", json={
-                "name": "Vendor Derived",
-                "catalogue_product_id": str(product.id),
-                "catalogue_vendor_id": str(other_vendor.id),  # should be overridden
-            })
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        assert r.status_code == 201
-        assert r.json()["catalogue_vendor"]["id"] == str(vendor.id)
+# TestPostSystems removed in DM-S2: POST /v1/systems is gone (INV-78).
+# Registration tests live in test_registrations.py.
 
 
 # ---------------------------------------------------------------------------
@@ -354,26 +202,20 @@ class TestGetSystemDetail:
         eu_op_role, data_cats, product, vendor,
     ):
         """Resolved vocab labels and catalogue refs in response."""
-        # Create via API to test full round-trip
-        app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            create_r = client.post("/v1/systems", json={
-                "name": "Detail System",
-                "catalogue_product_id": str(product.id),
-                "operator_role_id": str(eu_op_role.id),
-            })
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        assert create_r.status_code == 201
-        system_id = create_r.json()["id"]
+        # Insert system directly (POST /v1/systems is gone; see test_registrations.py)
+        system = System(
+            id=uuid.uuid4(), tenant_id=tenant.id,
+            name="Detail System", metadata_blob={},
+            catalogue_product_id=product.id,
+            operator_role_id=eu_op_role.id,
+        )
+        db_session.add(system)
+        db_session.flush()
 
         app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
         app.dependency_overrides[get_tenant_db] = _db_override(db_session)
         try:
-            r = client.get(f"/v1/systems/{system_id}")
+            r = client.get(f"/v1/systems/{system.id}")
         finally:
             app.dependency_overrides.pop(get_tenant_context, None)
             app.dependency_overrides.pop(get_tenant_db, None)
@@ -419,22 +261,23 @@ class TestGetSystemDetail:
 # ---------------------------------------------------------------------------
 
 class TestPatchSystem:
-    def _create_system(self, client, db_session, ctx, **kwargs):
-        payload = {"name": "Patch Me", **kwargs}
-        app.dependency_overrides[get_tenant_context] = _ctx_override(ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            r = client.post("/v1/systems", json=payload)
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-        assert r.status_code == 201
-        return r.json()["id"]
+    def _create_system(self, db_session, tenant, **kwargs):
+        """Insert a system row directly (POST /v1/systems removed in DM-S2)."""
+        s = System(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            name=kwargs.pop("name", "Patch Me"),
+            metadata_blob={},
+            **kwargs,
+        )
+        db_session.add(s)
+        db_session.flush()
+        return str(s.id)
 
     def test_update_name_and_purpose(
         self, client, db_session, tenant, system_owner_ctx,
     ):
-        system_id = self._create_system(client, db_session, system_owner_ctx)
+        system_id = self._create_system(db_session, tenant)
 
         app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
         app.dependency_overrides[get_tenant_db] = _db_override(db_session)
@@ -463,8 +306,8 @@ class TestPatchSystem:
     ):
         """Changing catalogue_product_id when use cases exist → 409."""
         system_id = self._create_system(
-            client, db_session, system_owner_ctx,
-            catalogue_product_id=str(product.id),
+            db_session, tenant,
+            catalogue_product_id=product.id,
         )
 
         # Add a use case directly to DB
@@ -499,8 +342,8 @@ class TestPatchSystem:
     ):
         """Product relink with no use cases re-derives vendor_id."""
         system_id = self._create_system(
-            client, db_session, system_owner_ctx,
-            catalogue_product_id=str(product.id),
+            db_session, tenant,
+            catalogue_product_id=product.id,
         )
 
         new_vendor = CatalogueVendor(id=uuid.uuid4(), name="New Vendor")
@@ -525,7 +368,7 @@ class TestPatchSystem:
         self, client, db_session, tenant, system_owner_ctx,
     ):
         """PATCH can update lifecycle_stage independently."""
-        system_id = self._create_system(client, db_session, system_owner_ctx)
+        system_id = self._create_system(db_session, tenant)
 
         app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
         app.dependency_overrides[get_tenant_db] = _db_override(db_session)
@@ -549,18 +392,14 @@ class TestPrefill:
         product, vendor, catalogue_facts,
     ):
         """System linked to a product returns catalogue facts."""
-        app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            create_r = client.post("/v1/systems", json={
-                "name": "Prefill System",
-                "catalogue_product_id": str(product.id),
-            })
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        system_id = create_r.json()["id"]
+        s = System(
+            id=uuid.uuid4(), tenant_id=tenant.id,
+            name="Prefill System", metadata_blob={},
+            catalogue_product_id=product.id,
+        )
+        db_session.add(s)
+        db_session.flush()
+        system_id = str(s.id)
 
         app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
         app.dependency_overrides[get_tenant_db] = _db_override(db_session)
@@ -583,15 +422,13 @@ class TestPrefill:
         self, client, db_session, tenant, system_owner_ctx,
     ):
         """System without a linked product → 200 with empty facts."""
-        app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            create_r = client.post("/v1/systems", json={"name": "No Product"})
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        system_id = create_r.json()["id"]
+        s = System(
+            id=uuid.uuid4(), tenant_id=tenant.id,
+            name="No Product", metadata_blob={},
+        )
+        db_session.add(s)
+        db_session.flush()
+        system_id = str(s.id)
 
         app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
         app.dependency_overrides[get_tenant_db] = _db_override(db_session)
@@ -609,18 +446,14 @@ class TestPrefill:
         self, client, db_session, tenant, system_owner_ctx,
     ):
         """Custom system → 200 with empty facts (not 404)."""
-        app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
-        app.dependency_overrides[get_tenant_db] = _db_override(db_session)
-        try:
-            create_r = client.post("/v1/systems", json={
-                "name": "Custom System",
-                "is_custom": True,
-            })
-        finally:
-            app.dependency_overrides.pop(get_tenant_context, None)
-            app.dependency_overrides.pop(get_tenant_db, None)
-
-        system_id = create_r.json()["id"]
+        s = System(
+            id=uuid.uuid4(), tenant_id=tenant.id,
+            name="Custom System", metadata_blob={},
+            is_custom=True,
+        )
+        db_session.add(s)
+        db_session.flush()
+        system_id = str(s.id)
 
         app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
         app.dependency_overrides[get_tenant_db] = _db_override(db_session)
@@ -637,22 +470,25 @@ class TestPrefill:
         self, client, db_session, tenant, system_owner_ctx, product,
     ):
         """Prefill is a read — no audit event should be written."""
+        s = System(
+            id=uuid.uuid4(), tenant_id=tenant.id,
+            name="Prefill Audit", metadata_blob={},
+            catalogue_product_id=product.id,
+        )
+        db_session.add(s)
+        db_session.flush()
+
         app.dependency_overrides[get_tenant_context] = _ctx_override(system_owner_ctx)
         app.dependency_overrides[get_tenant_db] = _db_override(db_session)
         try:
-            create_r = client.post("/v1/systems", json={
-                "name": "Prefill Audit",
-                "catalogue_product_id": str(product.id),
-            })
-            system_id = create_r.json()["id"]
-            client.get(f"/v1/systems/{system_id}/prefill")
+            client.get(f"/v1/systems/{s.id}/prefill")
         finally:
             app.dependency_overrides.pop(get_tenant_context, None)
             app.dependency_overrides.pop(get_tenant_db, None)
 
-        # Only the system.created event; no prefill audit event
+        # Prefill is a read — no audit event should exist
         events = db_session.scalars(select(AuditEvent)).all()
-        assert all(e.action == "system.created" for e in events)
+        assert len(events) == 0
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,10 @@
 /**
  * @jest-environment jsdom
+ *
+ * IntakeCaptureStep (DM-S2): the step now makes NO network call on submit.
+ * It captures system-stable facts (name, operatorRoleId, hostingModelId,
+ * lifecycleStage, purpose) and calls onSubmit(facts) directly (DF-D2-1).
+ * The POST /v1/registrations fires at the use-case step, not here.
  */
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,87 +16,55 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-/** GET reads (the six vocab lists) get an empty array; the POST create
- * gets the given response body. */
-function mockFetchOk(createResponseBody: unknown) {
-  global.fetch = jest.fn((_input: RequestInfo | URL, init?: RequestInit) => {
-    const isCreate = init?.method === "POST";
-    return Promise.resolve({
-      ok: true,
-      status: 200,
-      text: async () => JSON.stringify(isCreate ? createResponseBody : []),
-    } as Response);
-  }) as jest.Mock;
+function mockVocabEmpty() {
+  global.fetch = jest.fn(() =>
+    Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify([]) } as Response)
+  ) as jest.Mock;
 }
 
 afterEach(() => {
   jest.restoreAllMocks();
 });
 
-function postInit(): RequestInit {
-  const fetchMock = global.fetch as jest.Mock;
-  const call = fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === "POST");
-  if (!call) throw new Error("no POST call recorded");
-  return call[1] as RequestInit;
-}
-
 describe("IntakeCaptureStep", () => {
-  test("is_custom=true is unreachable alongside a catalogue product — the submitted body always nulls catalogue_product_id", async () => {
-    mockFetchOk({ id: "sys-1", name: "x" });
+  test("submit calls onSubmit with system-stable facts — no POST call is made", async () => {
+    mockVocabEmpty();
     const onSubmit = jest.fn();
 
-    render(
-      <IntakeCaptureStep isCustom={true} catalogueProductId="should-never-be-sent" onSubmit={onSubmit} />,
-      { wrapper }
-    );
+    render(<IntakeCaptureStep isCustom={false} catalogueProductId="p1" onSubmit={onSubmit} />, { wrapper });
 
-    // Vocab gate shows Skeleton until all vocab queries resolve
     await waitFor(() => screen.getByLabelText("System name"));
     fireEvent.change(screen.getByLabelText("System name"), { target: { value: "My System" } });
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
 
-    const sentBody = JSON.parse(postInit().body as string);
-    expect(sentBody.is_custom).toBe(true);
-    expect(sentBody.catalogue_product_id).toBeNull();
+    const facts = onSubmit.mock.calls[0][0];
+    expect(facts.name).toBe("My System");
+    expect(facts).toHaveProperty("operatorRoleId");
+    expect(facts).toHaveProperty("hostingModelId");
+    expect(facts).toHaveProperty("lifecycleStage");
+    expect(facts).toHaveProperty("purpose");
+
+    // No mutation — fetch should only have been called for vocab GETs
+    const fetchMock = global.fetch as jest.Mock;
+    const postCalls = fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === "POST");
+    expect(postCalls).toHaveLength(0);
   });
 
-  test("a successful create calls onSubmit with the returned SystemDetail", async () => {
-    const systemDetail = { id: "sys-1", name: "My System", is_custom: false };
-    mockFetchOk(systemDetail);
+  test("custom system submit forwards name without touching catalogueProductId", async () => {
+    mockVocabEmpty();
     const onSubmit = jest.fn();
 
-    render(<IntakeCaptureStep isCustom={false} catalogueProductId="p1" onSubmit={onSubmit} />, {
-      wrapper,
-    });
+    render(<IntakeCaptureStep isCustom={true} catalogueProductId="should-not-appear" onSubmit={onSubmit} />, { wrapper });
 
     await waitFor(() => screen.getByLabelText("System name"));
-    fireEvent.change(screen.getByLabelText("System name"), { target: { value: "My System" } });
-    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
-
-    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
-    // TanStack Query's onSuccess passes (data, variables, context, ...) —
-    // assert on the first arg (the actual SystemDetail response) only.
-    expect(onSubmit.mock.calls[0][0]).toEqual(systemDetail);
-  });
-
-  test("a catalogue-linked submit carries the catalogue_product_id forward, never catalogue_vendor_id", async () => {
-    mockFetchOk({ id: "sys-1" });
-    const onSubmit = jest.fn();
-
-    render(<IntakeCaptureStep isCustom={false} catalogueProductId="p1" onSubmit={onSubmit} />, {
-      wrapper,
-    });
-
-    await waitFor(() => screen.getByLabelText("System name"));
-    fireEvent.change(screen.getByLabelText("System name"), { target: { value: "My System" } });
+    fireEvent.change(screen.getByLabelText("System name"), { target: { value: "Custom AI" } });
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
 
-    const sentBody = JSON.parse(postInit().body as string);
-    expect(sentBody.catalogue_product_id).toBe("p1");
-    expect(sentBody.catalogue_vendor_id).toBeNull();
+    const facts = onSubmit.mock.calls[0][0];
+    expect(facts.name).toBe("Custom AI");
   });
 });

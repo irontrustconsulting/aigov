@@ -11,41 +11,65 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-function mockFetchOk(body: unknown) {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    status: 200,
-    text: async () => JSON.stringify(body),
-  } as Response) as jest.Mock;
-}
-
 afterEach(() => jest.restoreAllMocks());
 
-test("a successful create hands the use case id and classification up via onCreated", async () => {
-  mockFetchOk({
-    use_case: { id: "uc-1", tenant_id: "t1", system_id: "sys-1", title: "x", purpose: null, state: "intake", eu_tier: "unclassified" },
-    classification: {
-      id: "c1",
-      use_case_id: "uc-1",
-      tier: "requires_context",
-      rationale: "no product mapping",
-      version: 1,
-      is_current: true,
-      overridden: false,
-      proposed_tier: null,
-      basis_subcategory_code: null,
-      basis_legal_ref: null,
-      requires_context: true,
-    },
-  });
+const REGISTRATION_RESPONSE = {
+  system: {
+    id: "sys-1", name: "Test", is_custom: true, catalogue_product: null,
+    catalogue_vendor: null, owner_user_id: null, operator_role: null,
+    hosting_model: null, lifecycle_stage: null, purpose: null,
+    use_case_count: 0, use_case_lifecycle_states: [],
+    created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z",
+  },
+  use_case: {
+    id: "uc-1", tenant_id: "t1", system_id: "sys-1", title: "x", purpose: null,
+    state: "intake", eu_tier: "unclassified", usage_context: null,
+    human_oversight_type: null, data_categories: [], affected_parties: [],
+  },
+  classification: {
+    id: "c1", use_case_id: "uc-1", tier: "requires_context",
+    rationale: "no product mapping", version: 1, is_current: true,
+    overridden: false, proposed_tier: null, basis_subcategory_code: null,
+    basis_legal_ref: null, requires_context: true,
+  },
+};
+
+test("a successful register hands the full RegistrationRead up via onCreated", async () => {
+  // GET vocab requests return [] ; POST /registrations returns REGISTRATION_RESPONSE
+  global.fetch = jest.fn().mockImplementation((_url: RequestInfo | URL, init?: RequestInit) => {
+    if ((init?.method ?? "GET").toUpperCase() === "POST") {
+      return Promise.resolve({
+        ok: true, status: 201,
+        text: async () => JSON.stringify(REGISTRATION_RESPONSE),
+      } as Response);
+    }
+    return Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify([]) } as Response);
+  }) as jest.Mock;
+
   const onCreated = jest.fn();
 
-  render(<UseCaseCreateStep systemId="sys-1" usageContextId={null} humanOversightTypeId={null} dataCategoryIds={[]} affectedPartyIds={[]} onCreated={onCreated} />, { wrapper });
+  render(
+    <UseCaseCreateStep
+      name="Test"
+      isCustom={true}
+      catalogueProductId={null}
+      operatorRoleId={null}
+      hostingModelId={null}
+      lifecycleStage={null}
+      purpose={null}
+      onCreated={onCreated}
+    />,
+    { wrapper },
+  );
+
+  // Wait for vocab queries to settle (returns [], so fields render empty but enabled)
+  await waitFor(() => expect(screen.getByLabelText(/what are you using this for/i)).toBeInTheDocument());
 
   fireEvent.change(screen.getByLabelText(/what are you using this for/i), { target: { value: "Support chatbot" } });
   fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
   await waitFor(() => expect(onCreated).toHaveBeenCalled());
-  expect(onCreated.mock.calls[0][0]).toBe("uc-1");
-  expect(onCreated.mock.calls[0][1].requires_context).toBe(true);
+  const [result] = onCreated.mock.calls[0] as [typeof REGISTRATION_RESPONSE, unknown];
+  expect(result.use_case.id).toBe("uc-1");
+  expect(result.classification.requires_context).toBe(true);
 });

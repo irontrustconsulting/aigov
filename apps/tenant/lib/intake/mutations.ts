@@ -7,9 +7,8 @@ import type {
   ContextOutcomeRead,
   OverrideRequest,
   PreviewRequest,
-  SystemCreate,
-  SystemDetail,
-  UseCaseCreate,
+  RegistrationCreate,
+  RegistrationRead,
   UseCaseWithClassification,
 } from "@irontrust/api-client";
 import { api } from "@/lib/api";
@@ -19,21 +18,15 @@ import { lifecycleKey } from "./query-keys";
  * WI-3: every mutation goes through `api` (the BFF client) — never a raw
  * fetch. None send `If-Match` (FE-6 is dormant in F1: no consumed route
  * here accepts it). After a write that can move the lifecycle state
- * (create, override, context submit), the lifecycle live-state query is
+ * (register, override, context submit), the lifecycle live-state query is
  * invalidated so WI-9 never reads a stale verdict (FE-7).
  */
 
-export function useCreateSystem() {
-  return useMutation({
-    mutationFn: (body: SystemCreate) => api.post<SystemDetail, SystemCreate>("/v1/systems", body),
-  });
-}
-
-export function useCreateUseCase() {
+export function useRegister() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: UseCaseCreate) =>
-      api.post<UseCaseWithClassification, UseCaseCreate>("/v1/use-cases", body),
+    mutationFn: (body: RegistrationCreate) =>
+      api.post<RegistrationRead, RegistrationCreate>("/v1/registrations", body),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: lifecycleKey(data.use_case.id) });
     },
