@@ -34,9 +34,33 @@ function me(governanceRoleKeys: string[]): MeRead {
   };
 }
 
-function mockFetch(opts: { me: MeRead; portfolio?: SystemRollupRead[]; systems?: unknown[] }) {
+function mockFetch(opts: {
+  me: MeRead;
+  portfolio?: SystemRollupRead[];
+  systems?: unknown[];
+  draft?: Record<string, unknown> | "none";
+}) {
   global.fetch = jest.fn((input: RequestInfo | URL) => {
     const url = String(input);
+    if (url.includes("/v1/draft-registrations/active")) {
+      const d = opts.draft ?? "none";
+      if (d === "none") {
+        return Promise.resolve({ ok: true, status: 204, text: async () => "" } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            id: "draft-1",
+            tenant_id: "tenant-1",
+            owner_user_id: "user-1",
+            draft_blob: d,
+            created_at: "2026-06-28T10:00:00Z",
+            updated_at: "2026-06-28T10:00:00Z",
+          }),
+      } as Response);
+    }
     const body = url.includes("/v1/me")
       ? opts.me
       : url.includes("/v1/portfolio")
@@ -102,6 +126,52 @@ describe("DashboardPage axe pass", () => {
     });
     const { container } = render(<DashboardPage />, { wrapper });
     await waitFor(() => screen.getByLabelText("your-court"));
+    await expectNoAxeViolations(container);
+  });
+
+  test("scaffolded-empty + draft-resume banner (FE-29)", async () => {
+    mockFetch({
+      me: me(["system_owner"]),
+      portfolio: [],
+      systems: [],
+      draft: { catalogueProductName: "ATS Pro" },
+    });
+    const { container } = render(<DashboardPage />, { wrapper });
+    await waitFor(() => screen.getByLabelText("draft-resume"));
+    await expectNoAxeViolations(container);
+  });
+
+  test("populated portfolio + draft-resume banner (FE-29)", async () => {
+    mockFetch({
+      me: me(["system_owner"]),
+      portfolio: [
+        {
+          system_id: "sys-1",
+          system_name: "Acme Resume Screener",
+          use_case_count: 1,
+          highest_tier: "high_risk",
+          use_cases: [
+            {
+              use_case_id: "uc-1",
+              title: "Screen candidate applications",
+              state: "intake",
+              eu_tier: "high_risk",
+              blocking: {
+                state: "intake",
+                verdict: "park",
+                reason_code: "no_aiia",
+                reason: "No assessment started for this use case",
+                responsible_party: "user",
+              },
+            },
+          ],
+        },
+      ],
+      systems: [],
+      draft: { catalogueProductName: "ATS Pro" },
+    });
+    const { container } = render(<DashboardPage />, { wrapper });
+    await waitFor(() => screen.getByLabelText("draft-resume"));
     await expectNoAxeViolations(container);
   });
 });

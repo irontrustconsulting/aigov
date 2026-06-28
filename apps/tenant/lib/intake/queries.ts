@@ -172,11 +172,13 @@ export function useMe() {
 // Draft (DM-S3, D-66)
 // ---------------------------------------------------------------------------
 
-export function useActiveDraft() {
-  // The api client returns undefined (falsy) for 204 — treat as no active draft.
+export function useActiveDraft({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery<DraftRegistrationRead | null>({
     queryKey: intakeKeys.activeDraft(),
-    queryFn: () => api.get<DraftRegistrationRead | null>("/v1/draft-registrations/active"),
+    // The api client returns undefined for 204; coerce to null (React Query v5 forbids undefined data).
+    queryFn: async () =>
+      (await api.get<DraftRegistrationRead | null>("/v1/draft-registrations/active")) ?? null,
     staleTime: 0,
+    enabled,
   });
 }

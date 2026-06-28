@@ -12,6 +12,7 @@ export { Skeleton, SkeletonBlock } from "./state/skeleton";
 
 export { LogoTile, type LogoTileProps } from "./kit/logo-tile";
 export { ResumePrompt, type ResumePromptProps } from "./kit/resume-prompt";
+export { DraftResumeIndicator, type DraftResumeIndicatorProps } from "./kit/draft-resume-indicator";
 export { StatCard, type StatCardProps } from "./kit/stat-card";
 export { SectionHeader, type SectionHeaderProps } from "./kit/section-header";
 export { ListSelectRow, type ListSelectRowProps } from "./kit/list-select-row";

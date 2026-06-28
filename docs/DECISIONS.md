@@ -372,7 +372,8 @@ Both list routes share the `operator:create` gate rather than introducing a sepa
 
 **OPEN-1** · Worked-state void / withdraw path
 A reviewed or approved assessment has no void/withdraw path — pristine hard-delete is the only removal today, and it is blocked the moment an assessment is worked. The void mechanics (who can void, what state it lands in, audit shape) are undesigned. Blocks any "retract an approved assessment" flow.
-↳ refs: INV-17, 36; STATE deferred
+**NB-4 (DM-S3b):** a future void/withdraw path that removes a use case would reopen bare-system reachability and must re-evaluate INV-80 and the dashboard's bare-system handling. If D-67 Branch A has been executed at that point (no `GET /v1/systems` on the dashboard), the bare system would be invisible to the user; the void path must either clean up the bare system or re-introduce a read surface for it.
+↳ refs: INV-17, 36, INV-80, D-67; STATE deferred
 
 **OPEN-2** · AIIA versioning / `NEEDS_REFRESH` triggers
 The re-run cycle — detect material change → re-snapshot → flag `needs_refresh` — is unbuilt, though the fields exist (`Assessment.version`/`is_current`, `tier_snapshot`/`classification_version`). What counts as a *material change*, and what auto-fires a refresh, is undecided. Deferred post-MVP.
@@ -679,3 +680,21 @@ The wizard calls `POST /draft-registrations` on first advance. If a draft alread
 **DF-D3-6** · Last-write-wins PATCH without `lock_version` (sprint-local)
 `PATCH /draft-registrations/{id}` replaces `draft_blob` wholesale; no `lock_version` or `If-Match` guard. Multi-tab conflict on a draft is an edge case with low consequence: the later tab wins and the user sees their most recent step. Adding optimistic concurrency to a draft (which exists solely to accumulate transient capture) would add friction without meaningful safety. If the user needs a consistent view they navigate back, which refetches.
 ↳ origin: DM-S3 (sprint-local DF) · refs: D-66
+
+**D-67** · Zero-use-case nudge and dashboard `useSystems()` retirement, gated on a verified-zero cross-tenant legacy bare-system count
+Retire the A2 "register a use case" nudge and the dashboard's `useSystems()` call, deriving `systemCount` from `portfolio.data.length`, **when** the §0.2 cross-tenant count is zero. When non-zero, retain both unchanged and raise a separate legacy-data task (DF-S3b-3). Reachability basis: post-DM-S2 every committed system is constructed with its first use case atomically (INV-78), and no API path removes a use case (INV-80); a zero-use-case system is therefore legacy pre-DM-S2 data only, and the nudge plus the `GET /v1/systems` read that feeds it are otherwise dead.
+**DM-S3b execution (Branch B):** §0.2 returned 1 bare system on tenant `6be51846-1261-489b-b55f-cb4d6b2e3fcc`. Retirement clause **not executed this sprint**; `useSystems()`, `zeroUseCaseSystems`, and the A2 nudge are retained unchanged. A separate legacy-data task is owed to resolve the bare row before Branch A can execute (DF-S3b-3).
+Rejected: (a) unconditional retirement (silently masks a legacy bare system, since no `GET /v1/systems` read would remain to surface it); (b) keep both indefinitely (carries dead UI and a redundant dashboard request, against the DF6-9 no-extra-call discipline).
+↳ origin: DM-S3b · refs: INV-78, INV-80, DF6-9, DF-S3b-3
+
+**DF-S3b-1** · `draftBanner` excluded from the hub loading and error returns (sprint-local)
+The `draftBanner` renders only in the settled scaffolded-empty and populated returns, never in the `Skeleton` / `ErrorState` returns. `activeDraft` may still be loading there and the banner is non-blocking. Done-checks assert no banner in the loading and error states.
+↳ origin: DM-S3b (sprint-local DF) · refs: FE-29
+
+**DF-S3b-2** · Descriptor resolution order (sprint-local)
+FE-29's descriptor resolves `draft_blob.catalogueProductName` → `draft_blob.name` → "Untitled registration". The host (`PortfolioHub`) computes `productLabel` via `resolveLabel(blob)`; the component renders the literal fallback when null (INV-75 keeps a raw null off the face).
+↳ origin: DM-S3b (sprint-local DF) · refs: INV-75, DF-D3-1, FE-29
+
+**DF-S3b-3** · Retain branch when §0.2 is non-zero (sprint-local)
+If the §0.2 cross-tenant count is non-zero, the nudge and `useSystems()` are left unchanged, D-67's retirement clause is not minted this sprint, and the legacy count and tenant(s) are recorded in the handoff completion note for a separate legacy-data task. **DM-S3b result:** 1 bare system on tenant `6be51846-1261-489b-b55f-cb4d6b2e3fcc`. Branch B executed; D-67 retirement deferred.
+↳ origin: DM-S3b (sprint-local DF) · refs: D-67

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMe } from "@/lib/intake";
+import { useMe, useActiveDraft } from "@/lib/intake";
 import { isYourCourt, resolveCourt, useSystems, usePortfolio } from "@/lib/portfolio";
 import {
   WhoseCourtIndicator,
@@ -21,6 +21,7 @@ import {
   EmptyState,
   Skeleton,
   ErrorState,
+  DraftResumeIndicator,
 } from "@irontrust/ui";
 import type { SystemRollupRead } from "@irontrust/api-client";
 
@@ -73,9 +74,18 @@ export default function DashboardPage() {
   return <PortfolioHub roleKeys={roleKeys} />;
 }
 
+function resolveLabel(blob: Record<string, unknown>): string | null {
+  const label =
+    (blob.catalogueProductName as string | undefined) ??
+    (blob.name as string | undefined) ??
+    null;
+  return typeof label === "string" ? label : null;
+}
+
 function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
   const portfolio = usePortfolio();
   const systems = useSystems();
+  const activeDraft = useActiveDraft({ enabled: roleKeys.has("system_owner") });
 
   if (portfolio.isLoading || systems.isLoading) {
     return (
@@ -101,6 +111,14 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
 
   const isAdoptionFace = [...roleKeys].some((k) => ADOPTION_ROLE_KEYS.has(k));
 
+  const draftBanner =
+    activeDraft.data != null ? (
+      <DraftResumeIndicator
+        productLabel={resolveLabel(activeDraft.data.draft_blob)}
+        href="/systems/new"
+      />
+    ) : null;
+
   const zeroUseCaseSystems = systems.data.filter(
     (s) => !portfolio.data!.some((p) => p.system_id === s.id)
   );
@@ -121,6 +139,7 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
     // INV-74: retained chrome (header + stat row + framed table); get-started content is in-region.
     return (
       <PageScaffold>
+        {draftBanner}
         <PageHeader
           title="Portfolio"
           action={
@@ -216,6 +235,7 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
 
   return (
     <PageScaffold>
+      {draftBanner}
       <PageHeader
         title="Portfolio"
         action={

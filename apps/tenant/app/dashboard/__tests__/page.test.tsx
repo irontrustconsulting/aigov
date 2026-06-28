@@ -33,9 +33,37 @@ function me(governanceRoleKeys: string[]): MeRead {
   };
 }
 
-function mockFetch(opts: { me: MeRead; portfolio?: SystemRollupRead[]; systems?: SystemRead[] }) {
+type DraftOpt = { body: Record<string, unknown> } | "none" | "error";
+
+function mockFetch(opts: {
+  me: MeRead;
+  portfolio?: SystemRollupRead[];
+  systems?: SystemRead[];
+  draft?: DraftOpt;
+}) {
   global.fetch = jest.fn((input: RequestInfo | URL) => {
     const url = String(input);
+    if (url.includes("/v1/draft-registrations/active")) {
+      const d = opts.draft ?? "none";
+      if (d === "error") {
+        return Promise.resolve({ ok: false, status: 500, text: async () => "error" } as Response);
+      }
+      if (d === "none") {
+        return Promise.resolve({ ok: true, status: 204, text: async () => "" } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          id: "draft-1",
+          tenant_id: "tenant-1",
+          owner_user_id: "user-1",
+          draft_blob: d.body,
+          created_at: "2026-06-28T10:00:00Z",
+          updated_at: "2026-06-28T10:00:00Z",
+        }),
+      } as Response);
+    }
     const body = url.includes("/v1/me")
       ? opts.me
       : url.includes("/v1/portfolio")
@@ -147,5 +175,160 @@ describe("DashboardPage (UI-F2-PORTFOLIO portfolio landing)", () => {
 
     await waitFor(() => expect(screen.getByLabelText("zero-use-case-system")).toBeInTheDocument());
     expect(screen.getByText(/no use case registered yet/i)).toBeInTheDocument();
+  });
+});
+
+describe("DashboardPage — draft-resume banner (FE-29, DM-S3b)", () => {
+  test("system_owner + active draft + zero systems (scaffolded-empty): banner present and links to /systems/new", async () => {
+    mockFetch({
+      me: me(["system_owner"]),
+      portfolio: [],
+      systems: [],
+      draft: { body: { catalogueProductName: "ATS Pro" } },
+    });
+
+    renderWithClient();
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("draft-resume")).toBeInTheDocument()
+    );
+    const link = screen.getByRole("link", { name: /Resume/ });
+    expect(link).toHaveAttribute("href", "/systems/new");
+    expect(screen.getByText("ATS Pro")).toBeInTheDocument();
+  });
+
+  test("system_owner + active draft + populated portfolio: banner present", async () => {
+    mockFetch({
+      me: me(["system_owner"]),
+      portfolio: [pendingReviewUseCase],
+      systems: [],
+      draft: { body: { name: "Custom HR Tool" } },
+    });
+
+    renderWithClient();
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("draft-resume")).toBeInTheDocument()
+    );
+    expect(screen.getByText("Custom HR Tool")).toBeInTheDocument();
+  });
+
+  test("system_owner + empty blob: renders 'Untitled registration' fallback", async () => {
+    mockFetch({
+      me: me(["system_owner"]),
+      portfolio: [],
+      systems: [],
+      draft: { body: {} },
+    });
+
+    renderWithClient();
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("draft-resume")).toBeInTheDocument()
+    );
+    expect(screen.getByText("Untitled registration")).toBeInTheDocument();
+  });
+
+  test("system_owner + no draft (204): no banner", async () => {
+    mockFetch({
+      me: me(["system_owner"]),
+      portfolio: [],
+      systems: [],
+      draft: "none",
+    });
+
+    renderWithClient();
+
+    // Wait for the page to settle
+    await waitFor(() => screen.getByLabelText("systems"));
+    expect(screen.queryByLabelText("draft-resume")).toBeNull();
+  });
+
+  test("system_owner + draft query error: no banner (RD-2)", async () => {
+    mockFetch({
+      me: me(["system_owner"]),
+      portfolio: [],
+      systems: [],
+      draft: "error",
+    });
+
+    renderWithClient();
+
+    await waitFor(() => screen.getByLabelText("systems"));
+    expect(screen.queryByLabelText("draft-resume")).toBeNull();
+  });
+
+  test("admin (zero gov roles): no banner and GET /v1/draft-registrations/active is not requested (DF2-5)", async () => {
+    const fetchSpy = (global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(me([])),
+      } as Response)
+    )) as jest.Mock;
+
+    renderWithClient();
+
+    await waitFor(() => screen.getByLabelText("admin-empty-state"));
+    expect(screen.queryByLabelText("draft-resume")).toBeNull();
+    for (const call of fetchSpy.mock.calls) {
+      expect(String(call[0])).not.toContain("/v1/draft-registrations/active");
+    }
+  });
+
+  test("loading state (portfolio pending): no banner rendered (DF-S3b-1)", async () => {
+    global.fetch = jest.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/v1/me")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify(me(["system_owner"])),
+        } as Response);
+      }
+      // portfolio hangs — never resolves
+      return new Promise(() => {});
+    }) as jest.Mock;
+
+    renderWithClient();
+
+    // me resolves; portfolio hangs → should be in loading skeleton, no banner
+    await waitFor(() => screen.getByRole("status"));
+    expect(screen.queryByLabelText("draft-resume")).toBeNull();
+  });
+
+  test("error state (portfolio errored): no banner rendered (DF-S3b-1)", async () => {
+    global.fetch = jest.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/v1/me")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify(me(["system_owner"])),
+        } as Response);
+      }
+      if (url.includes("/v1/draft-registrations/active")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({
+              id: "draft-1",
+              tenant_id: "tenant-1",
+              owner_user_id: "user-1",
+              draft_blob: { catalogueProductName: "ATS Pro" },
+              created_at: "2026-06-28T10:00:00Z",
+              updated_at: "2026-06-28T10:00:00Z",
+            }),
+        } as Response);
+      }
+      // portfolio + systems error
+      return Promise.resolve({ ok: false, status: 500, text: async () => "error" } as Response);
+    }) as jest.Mock;
+
+    renderWithClient();
+
+    await waitFor(() => screen.getByText(/could not load the portfolio/i));
+    expect(screen.queryByLabelText("draft-resume")).toBeNull();
   });
 });

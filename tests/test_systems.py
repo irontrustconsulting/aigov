@@ -131,6 +131,24 @@ class TestPostSystemsAbsent:
 
 
 # ---------------------------------------------------------------------------
+# DELETE /v1/use-cases + DELETE /v1/systems — route-absence (INV-80)
+# ---------------------------------------------------------------------------
+
+class TestDeleteRoutesAbsent:
+    """INV-80: No use-case-removal or system-removal route exists."""
+
+    def test_delete_use_case_absent(self, client):
+        """INV-80: DELETE /v1/use-cases/{id} must not exist."""
+        r = client.delete("/v1/use-cases/00000000-0000-0000-0000-000000000000")
+        assert r.status_code in (404, 405)
+
+    def test_delete_system_absent(self, client):
+        """INV-80: DELETE /v1/systems/{id} must not exist."""
+        r = client.delete("/v1/systems/00000000-0000-0000-0000-000000000000")
+        assert r.status_code in (404, 405)
+
+
+# ---------------------------------------------------------------------------
 # GET /v1/systems — ungated read, any authenticated member
 # ---------------------------------------------------------------------------
 
