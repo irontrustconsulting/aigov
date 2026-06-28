@@ -42,6 +42,11 @@ function mockMe(roleKeys: string[]) {
           }),
       } as Response);
     }
+    // DM-S3: active-draft returns 204 (no active draft) so the wizard shows
+    // the drill-down directly rather than ResumePrompt.
+    if (url.includes("/v1/draft-registrations/active")) {
+      return Promise.resolve({ ok: true, status: 204, text: async () => "" } as Response);
+    }
     return Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify([]) } as Response);
   }) as jest.Mock;
 }

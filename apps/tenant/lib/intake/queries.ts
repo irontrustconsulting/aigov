@@ -6,6 +6,7 @@ import type {
   AffectedPartyOut,
   ClassificationContextRead,
   DataCategoryOut,
+  DraftRegistrationRead,
   EUAIActSubcategoryRead,
   MeRead,
   PrefillResponse,
@@ -164,5 +165,18 @@ export function useMe() {
   return useQuery({
     queryKey: intakeKeys.me(),
     queryFn: () => api.get<MeRead>("/v1/me"),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Draft (DM-S3, D-66)
+// ---------------------------------------------------------------------------
+
+export function useActiveDraft() {
+  // The api client returns undefined (falsy) for 204 — treat as no active draft.
+  return useQuery<DraftRegistrationRead | null>({
+    queryKey: intakeKeys.activeDraft(),
+    queryFn: () => api.get<DraftRegistrationRead | null>("/v1/draft-registrations/active"),
+    staleTime: 0,
   });
 }

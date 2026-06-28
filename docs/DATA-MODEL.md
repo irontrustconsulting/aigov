@@ -41,6 +41,11 @@
 | `use_case_data_category` | TENANT (RLS) | **DM-S1 addition.** Link `use_case ↔ data_category`. `tenant_id` FK; RLS policy `tenant_id = current_setting('app.current_tenant', true)::uuid`; unique `(use_case_id, data_category_id)`. Isolation via RLS (INV-77). |
 | `use_case_affected_party` | TENANT (RLS) | **DM-S1 addition.** Link `use_case ↔ affected_party`. Same shape and RLS policy as `use_case_data_category` (INV-77). |
 
+### Draft registrations — `domain.py` (DM-S3)
+| Table | Plane | Notes |
+|---|---|---|
+| `draft_registration` | TENANT (RLS) | **DM-S3 addition.** Server-side draft staging for the registration wizard. `UniqueConstraint(tenant_id, owner_user_id)` enforces one active draft per user (`uq_draft_one_per_user`). RLS policy `tenant_isolation` scopes to `current_setting('app.current_tenant', true)::uuid`; application layer additionally filters `owner_user_id = ctx.user_id` (DF-D3-4). `draft_blob JSONB` stores pre-boundary wizard fields + clamped step cursor. CASCADE FKs to `tenant` and `app_user`. `updated_at` managed by trigger. INV-79, D-66. |
+
 ### Approvals — `domain.py` (confirmed)
 | Table | Plane | Notes |
 |---|---|---|

@@ -53,7 +53,18 @@ The product/category/vendor/subcategory reads are intentionally `anon` — they 
 
 | Method · Path | Gate | Request | Response | If-Match | Notes |
 |---|---|---|---|---|---|
-| `POST /registrations` | `gov:system_owner` | `RegistrationCreate` | `RegistrationRead` (201) | — | Atomic: system + first use case + classification snapshot in one transaction. `RegistrationCreate` system-stable fields: `name`, `is_custom`, `catalogue_product_id`, `operator_role_id`, `hosting_model_id`, `lifecycle_stage`, `owner_user_id`, `purpose`. Use-case fields: `title`, `use_case_purpose`, `context_blob`, `usage_context_id`, `human_oversight_type_id`, `data_category_ids`, `affected_party_ids`. Response `RegistrationRead = { system: SystemDetail, use_case: UseCaseRead, classification: ClassificationRead }`. INV-78: the only route that constructs a System. D-65. |
+| `POST /registrations` | `gov:system_owner` | `RegistrationCreate` | `RegistrationRead` (201) | — | Atomic: system + first use case + classification snapshot in one transaction. `RegistrationCreate` system-stable fields: `name`, `is_custom`, `catalogue_product_id`, `operator_role_id`, `hosting_model_id`, `lifecycle_stage`, `owner_user_id`, `purpose`. Use-case fields: `title`, `use_case_purpose`, `context_blob`, `usage_context_id`, `human_oversight_type_id`, `data_category_ids`, `affected_party_ids`. **DM-S3:** optional `draft_id: uuid | null` — when present, the matching `draft_registration` row (owner-filtered) is deleted atomically in the same transaction (SV-3/D-66). Response `RegistrationRead = { system: SystemDetail, use_case: UseCaseRead, classification: ClassificationRead }`. INV-78: the only route that constructs a System. D-65. |
+
+### Draft registrations — `app/routers/v1/draft_registrations.py` (DM-S3)
+
+One active draft per user per tenant (INV-79). RLS scopes to tenant; application layer additionally filters `owner_user_id == ctx.user_id` (DF-D3-4). `draft_blob` stores pre-boundary wizard fields + clamped step cursor (DF-D3-1..3). No `If-Match` — last-write-wins (DF-D3-6).
+
+| Method · Path | Gate | Request | Response | If-Match | Notes |
+|---|---|---|---|---|---|
+| `POST /draft-registrations` | `gov:system_owner` | — | `DraftRegistrationRead` (200) | — | SELECT-first get-or-create (DF-D3-5). Returns existing row if one already exists; creates with empty `draft_blob` otherwise. Always 200. |
+| `GET /draft-registrations/active` | `gov:system_owner` | — | `DraftRegistrationRead` (200) or 204 | — | Returns caller's active draft or 204 (no body) if none exists. |
+| `PATCH /draft-registrations/{id}` | `gov:system_owner` | `DraftRegistrationPatch` | `DraftRegistrationRead` (200) | — | Replaces `draft_blob` wholesale (last-write-wins). 404 if id not found or belongs to a different user. |
+| `DELETE /draft-registrations/{id}` | `gov:system_owner` | — | 204 | — | Owner-filtered discard. 404 if not found or different owner. Called via `onStartOver` in `ResumePrompt` (FE-28). |
 
 ### Catalogue prefill — `app/routers/v1/catalogue.py` (DM-S2)
 

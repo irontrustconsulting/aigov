@@ -5,6 +5,8 @@ import type {
   ComputeRequest,
   ComputeResultRead,
   ContextOutcomeRead,
+  DraftRegistrationPatch,
+  DraftRegistrationRead,
   OverrideRequest,
   PreviewRequest,
   RegistrationCreate,
@@ -12,7 +14,7 @@ import type {
   UseCaseWithClassification,
 } from "@irontrust/api-client";
 import { api } from "@/lib/api";
-import { lifecycleKey } from "./query-keys";
+import { intakeKeys, lifecycleKey } from "./query-keys";
 
 /**
  * WI-3: every mutation goes through `api` (the BFF client) — never a raw
@@ -29,6 +31,47 @@ export function useRegister() {
       api.post<RegistrationRead, RegistrationCreate>("/v1/registrations", body),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: lifecycleKey(data.use_case.id) });
+      // Draft is atomically deleted on the backend; clear the client-side cache (D-66).
+      queryClient.invalidateQueries({ queryKey: intakeKeys.activeDraft() });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Draft mutations (DM-S3, D-66)
+// ---------------------------------------------------------------------------
+
+export function useGetOrCreateDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<DraftRegistrationRead, Record<string, never>>("/v1/draft-registrations", {}),
+    onSuccess: (data) => {
+      queryClient.setQueryData(intakeKeys.activeDraft(), data);
+    },
+  });
+}
+
+export function usePatchDraft(draftId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: DraftRegistrationPatch) =>
+      api.patch<DraftRegistrationRead, DraftRegistrationPatch>(
+        `/v1/draft-registrations/${draftId}`,
+        body
+      ),
+    onSuccess: (data) => {
+      queryClient.setQueryData(intakeKeys.activeDraft(), data);
+    },
+  });
+}
+
+export function useDiscardDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (draftId: string) =>
+      api.delete<void>(`/v1/draft-registrations/${draftId}`),
+    onSuccess: () => {
+      queryClient.setQueryData(intakeKeys.activeDraft(), null);
     },
   });
 }

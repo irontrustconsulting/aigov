@@ -29,6 +29,8 @@ class RegistrationCreate(BaseModel):
     human_oversight_type_id: uuid.UUID | None = None
     data_category_ids: list[uuid.UUID] = Field(default_factory=list)
     affected_party_ids: list[uuid.UUID] = Field(default_factory=list)
+    # When present, the draft is deleted in the same transaction (D-66/SV-3).
+    draft_id: uuid.UUID | None = None
 
 
 class RegistrationRead(BaseModel):

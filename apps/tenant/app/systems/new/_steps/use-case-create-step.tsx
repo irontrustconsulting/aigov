@@ -20,6 +20,8 @@ export interface UseCaseCreateStepProps {
   hostingModelId: string | null;
   lifecycleStage: SystemLifecycleStage | null;
   purpose: string | null;
+  /** DM-S3: when set, the draft is atomically discarded on successful registration (D-66). */
+  draftId: string | null;
   onCreated: (
     result: RegistrationRead,
     context: {
@@ -46,6 +48,7 @@ export function UseCaseCreateStep({
   hostingModelId,
   lifecycleStage,
   purpose,
+  draftId,
   onCreated,
 }: UseCaseCreateStepProps) {
   const [title, setTitle] = useState("");
@@ -100,6 +103,8 @@ export function UseCaseCreateStep({
         human_oversight_type_id: humanOversightTypeId || null,
         data_category_ids: dataCategoryIds,
         affected_party_ids: affectedPartyIds,
+        // DM-S3: discard draft atomically on success (D-66)
+        draft_id: draftId ?? undefined,
       },
       {
         onSuccess: (data: RegistrationRead) =>

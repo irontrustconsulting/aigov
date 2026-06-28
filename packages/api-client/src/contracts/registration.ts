@@ -23,6 +23,8 @@ export interface RegistrationCreate {
   human_oversight_type_id: string | null;
   data_category_ids: string[];
   affected_party_ids: string[];
+  /** When present, the draft is deleted in the same transaction (D-66/SV-3). */
+  draft_id?: string | null;
 }
 
 /** Response from POST /v1/registrations — full system + use case + classification,

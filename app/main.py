@@ -20,6 +20,7 @@ from app.routers.v1 import (
     catalogue,
     classification_context,
     coverage,
+    draft_registrations,
     evidence,
     export,
     governance_roles,
@@ -53,6 +54,7 @@ def whoami(claims: CognitoClaims = Depends(verify_cognito_token)) -> dict:
 
 app.include_router(reference.router, prefix="/v1")
 app.include_router(registrations.router, prefix="/v1")
+app.include_router(draft_registrations.router, prefix="/v1")
 app.include_router(catalogue.router, prefix="/v1")
 app.include_router(systems.router, prefix="/v1")
 app.include_router(governance_roles.router, prefix="/v1")

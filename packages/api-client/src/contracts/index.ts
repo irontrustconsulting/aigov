@@ -1,4 +1,5 @@
 export * from "./enums";
+export * from "./draft-registration";
 export * from "./reference";
 export * from "./system";
 export * from "./registration";

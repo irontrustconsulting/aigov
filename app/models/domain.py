@@ -267,6 +267,34 @@ class UseCase(Base, TimestampMixin):
 # THREE INHERITING APPROVAL SCOPES (PRD 4.1.4)
 # ---------------------------------------------------------------------------
 
+class DraftRegistration(Base, TimestampMixin):
+    """Transient registration draft — one active draft per (tenant, user).
+
+    Accumulates pre-boundary wizard captures; discarded atomically when
+    POST /v1/registrations commits (D-66). Never an inventory entity (INV-79).
+    RLS isolates by tenant; owner_user_id filter isolates within tenant (DF-D3-4).
+    """
+    __tablename__ = "draft_registration"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "owner_user_id", name="uq_draft_one_per_user"),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("tenant.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("app_user.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    draft_blob: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+
+
+# ---------------------------------------------------------------------------
+# THREE INHERITING APPROVAL SCOPES (PRD 4.1.4)
+# ---------------------------------------------------------------------------
+
 class VendorApproval(Base, TimestampMixin):
     """Tenant's clearance of a vendor (outer gate). One per tenant+vendor."""
     __tablename__ = "vendor_approval"

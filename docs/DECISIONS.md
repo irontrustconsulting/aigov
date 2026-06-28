@@ -649,3 +649,33 @@ The prefill step now calls `GET /v1/catalogue/products/{product_id}/prefill` (no
 **DF-D2-3** · Four use-distinguishing context controls relocated to use-case step (sprint-local)
 `usage_context_id`, `human_oversight_type_id`, `data_category_ids`, `affected_party_ids` are now captured at the use-case-create step (not the intake-capture step). The four vocab hooks and their form controls move from `IntakeCaptureStep` to `UseCaseCreateStep`. The transition arrangement from DF-D1-2 is resolved and closed. `IntakeCaptureFacts` type carries no context fields; `UseCaseCreateStep` holds local state for all four and includes them in the `RegistrationCreate` body.
 ↳ origin: DM-S2 (sprint-local DF) · refs: DF-D1-2 (closed), D-65
+
+**D-66** · Progressive server-side draft staging — persist on each pre-boundary wizard transition, discard atomically on registration
+Abandoning mid-wizard loses all captured data; the user must restart the full 3-step capture on every re-entry. A server-side `draft_registration` row accumulates the wizard's pre-boundary state on each step advance, survives process restarts and browser closes, and is atomically discarded when `POST /v1/registrations` succeeds.
+Design shape: one row per user per tenant (`UniqueConstraint(tenant_id, owner_user_id)` — INV-79); RLS scopes tenant; application layer additionally filters `owner_user_id` (DF-D3-4) so users cannot read or overwrite each other's drafts. `draft_blob` stores only pre-boundary fields (DF-D3-1, DF-D3-2); post-boundary wizard state (resolved tier, use-case-id, etc.) is never written to the blob. The step cursor stored in the blob is clamped to the pre-boundary set `["drill-down", "intake", "prefill", "use-case"]` (DF-D3-3), so a resume never navigates past the atomic boundary. Discard in the same transaction as `POST /v1/registrations` means a forced rollback leaves the draft intact (SV-3) — the user can retry. Front-door: `GET /draft-registrations/active` on page entry; `ResumePrompt` (FE-28) when a draft exists.
+Rejected: client-side `localStorage` draft (lost on device change, cannot survive cookie/storage clears, exposes form data to XSS). Rejected: optimistic-concurrency (`lock_version` on draft) — multi-tab conflict on a draft is low-risk; last-write-wins (DF-D3-6) is sufficient. Rejected: storing full wizard state including post-boundary fields in the blob (those fields are server-derived; re-deriving on resume is cheaper and safer).
+↳ origin: DM-S3 · refs: INV-79, FE-28, SV-3, DF-D3-1..6
+
+**DF-D3-1** · Pre-boundary fields only in `draft_blob` (sprint-local)
+`draft_blob` stores: `isCustom`, `catalogueProductId`, `catalogueProductName`, `name`, `operatorRoleId`, `hostingModelId`, `lifecycleStage`, `purpose`, `step`. These are the fields the user types or selects across drill-down, intake, and prefill steps. No use-case fields (title, useCasePurpose, vocab selections) — those are captured at the atomic boundary step and are not pre-boundary state.
+↳ origin: DM-S3 (sprint-local DF) · refs: D-66
+
+**DF-D3-2** · No PATCH fires on or after REGISTERED (sprint-local)
+`persistTransition` guards `PRE_BOUNDARY_STEPS.includes(nextStep)` — if `nextStep` is not in the pre-boundary set, the function returns immediately. This ensures the draft is never written with post-boundary wizard state (resolved tier, use-case-id, context-gate state). The `REGISTERED` action also sets `draftId: null` in the reducer, so there is no stale `patchDraft` target after registration.
+↳ origin: DM-S3 (sprint-local DF) · refs: D-66, DF-D3-1
+
+**DF-D3-3** · Step clamped to pre-boundary set for `draft_blob.step` (sprint-local)
+`clampStep()` maps any post-boundary step to `"use-case"` before writing to `draft_blob`. This prevents a resume from starting mid-post-boundary (which would skip the atomic-boundary step and produce an inconsistent wizard state). The clamped set is `["drill-down", "intake", "prefill", "use-case"]`.
+↳ origin: DM-S3 (sprint-local DF) · refs: D-66, DF-D3-1
+
+**DF-D3-4** · Application-level `owner_user_id` filter (sprint-local)
+RLS on `draft_registration` scopes rows to the caller's tenant but does not scope to the caller's user. All four draft endpoints additionally filter `WHERE owner_user_id = ctx.user_id`. This is a deliberate layering: RLS provides the tenant boundary (INV-4); the application provides the user boundary (required because `irontrustai_app` is a shared DB role and RLS cannot inspect `ctx.user_id`). Cross-user reads and writes return 404 (not 403) to avoid confirming row existence to other tenant members.
+↳ origin: DM-S3 (sprint-local DF) · refs: D-66, INV-79, INV-4
+
+**DF-D3-5** · SELECT-first get-or-create for `POST /draft-registrations` (sprint-local)
+The wizard calls `POST /draft-registrations` on first advance. If a draft already exists (e.g., the user opened a second tab), the endpoint returns the existing row rather than erroring. The `UniqueConstraint` is a backstop (prevents a concurrent race between the SELECT and INSERT); application-level get-or-create is the primary path. Always returns 200.
+↳ origin: DM-S3 (sprint-local DF) · refs: D-66, INV-79
+
+**DF-D3-6** · Last-write-wins PATCH without `lock_version` (sprint-local)
+`PATCH /draft-registrations/{id}` replaces `draft_blob` wholesale; no `lock_version` or `If-Match` guard. Multi-tab conflict on a draft is an edge case with low consequence: the later tab wins and the user sees their most recent step. Adding optimistic concurrency to a draft (which exists solely to accumulate transient capture) would add friction without meaningful safety. If the user needs a consistent view they navigate back, which refetches.
+↳ origin: DM-S3 (sprint-local DF) · refs: D-66

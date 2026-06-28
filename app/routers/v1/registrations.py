@@ -14,7 +14,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth.context import TenantContext, get_tenant_db, require_governance_role
-from app.models.domain import System, UseCase
+from app.models.domain import DraftRegistration, System, UseCase
 from app.models.intake import (
     AffectedParty,
     DataCategory,
@@ -175,7 +175,20 @@ def register(
     proposal = resolve_classification(system.id, db)
     classification = snapshot_classification(use_case, proposal, db, actor_user_id=ctx.user_id)
 
-    # Step 4 — assemble response; get_tenant_db commits at request end
+    # Step 4 — atomically discard the draft if one was supplied (D-66/SV-3).
+    # Same transaction: a forced rollback leaves the draft intact.
+    if payload.draft_id:
+        draft = db.scalar(
+            select(DraftRegistration).where(
+                DraftRegistration.id == payload.draft_id,
+                DraftRegistration.owner_user_id == ctx.user_id,
+            )
+        )
+        if draft:
+            db.delete(draft)
+            db.flush()
+
+    # Step 5 — assemble response; get_tenant_db commits at request end
     return RegistrationRead(
         system=system_service.get_system_detail(system.id, db),
         use_case=_build_use_case_read(use_case, db),
