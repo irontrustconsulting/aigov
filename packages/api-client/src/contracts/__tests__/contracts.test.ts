@@ -30,7 +30,6 @@ describe("F1 mutation bodies reject forbidden fields at the runtime boundary", (
     const body = {
       system_id: "sys-1",
       title: "Test use case",
-      purpose: null,
       context_blob: {},
       tenant_id: "evil",
     } as UseCaseCreate & { tenant_id: string };

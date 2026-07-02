@@ -53,7 +53,7 @@ The product/category/vendor/subcategory reads are intentionally `anon` — they 
 
 | Method · Path | Gate | Request | Response | If-Match | Notes |
 |---|---|---|---|---|---|
-| `POST /registrations` | `gov:system_owner` | `RegistrationCreate` | `RegistrationRead` (201) | — | Atomic: system + first use case + classification snapshot in one transaction. `RegistrationCreate` system-stable fields: `name`, `is_custom`, `catalogue_product_id`, `operator_role_id`, `hosting_model_id`, `lifecycle_stage`, `owner_user_id`, `purpose`. Use-case fields: `title`, `use_case_purpose`, `context_blob`, `usage_context_id`, `human_oversight_type_id`, `data_category_ids`, `affected_party_ids`. **DM-S3:** optional `draft_id: uuid | null` — when present, the matching `draft_registration` row (owner-filtered) is deleted atomically in the same transaction (SV-3/D-66). Response `RegistrationRead = { system: SystemDetail, use_case: UseCaseRead, classification: ClassificationRead }`. INV-78: the only route that constructs a System. D-65. |
+| `POST /registrations` | `gov:system_owner` | `RegistrationCreate` | `RegistrationRead` (201) | — | Atomic: system + first use case + classification snapshot in one transaction. `RegistrationCreate` system-stable fields: `name`, `is_custom`, `catalogue_product_id`, `operator_role_id`, `hosting_model_id`, `lifecycle_stage`, `owner_user_id`, `purpose`. Use-case fields: `title`, `intended_use_category_id` (FK `product_category`, nullable — replaces `use_case_purpose` dropped DM-S4b), `context_blob`, `usage_context_id`, `human_oversight_type_id`, `data_category_ids`, `affected_party_ids`. **DM-S3:** optional `draft_id: uuid | null` — when present, the matching `draft_registration` row is deleted atomically (SV-3/D-66). **DM-S4b:** classification branches on `ClassificationDisposition` (D-71, D-73, INV-82): `REQUIRES_CONTEXT` → gate-2 seam snapshot (`off_label=True` when product present but no declared category — D-72); `AUTHORITATIVE` → `APPROVED` + stamps `eu_tier`; `DOWN_SELECTION` → `PENDING_REVIEW`, `eu_tier` NOT stamped. Response `RegistrationRead = { system: SystemDetail, use_case: UseCaseRead, classification: ClassificationRead }`. INV-78: the only route that constructs a System. D-65. |
 
 ### Draft registrations — `app/routers/v1/draft_registrations.py` (DM-S3)
 
@@ -71,6 +71,7 @@ One active draft per user per tenant (INV-79). RLS scopes to tenant; application
 | Method · Path | Gate | Request | Response | If-Match | Notes |
 |---|---|---|---|---|---|
 | `GET /catalogue/products/{product_id}/prefill` | `member` | — | `PrefillResponse` | — | By-product prefill before system exists (DF-D2-2). `facts: []` when product has no facts. Shared resolver with `GET /systems/{id}/prefill`. No audit. |
+| `GET /catalogue/products/{product_id}/categories` | `member` | — | `ProductCategoryRead[]` | — | **DM-S4b.** Returns the `ProductCategoryMembership` rows for this product joined to `ProductCategory`; empty list if none. Used by the wizard use-case step to build the intended-use category selector (FE-31, D-71). No audit. |
 
 ### Systems — `app/routers/v1/systems.py`
 
@@ -91,7 +92,7 @@ One active draft per user per tenant (INV-79). RLS scopes to tenant; application
 | `GET /use-cases/{use_case_id}` | `member` | — | `UseCaseWithClassification` | — | 404 if no current classification snapshot exists. `UseCaseRead` includes the four resolved context fields (DM-S1). |
 | `POST /use-cases/{use_case_id}/classify/override` | `gov:system_owner` | `OverrideRequest` | `UseCaseWithClassification` | — | 422 on unknown `subcategory_code` or `tier` ≠ `subcategory.tier`. New current snapshot; prior preserved `is_current=False`. |
 
-`ClassificationRead` (the gate-1 projection, embedded in both responses above) carries `requires_context`, never `status`.
+`ClassificationRead` (the gate-1 projection, embedded in both responses above) carries `requires_context` and `status` (DM-S4b, WI-6b). `status` is needed by the wizard to branch `DOWN_SELECTION` → whose-court without a separate lifecycle call (D-73). **Note:** `ClassificationRead` does NOT include `created_at`/`updated_at`; pass a `ClassificationStatusRead` to components that need those fields.
 
 ### Classification context gate — gate 2 — `app/routers/v1/classification_context.py`
 

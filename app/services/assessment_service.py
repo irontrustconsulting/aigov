@@ -475,14 +475,6 @@ def create_aiia(use_case_id: uuid.UUID, ctx: TenantContext, db: Session) -> Asse
         snapshot_facts: list[tuple[str, str, str]] = [
             (f"System name: {system.name}", system.name, "system.name"),
         ]
-        if use_case.purpose:
-            snapshot_facts.append(
-                (
-                    f"Use case purpose: {use_case.purpose}",
-                    use_case.purpose,
-                    "use_case.purpose",
-                )
-            )
         _fk_dimensions = (
             (
                 "Operator role",

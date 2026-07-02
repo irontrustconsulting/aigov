@@ -14,6 +14,7 @@ function classification(overrides: Partial<ClassificationRead>): ClassificationR
     basis_subcategory_code: null,
     basis_legal_ref: null,
     requires_context: false,
+    status: "approved",
     ...overrides,
   };
 }
@@ -41,7 +42,6 @@ function registrationResult(classificationOverrides: Partial<ClassificationRead>
       tenant_id: "t1",
       system_id: "sys-1",
       title: "x",
-      purpose: null,
       state: "intake",
       eu_tier: "unclassified",
       usage_context: null,
@@ -71,21 +71,27 @@ describe("wizardReducer REGISTERED branch precedence (sprint § branch order)", 
     expect(next.step).toBe("context-gate");
   });
 
-  test("tier=prohibited (requires_context false) routes to the terminal hard-stop", () => {
-    const action = registrationAction({ requires_context: false, tier: "prohibited" });
+  test("tier=prohibited (requires_context false, status=approved) routes to the terminal hard-stop", () => {
+    const action = registrationAction({ requires_context: false, tier: "prohibited", status: "approved" });
     const next = wizardReducer(initialWizardState, action);
     expect(next.step).toBe("terminal-prohibited");
   });
 
-  test("a concrete, non-prohibited tier routes to the resolved-tier step (override ladder), not straight to whose-court", () => {
-    const action = registrationAction({ requires_context: false, tier: "high_risk" });
+  test("DOWN_SELECTION (status=pending_review, non-prohibited) routes to whose-court for reviewer sign-off (D-73)", () => {
+    const action = registrationAction({ requires_context: false, tier: "high_risk", status: "pending_review" });
+    const next = wizardReducer(initialWizardState, action);
+    expect(next.step).toBe("whose-court");
+  });
+
+  test("AUTHORITATIVE (status=approved, non-prohibited) routes to the resolved-tier step", () => {
+    const action = registrationAction({ requires_context: false, tier: "high_risk", status: "approved" });
     const next = wizardReducer(initialWizardState, action);
     expect(next.step).toBe("use-case-resolved");
     expect(next.useCaseId).toBe("uc-1");
   });
 
   test("PROCEED_TO_WHOSE_COURT advances from the resolved-tier step to whose-court", () => {
-    const resolved = wizardReducer(initialWizardState, registrationAction({ tier: "high_risk" }));
+    const resolved = wizardReducer(initialWizardState, registrationAction({ tier: "high_risk", status: "approved" }));
     const next = wizardReducer(resolved, { type: "PROCEED_TO_WHOSE_COURT" });
     expect(next.step).toBe("whose-court");
   });

@@ -49,7 +49,6 @@ const useCaseDetail: UseCaseWithClassification = {
     tenant_id: "t1",
     system_id: "sys-1",
     title: "Screen candidate CVs",
-    purpose: "Automated screening",
     state: "under_assessment",
     eu_tier: "high_risk",
   },
@@ -65,6 +64,7 @@ const useCaseDetail: UseCaseWithClassification = {
     basis_subcategory_code: null,
     basis_legal_ref: null,
     requires_context: false,
+    status: "approved",
   },
 };
 

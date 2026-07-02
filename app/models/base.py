@@ -173,6 +173,18 @@ class ClassificationStatus(str, enum.Enum):
     NEEDS_REFRESH = "needs_refresh"            # reserved for workflow track
 
 
+class ClassificationDisposition(str, enum.Enum):
+    """How gate-1 resolved the governing subcategory (INV-82, D-71).
+
+    AUTHORITATIVE  — declared category is the product-wide highest; or no
+                     declaration (null path, backward-compatible).
+    DOWN_SELECTION — declared category is below the product-wide highest;
+                     reviewer sign-off required before eu_tier is stamped.
+    """
+    AUTHORITATIVE = "authoritative"
+    DOWN_SELECTION = "down_selection"
+
+
 class ReviewDecision(str, enum.Enum):
     """An AssessmentReview's decision (Sprint 6a, design doc §3.2)."""
     APPROVED = "approved"

@@ -22,7 +22,7 @@ const REGISTRATION_RESPONSE = {
     created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z",
   },
   use_case: {
-    id: "uc-1", tenant_id: "t1", system_id: "sys-1", title: "x", purpose: null,
+    id: "uc-1", tenant_id: "t1", system_id: "sys-1", title: "x",
     state: "intake", eu_tier: "unclassified", usage_context: null,
     human_oversight_type: null, data_categories: [], affected_parties: [],
   },
@@ -30,12 +30,12 @@ const REGISTRATION_RESPONSE = {
     id: "c1", use_case_id: "uc-1", tier: "requires_context",
     rationale: "no product mapping", version: 1, is_current: true,
     overridden: false, proposed_tier: null, basis_subcategory_code: null,
-    basis_legal_ref: null, requires_context: true,
+    basis_legal_ref: null, requires_context: true, status: "pending_review",
   },
 };
 
 test("a successful register hands the full RegistrationRead up via onCreated", async () => {
-  // GET vocab requests return [] ; POST /registrations returns REGISTRATION_RESPONSE
+  // GET vocab/category requests return []; POST /registrations returns REGISTRATION_RESPONSE
   global.fetch = jest.fn().mockImplementation((_url: RequestInfo | URL, init?: RequestInit) => {
     if ((init?.method ?? "GET").toUpperCase() === "POST") {
       return Promise.resolve({
@@ -57,6 +57,7 @@ test("a successful register hands the full RegistrationRead up via onCreated", a
       hostingModelId={null}
       lifecycleStage={null}
       purpose={null}
+      draftId={null}
       onCreated={onCreated}
     />,
     { wrapper },

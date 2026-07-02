@@ -14,10 +14,9 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth.context import TenantContext, get_tenant_db, require_governance_role
+from app.models.base import ClassificationDisposition, ClassificationStatus
 from app.models.domain import DraftRegistration, System, UseCase
 from app.models.intake import (
-    AffectedParty,
-    DataCategory,
     HumanOversightType,
     UsageContext,
     UseCaseAffectedParty,
@@ -38,7 +37,7 @@ router = APIRouter(prefix="/registrations", tags=["registrations"])
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers (mirrors of use_cases.py private helpers)
+# Internal helpers
 # ---------------------------------------------------------------------------
 
 def _replace_data_categories(
@@ -93,7 +92,6 @@ def _build_use_case_read(use_case: UseCase, db: Session) -> UseCaseRead:
         tenant_id=use_case.tenant_id,
         system_id=use_case.system_id,
         title=use_case.title,
-        purpose=use_case.purpose,
         state=use_case.state,
         eu_tier=use_case.eu_tier,
         usage_context=VocabItemOut(id=uc_vocab.id, code=uc_vocab.code, label=uc_vocab.label) if uc_vocab else None,
@@ -138,6 +136,13 @@ def register(
     A forced failure after any flush leaves no orphan rows — get_tenant_db
     rolls back on exception before committing. INV-78: the only route that
     constructs a System.
+
+    Classification branches on disposition (D-71, D-73, INV-82):
+      REQUIRES_CONTEXT → gate-2 seam snapshot; off_label=True when product
+                         present but no membership category declared (D-72).
+      AUTHORITATIVE    → status=APPROVED, eu_tier stamped immediately.
+      DOWN_SELECTION   → status=PENDING_REVIEW, eu_tier NOT stamped;
+                         reviewer sign-off stamps it (D-73).
     """
     # Step 1 — create system (flushes internally; no commit)
     system_payload = SystemCreate(
@@ -159,7 +164,7 @@ def register(
         tenant_id=ctx.tenant_id,
         system_id=system.id,
         title=payload.title,
-        purpose=payload.use_case_purpose,
+        product_category_id=payload.intended_use_category_id,
         context_blob=payload.context_blob,
         usage_context_id=payload.usage_context_id,
         human_oversight_type_id=payload.human_oversight_type_id,
@@ -171,9 +176,37 @@ def register(
     _replace_affected_parties(db, use_case.id, ctx.tenant_id, payload.affected_party_ids)
     db.flush()
 
-    # Step 3 — classify (resolve + snapshot; advance_use_case fires inside snapshot)
-    proposal = resolve_classification(system.id, db)
-    classification = snapshot_classification(use_case, proposal, db, actor_user_id=ctx.user_id)
+    # Step 3 — classify and branch on disposition (D-71, D-73, INV-82)
+    proposal = resolve_classification(system.id, use_case.id, db)
+
+    if proposal.requires_context:
+        # Gate-2 seam: "Other" = product present + no declared membership (D-72).
+        off_label = (
+            payload.catalogue_product_id is not None
+            and payload.intended_use_category_id is None
+        )
+        classification = snapshot_classification(
+            use_case, proposal, db,
+            actor_user_id=ctx.user_id,
+            status=ClassificationStatus.PENDING_REVIEW,
+            stamp_eu_tier=True,
+            off_label=off_label,
+        )
+    elif proposal.disposition == ClassificationDisposition.AUTHORITATIVE:
+        classification = snapshot_classification(
+            use_case, proposal, db,
+            actor_user_id=ctx.user_id,
+            status=ClassificationStatus.APPROVED,
+            stamp_eu_tier=True,
+        )
+    else:
+        # DOWN_SELECTION: reviewer sign-off stamps eu_tier (D-73).
+        classification = snapshot_classification(
+            use_case, proposal, db,
+            actor_user_id=ctx.user_id,
+            status=ClassificationStatus.PENDING_REVIEW,
+            stamp_eu_tier=False,
+        )
 
     # Step 4 — atomically discard the draft if one was supplied (D-66/SV-3).
     # Same transaction: a forced rollback leaves the draft intact.

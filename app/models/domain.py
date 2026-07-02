@@ -212,7 +212,11 @@ class UseCase(Base, TimestampMixin):
         nullable=False, index=True,
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    purpose: Mapped[str | None] = mapped_column(Text)
+    product_category_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("product_category.id", ondelete="SET NULL"),
+        nullable=True, index=True,
+    )
 
     # Lifecycle state (PRD 4.1.1). Transitions recorded in LifecycleTransition.
     state: Mapped[LifecycleState] = mapped_column(

@@ -18,6 +18,7 @@ export const intakeKeys = {
   activeDraft: () => ["active-draft"] as const,
   draft: (id: string) => ["draft", id] as const,
   prefill: (systemId: string) => ["system-prefill", systemId] as const,
+  productMemberships: (productId: string) => ["product-memberships", productId] as const,
   classificationContext: (useCaseId: string) => ["classification-context", useCaseId] as const,
   me: () => ["me"] as const,
 } as const;

@@ -57,6 +57,7 @@ class ClassificationHistoryEntryRead(BaseModel):
     basis_legal_ref: str | None
     status: ClassificationStatus
     version: int
+    off_label: bool = False
     # Not a row column — sourced from the classification.signed_off audit
     # event (§4.2 item 2).
     signed_off_by: ActorRef | None

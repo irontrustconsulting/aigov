@@ -61,6 +61,8 @@ export interface WizardState {
   purpose: string | null;
   // Basis captions for seeded intake fields (DM-S4a, FE-30); null until SEED_INTAKE fires.
   intakePrefillBases: IntakePrefillBases | null;
+  // Intended-use category captured at use-case step (FE-31, D-71)
+  intendedUseCategoryId: string | null;
   // Use-distinguishing context captured at use-case step (closes DF-D1-2)
   usageContextId: string | null;
   humanOversightTypeId: string | null;
@@ -85,6 +87,7 @@ export const initialWizardState: WizardState = {
   lifecycleStage: null,
   purpose: null,
   intakePrefillBases: null,
+  intendedUseCategoryId: null,
   usageContextId: null,
   humanOversightTypeId: null,
   dataCategoryIds: [],
@@ -190,6 +193,8 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
       };
       if (classification.requires_context) return { ...base, step: "context-gate" };
       if (classification.tier === "prohibited") return { ...base, step: "terminal-prohibited" };
+      // DOWN_SELECTION: reviewer must sign off before use case is resolved (D-73).
+      if (classification.status === "pending_review") return { ...base, step: "whose-court" };
       return { ...base, step: "use-case-resolved" };
     }
 
@@ -223,6 +228,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         // intakePrefillBases starts null; SEED_INTAKE re-fires but the
         // empty-guard means draft-restored values are never overwritten.
         intakePrefillBases: null,
+        intendedUseCategoryId: blob.intendedUseCategoryId ?? null,
         step: clampStep((blob.step as WizardStep | undefined) ?? "drill-down"),
         draftId: action.draft.id,
       };

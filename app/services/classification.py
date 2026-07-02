@@ -12,31 +12,35 @@ Two concerns, strictly separated:
                             use case's eu_tier, and stages an AuditEvent.
                             The caller owns the transaction.
 
-Resolution algorithm
---------------------
-1. The use case's system must have a catalogue_product_id.
-   No product → REQUIRES_CONTEXT.
-2. Traverse: product → product_category_membership → product_category_eu_mapping
-   (is_primary=True) → eu_ai_act_subcategory.
-3. No primary mappings across any of the product's categories → REQUIRES_CONTEXT.
-4. One or more primary mappings → pick the one with the highest tier.
-   Tier order (highest first): PROHIBITED > HIGH > LIMITED > MINIMAL.
+Resolution algorithm (DM-S4b, INV-82, D-71)
+--------------------------------------------
+When use_case.product_category_id is set (declared intended-use category):
+  1. Find the declared category's primary EU AI Act mapping → governing tier.
+     No primary mapping for the declared category → REQUIRES_CONTEXT.
+  2. Also compute the product-wide-highest tier (retained query).
+  3. disposition = AUTHORITATIVE if governing tier == product-wide-highest.
+     disposition = DOWN_SELECTION  if governing tier  < product-wide-highest.
+
+When use_case.product_category_id is null (no declaration; POST /use-cases
+and legacy paths):
+  - Product-wide-highest path unchanged; disposition = AUTHORITATIVE.
+  - No product or no primary mappings → REQUIRES_CONTEXT.
 
 REQUIRES_CONTEXT is an explicit terminal state, not an error. It is the seam
-where the future context-question wizard will attach.
+where the context-question wizard attaches.
 """
 
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models.assessment import Classification
-from app.models.base import EUAIActTier
+from app.models.base import ClassificationDisposition, ClassificationStatus, EUAIActTier
 from app.models.domain import System, UseCase
 from app.models.lifecycle import AuditEvent
 from app.models.taxonomy import (
@@ -55,6 +59,64 @@ _TIER_ORDER: list[EUAIActTier] = [
 ]
 
 
+def _tier_rank(tier: EUAIActTier) -> int:
+    try:
+        return _TIER_ORDER.index(tier)
+    except ValueError:
+        return len(_TIER_ORDER)
+
+
+def _primary_mappings_for_product(product_id: uuid.UUID, db: Session):
+    """Return all primary EU AI Act subcategory rows for a product."""
+    return db.execute(
+        select(
+            EUAIActSubcategory.code,
+            EUAIActSubcategory.name,
+            EUAIActSubcategory.tier,
+            EUAIActSubcategory.legal_ref,
+        )
+        .join(
+            ProductCategoryEUMapping,
+            ProductCategoryEUMapping.eu_ai_act_subcategory_id == EUAIActSubcategory.id,
+        )
+        .join(
+            ProductCategoryMembership,
+            ProductCategoryMembership.product_category_id
+            == ProductCategoryEUMapping.product_category_id,
+        )
+        .where(
+            ProductCategoryMembership.catalogue_product_id == product_id,
+            ProductCategoryEUMapping.is_primary.is_(True),
+        )
+    ).all()
+
+
+def _primary_mappings_for_category(product_id: uuid.UUID, category_id: uuid.UUID, db: Session):
+    """Return primary EU AI Act subcategory rows for one specific product category."""
+    return db.execute(
+        select(
+            EUAIActSubcategory.code,
+            EUAIActSubcategory.name,
+            EUAIActSubcategory.tier,
+            EUAIActSubcategory.legal_ref,
+        )
+        .join(
+            ProductCategoryEUMapping,
+            ProductCategoryEUMapping.eu_ai_act_subcategory_id == EUAIActSubcategory.id,
+        )
+        .join(
+            ProductCategoryMembership,
+            ProductCategoryMembership.product_category_id
+            == ProductCategoryEUMapping.product_category_id,
+        )
+        .where(
+            ProductCategoryMembership.catalogue_product_id == product_id,
+            ProductCategoryMembership.product_category_id == category_id,
+            ProductCategoryEUMapping.is_primary.is_(True),
+        )
+    ).all()
+
+
 @dataclass
 class ClassificationProposal:
     """Result of resolve_classification. Immutable; writes nothing."""
@@ -63,20 +125,28 @@ class ClassificationProposal:
     subcategory_name: str | None
     legal_ref: str | None
     rationale: str
+    disposition: ClassificationDisposition = field(default=ClassificationDisposition.AUTHORITATIVE)
 
     @property
     def requires_context(self) -> bool:
         return self.tier == EUAIActTier.REQUIRES_CONTEXT
 
 
-def resolve_classification(system_id: uuid.UUID, db: Session) -> ClassificationProposal:
-    """Derive the proposed EU AI Act tier for a use case by traversing the
-    seeded reference bridge. Pure read; does not write to the DB.
+def resolve_classification(
+    system_id: uuid.UUID,
+    use_case_id: uuid.UUID | None,
+    db: Session,
+) -> ClassificationProposal:
+    """Derive the proposed EU AI Act tier for a use case.
 
-    The db session may be the RLS-scoped tenant session (the system row is
-    tenant-scoped) or a reference session — the reference tables are global.
-    The global tables (product_category_membership, product_category_eu_mapping,
-    eu_ai_act_subcategory) carry no RLS and are readable from either session.
+    Pure read; does not write to the DB. Declared-category-aware (D-71,
+    INV-82): when use_case.product_category_id is set, the governing
+    subcategory comes from that category's primary mapping. The null path
+    falls through to the product-wide-highest algorithm (backward-compatible
+    with POST /use-cases and legacy rows).
+
+    use_case_id may be None (legacy / direct-service callers) — in that case
+    the null declaration path is taken (product-wide-highest, AUTHORITATIVE).
     """
     system = db.get(System, system_id)
     if system is None:
@@ -94,29 +164,59 @@ def resolve_classification(system_id: uuid.UUID, db: Session) -> ClassificationP
             ),
         )
 
-    # Fetch all PRIMARY mappings across the product's categories in one query.
-    rows = db.execute(
-        select(
-            EUAIActSubcategory.code,
-            EUAIActSubcategory.name,
-            EUAIActSubcategory.tier,
-            EUAIActSubcategory.legal_ref,
+    declared_category_id: uuid.UUID | None = None
+    if use_case_id is not None:
+        use_case = db.get(UseCase, use_case_id)
+        if use_case is not None:
+            declared_category_id = use_case.product_category_id
+
+    if declared_category_id is not None:
+        # Declared path: governing = declared category's primary mapping.
+        declared_rows = _primary_mappings_for_category(
+            system.catalogue_product_id, declared_category_id, db
         )
-        .join(
-            ProductCategoryEUMapping,
-            ProductCategoryEUMapping.eu_ai_act_subcategory_id == EUAIActSubcategory.id,
+        if not declared_rows:
+            return ClassificationProposal(
+                tier=EUAIActTier.REQUIRES_CONTEXT,
+                subcategory_code=None,
+                subcategory_name=None,
+                legal_ref=None,
+                rationale=(
+                    "The declared intended-use category has no primary EU AI Act mapping. "
+                    "Context questions are required to determine the applicable tier."
+                ),
+            )
+
+        governing = min(declared_rows, key=lambda r: _tier_rank(EUAIActTier(r.tier)))
+        governing_tier = EUAIActTier(governing.tier)
+
+        # Also compute product-wide-highest to determine disposition.
+        all_rows = _primary_mappings_for_product(system.catalogue_product_id, db)
+        product_best = min(all_rows, key=lambda r: _tier_rank(EUAIActTier(r.tier)))
+        product_highest = EUAIActTier(product_best.tier)
+
+        disposition = (
+            ClassificationDisposition.AUTHORITATIVE
+            if _tier_rank(governing_tier) <= _tier_rank(product_highest)
+            else ClassificationDisposition.DOWN_SELECTION
         )
-        .join(
-            ProductCategoryMembership,
-            ProductCategoryMembership.product_category_id
-            == ProductCategoryEUMapping.product_category_id,
+
+        rationale = (
+            f"Governing subcategory derived from declared intended-use category: "
+            f"{governing.code} ({governing.legal_ref or 'no legal ref'}). "
+            f"Disposition: {disposition.value}."
         )
-        .where(
-            ProductCategoryMembership.catalogue_product_id
-            == system.catalogue_product_id,
-            ProductCategoryEUMapping.is_primary.is_(True),
+        return ClassificationProposal(
+            tier=governing_tier,
+            subcategory_code=governing.code,
+            subcategory_name=governing.name,
+            legal_ref=governing.legal_ref,
+            rationale=rationale,
+            disposition=disposition,
         )
-    ).all()
+
+    # Null path: product-wide-highest (backward-compatible with POST /use-cases).
+    rows = _primary_mappings_for_product(system.catalogue_product_id, db)
 
     if not rows:
         return ClassificationProposal(
@@ -130,18 +230,9 @@ def resolve_classification(system_id: uuid.UUID, db: Session) -> ClassificationP
             ),
         )
 
-    # Pick the highest-tier row. Rows not in _TIER_ORDER (shouldn't happen
-    # with clean seed data, but be safe) sort below MINIMAL.
-    def _tier_rank(row) -> int:
-        try:
-            return _TIER_ORDER.index(EUAIActTier(row.tier))
-        except ValueError:
-            return len(_TIER_ORDER)
-
-    best = min(rows, key=_tier_rank)
+    best = min(rows, key=lambda r: _tier_rank(EUAIActTier(r.tier)))
     tier = EUAIActTier(best.tier)
 
-    # Build a human-readable rationale.
     all_codes = ", ".join(r.code for r in rows)
     rationale = (
         f"Derived from product category primary mappings: [{all_codes}]. "
@@ -160,6 +251,7 @@ def resolve_classification(system_id: uuid.UUID, db: Session) -> ClassificationP
         subcategory_name=best.name,
         legal_ref=best.legal_ref,
         rationale=rationale,
+        disposition=ClassificationDisposition.AUTHORITATIVE,
     )
 
 
@@ -172,14 +264,18 @@ def snapshot_classification(
     overridden: bool = False,
     proposed_tier: EUAIActTier | None = None,
     justification: str | None = None,
+    status: ClassificationStatus = ClassificationStatus.PENDING_REVIEW,
+    stamp_eu_tier: bool = True,
+    off_label: bool = False,
 ) -> Classification:
     """Persist a Classification snapshot. Unsets any prior is_current row first.
 
     Respects uq_current_classification: at most one is_current=True row per
     use_case. Always inserts a new row — never mutates an existing one.
 
-    Updates use_case.eu_tier and use_case.eu_ai_act_subcategory_id to keep
-    the use case's own current tier in sync with the latest snapshot.
+    When stamp_eu_tier=True (default), updates use_case.eu_tier and
+    use_case.eu_ai_act_subcategory_id. When False (DOWN_SELECTION path),
+    eu_tier is left unstamped until reviewer sign-off (D-73).
     """
     # Unset prior current snapshot (if any).
     db.execute(
@@ -219,12 +315,14 @@ def snapshot_classification(
         proposed_tier=proposed_tier,
         basis_subcategory_code=proposal.subcategory_code,
         basis_legal_ref=proposal.legal_ref,
+        status=status,
+        off_label=off_label,
     )
     db.add(classification)
 
-    # Keep the use case's denormalised tier current.
-    use_case.eu_tier = proposal.tier
-    db.add(use_case)
+    if stamp_eu_tier:
+        use_case.eu_tier = proposal.tier
+        db.add(use_case)
 
     db.flush()
 
@@ -233,6 +331,8 @@ def snapshot_classification(
         "basis_subcategory_code": proposal.subcategory_code,
         "basis_legal_ref": proposal.legal_ref,
         "version": version,
+        "disposition": proposal.disposition.value,
+        "off_label": off_label,
     }
     if overridden:
         detail["proposed_tier"] = proposed_tier.value if proposed_tier else None

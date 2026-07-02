@@ -23,7 +23,7 @@ class RegistrationCreate(BaseModel):
     purpose: str | None = None
     # ---- first use case ----
     title: str = Field(min_length=1, max_length=255)
-    use_case_purpose: str | None = None
+    intended_use_category_id: uuid.UUID | None = None
     context_blob: dict = Field(default_factory=dict)
     usage_context_id: uuid.UUID | None = None
     human_oversight_type_id: uuid.UUID | None = None

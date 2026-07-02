@@ -119,6 +119,19 @@ export function useAffectedParties() {
 }
 
 // ---------------------------------------------------------------------------
+// Intended-use category memberships for a product (WI-3, FE-31)
+// ---------------------------------------------------------------------------
+
+export function useProductCategoryMemberships(catalogueProductId: string | null | undefined) {
+  return useQuery({
+    queryKey: intakeKeys.productMemberships(catalogueProductId ?? ""),
+    queryFn: () =>
+      api.get<ProductCategoryRead[]>(`/v1/catalogue/products/${catalogueProductId}/categories`),
+    enabled: Boolean(catalogueProductId),
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Prefill (WI-6)
 // ---------------------------------------------------------------------------
 

@@ -17,7 +17,7 @@ export interface RegistrationCreate {
   purpose: string | null;
   // first use case
   title: string;
-  use_case_purpose: string | null;
+  intended_use_category_id: string | null;
   context_blob: Record<string, unknown>;
   usage_context_id: string | null;
   human_oversight_type_id: string | null;

@@ -46,6 +46,7 @@ const classification: ClassificationRead = {
   basis_subcategory_code: "SUB-1",
   basis_legal_ref: "Art. 6(2)",
   requires_context: false,
+  status: "approved",
 };
 
 describe("WI-11 axe pass — wizard screens", () => {
@@ -115,6 +116,7 @@ describe("WI-11 axe pass — wizard screens", () => {
         hostingModelId={null}
         lifecycleStage={null}
         purpose={null}
+        draftId={null}
         onCreated={jest.fn()}
       />,
       { wrapper }

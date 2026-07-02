@@ -128,11 +128,10 @@ def _make_system(
 
 def _make_use_case(
     db: Session, tenant: Tenant, system: System,
-    purpose: str | None = "Test purpose",
 ) -> UseCase:
     uc = UseCase(
         id=uuid.uuid4(), tenant_id=tenant.id, system_id=system.id,
-        title="Test use case", purpose=purpose, context_blob={},
+        title="Test use case", context_blob={},
     )
     db.add(uc)
     db.flush()

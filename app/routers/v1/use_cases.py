@@ -102,7 +102,6 @@ def _build_use_case_read(use_case: UseCase, db: Session) -> UseCaseRead:
         tenant_id=use_case.tenant_id,
         system_id=use_case.system_id,
         title=use_case.title,
-        purpose=use_case.purpose,
         state=use_case.state,
         eu_tier=use_case.eu_tier,
         usage_context=VocabItemOut(id=uc_vocab.id, code=uc_vocab.code, label=uc_vocab.label) if uc_vocab else None,
@@ -173,7 +172,6 @@ def register_use_case(
         tenant_id=ctx.tenant_id,
         system_id=payload.system_id,
         title=payload.title,
-        purpose=payload.purpose,
         context_blob=payload.context_blob,
         usage_context_id=payload.usage_context_id,
         human_oversight_type_id=payload.human_oversight_type_id,
@@ -185,7 +183,7 @@ def register_use_case(
     _replace_use_case_affected_parties(db, use_case.id, ctx.tenant_id, payload.affected_party_ids)
     db.flush()
 
-    proposal = resolve_classification(payload.system_id, db)
+    proposal = resolve_classification(payload.system_id, use_case.id, db)
     classification = snapshot_classification(
         use_case,
         proposal,

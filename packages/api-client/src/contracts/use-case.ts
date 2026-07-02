@@ -6,7 +6,6 @@ import type { AffectedPartyOut, DataCategoryOut, VocabItemOut } from "./referenc
 export interface UseCaseCreate {
   system_id: string;
   title: string;
-  purpose: string | null;
   context_blob: Record<string, unknown>;
   /** Use-distinguishing context (D-63/INV-76) — relocated from system in DM-S1. */
   usage_context_id: string | null;
@@ -20,7 +19,6 @@ export interface UseCaseRead {
   tenant_id: string;
   system_id: string;
   title: string;
-  purpose: string | null;
   state: LifecycleState;
   /** Unratified on the context path (C-2/V-2) — tier/basis display reads
    * the Classification snapshot, never this field. */

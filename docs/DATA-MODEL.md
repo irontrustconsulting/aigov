@@ -37,7 +37,7 @@
 | Table | Plane | Notes |
 |---|---|---|
 | `system` | TENANT (RLS) | Check constraint `ck_system_custom_no_catalogue` (is_custom + catalogue FK rejected). Deployment-stable fields only: `operator_role_id`, `hosting_model_id`, `catalogue_product_id`, `lifecycle_stage`. `usage_context_id` and `human_oversight_type_id` removed in DM-S1 (D-63). |
-| `use_case` | TENANT (RLS) | Carries `state` (`LifecycleState`) and `eu_tier`. `state` written only by `apply_transition` (INV-24). **DM-S1:** gains `usage_context_id` (FK `usage_context`, SET NULL) and `human_oversight_type_id` (FK `human_oversight_type`, SET NULL) — use-distinguishing context (D-63). |
+| `use_case` | TENANT (RLS) | Carries `state` (`LifecycleState`) and `eu_tier`. `state` written only by `apply_transition` (INV-24). **DM-S1:** gains `usage_context_id` (FK `usage_context`, SET NULL) and `human_oversight_type_id` (FK `human_oversight_type`, SET NULL) — use-distinguishing context (D-63). **DM-S4b:** `purpose text` column **dropped** (migration `d5c81f9fd50d`); `product_category_id uuid NULL FK(product_category, ON DELETE SET NULL)` added + index — the declared membership category for this use case (INV-82, D-71). |
 | `use_case_data_category` | TENANT (RLS) | **DM-S1 addition.** Link `use_case ↔ data_category`. `tenant_id` FK; RLS policy `tenant_id = current_setting('app.current_tenant', true)::uuid`; unique `(use_case_id, data_category_id)`. Isolation via RLS (INV-77). |
 | `use_case_affected_party` | TENANT (RLS) | **DM-S1 addition.** Link `use_case ↔ affected_party`. Same shape and RLS policy as `use_case_data_category` (INV-77). |
 
@@ -55,7 +55,7 @@
 ### Classification & decision tree
 | Table | Plane | Notes |
 |---|---|---|
-| `classification` | TENANT (RLS) — `assessment.py` (confirmed) | Versioned snapshots (`version`/`is_current`); status = `classification_status`. Partial unique `uq_current_classification`. |
+| `classification` | TENANT (RLS) — `assessment.py` (confirmed) | Versioned snapshots (`version`/`is_current`); status = `classification_status`. Partial unique `uq_current_classification`. **DM-S4b:** `off_label boolean NOT NULL DEFAULT false` added — True when `catalogue_product_id` is present but no `intended_use_category_id` was declared at registration time (D-72). |
 | `decision_tree` | GLOBAL | Versioned context-question gate; content-hashed, fails loud on frozen-version mutation. *(file: verify)* |
 | `decision_tree_question` | GLOBAL | *(file: verify)* |
 | `decision_tree_option` | GLOBAL | *(file: verify)* |
@@ -149,6 +149,7 @@ Authoritative inventory from live `pg_enum` — 17 types, all labels **UPPERCASE
 | `approval_status` | NOT_STARTED, UNDER_REVIEW, APPROVED, REJECTED, EXPIRED | `vendor_approval`, `product_approval` |
 | `assessment_status` | DRAFT, IN_REVIEW, APPROVED, NEEDS_REFRESH | `assessment` (WKF-3) |
 | `assessment_type` | AIIA, FRIA, DPIA, MODEL_RISK | `assessment.type`, `assessment_section_template.type` |
+| `classification_disposition` | AUTHORITATIVE, DOWN_SELECTION | Python enum only (`app/models/base.py`; not a Postgres column). Computed by `resolve_classification`; recorded in `AuditEvent.detail["disposition"]`. `AUTHORITATIVE` → declared tier equals product-wide-highest (direct stamp). `DOWN_SELECTION` → declared tier below product-wide-highest (reviewer round-trip — D-73, INV-82). |
 | `classification_status` | PENDING_REVIEW, APPROVED, CHANGES_REQUESTED, NEEDS_REFRESH | `classification` |
 | `coverage_status` | OPEN, PARTIAL, SATISFIED | `assessment_item_control` |
 | `eu_ai_act_tier` | PROHIBITED, HIGH, LIMITED, MINIMAL, UNCLASSIFIED, REQUIRES_CONTEXT | shared: `use_case.eu_tier`, `classification.tier`, `eu_ai_act_subcategory.tier`, `assessment_section_template.tier`. UNCLASSIFIED / REQUIRES_CONTEXT are resolution states beyond the four DOMAIN tiers |

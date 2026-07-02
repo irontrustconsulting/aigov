@@ -81,8 +81,8 @@ describe("intake mutation hooks call only the BFF proxy and never send If-Match"
   test("useRegister invalidates the lifecycle live-state query on success", async () => {
     global.fetch = mockFetchOk({
       system: { id: "sys-1", name: "x", is_custom: true, catalogue_product: null, catalogue_vendor: null, owner_user_id: null, operator_role: null, hosting_model: null, lifecycle_stage: null, purpose: null, use_case_count: 0, use_case_lifecycle_states: [], created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" },
-      use_case: { id: "uc-1", tenant_id: "t1", system_id: "sys-1", title: "t", purpose: null, state: "intake", eu_tier: "unclassified", usage_context: null, human_oversight_type: null, data_categories: [], affected_parties: [] },
-      classification: { id: "c1", use_case_id: "uc-1", tier: "minimal_risk", rationale: "r", version: 1, is_current: true, overridden: false, proposed_tier: null, basis_subcategory_code: null, basis_legal_ref: null, requires_context: false },
+      use_case: { id: "uc-1", tenant_id: "t1", system_id: "sys-1", title: "t", state: "intake", eu_tier: "unclassified", usage_context: null, human_oversight_type: null, data_categories: [], affected_parties: [] },
+      classification: { id: "c1", use_case_id: "uc-1", tier: "minimal_risk", rationale: "r", version: 1, is_current: true, overridden: false, proposed_tier: null, basis_subcategory_code: null, basis_legal_ref: null, requires_context: false, status: "approved" },
     });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const invalidateSpy = jest.spyOn(client, "invalidateQueries");
@@ -94,7 +94,7 @@ describe("intake mutation hooks call only the BFF proxy and never send If-Match"
       result.current.mutate({
         name: "x", is_custom: true, catalogue_product_id: null, operator_role_id: null,
         hosting_model_id: null, lifecycle_stage: null, owner_user_id: null, purpose: null,
-        title: "t", use_case_purpose: null, context_blob: {},
+        title: "t", intended_use_category_id: null, context_blob: {},
         usage_context_id: null, human_oversight_type_id: null,
         data_category_ids: [], affected_party_ids: [],
       });

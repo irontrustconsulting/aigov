@@ -325,7 +325,7 @@ class TestResolver:
         self, db_session, tenant, product_high
     ):
         system = _make_system(db_session, tenant, product_high)
-        proposal = resolve_classification(system.id, db_session)
+        proposal = resolve_classification(system.id, None, db_session)
 
         assert proposal.tier == EUAIActTier.HIGH
         assert proposal.subcategory_code == "EMP-RECRUIT-TEST"
@@ -337,7 +337,7 @@ class TestResolver:
     ):
         """Product in HIGH + LIMITED categories → HIGH governs."""
         system = _make_system(db_session, tenant, product_multi_tier)
-        proposal = resolve_classification(system.id, db_session)
+        proposal = resolve_classification(system.id, None, db_session)
 
         assert proposal.tier == EUAIActTier.HIGH
         assert proposal.subcategory_code == "EMP-RECRUIT-TEST"
@@ -348,7 +348,7 @@ class TestResolver:
     ):
         """Product with no primary EU mapping → REQUIRES_CONTEXT, not an error."""
         system = _make_system(db_session, tenant, product_no_mapping)
-        proposal = resolve_classification(system.id, db_session)
+        proposal = resolve_classification(system.id, None, db_session)
 
         assert proposal.tier == EUAIActTier.REQUIRES_CONTEXT
         assert proposal.subcategory_code is None
@@ -358,7 +358,7 @@ class TestResolver:
     def test_no_catalogue_product_returns_requires_context(self, db_session, tenant):
         """System with no catalogue_product_id → REQUIRES_CONTEXT."""
         system = _make_system(db_session, tenant, product=None)
-        proposal = resolve_classification(system.id, db_session)
+        proposal = resolve_classification(system.id, None, db_session)
 
         assert proposal.tier == EUAIActTier.REQUIRES_CONTEXT
         assert proposal.requires_context
@@ -375,7 +375,7 @@ class TestSnapshot:
         user, m = member
         system = _make_system(db_session, tenant, product_high)
         use_case = _make_use_case(db_session, tenant, system)
-        proposal = resolve_classification(system.id, db_session)
+        proposal = resolve_classification(system.id, None, db_session)
 
         classification = snapshot_classification(
             use_case, proposal, db_session, actor_user_id=user.id
@@ -395,7 +395,7 @@ class TestSnapshot:
         user, m = member
         system = _make_system(db_session, tenant, product_high)
         use_case = _make_use_case(db_session, tenant, system)
-        proposal = resolve_classification(system.id, db_session)
+        proposal = resolve_classification(system.id, None, db_session)
 
         first = snapshot_classification(
             use_case, proposal, db_session, actor_user_id=user.id
@@ -417,7 +417,7 @@ class TestSnapshot:
         user, m = member
         system = _make_system(db_session, tenant, product_high)
         use_case = _make_use_case(db_session, tenant, system)
-        original_proposal = resolve_classification(system.id, db_session)
+        original_proposal = resolve_classification(system.id, None, db_session)
         first = snapshot_classification(
             use_case, original_proposal, db_session, actor_user_id=user.id
         )
@@ -455,7 +455,7 @@ class TestSnapshot:
         user, m = member
         system = _make_system(db_session, tenant, product=None)
         use_case = _make_use_case(db_session, tenant, system)
-        proposal = resolve_classification(system.id, db_session)
+        proposal = resolve_classification(system.id, None, db_session)
 
         classification = snapshot_classification(
             use_case, proposal, db_session, actor_user_id=user.id
@@ -856,7 +856,7 @@ class TestClassifierContextIsolation:
         db_session.flush()
 
         # Classification must still resolve from the product mapping alone.
-        proposal = resolve_classification(system.id, db_session)
+        proposal = resolve_classification(system.id, None, db_session)
         assert proposal.tier == EUAIActTier.HIGH
 
 

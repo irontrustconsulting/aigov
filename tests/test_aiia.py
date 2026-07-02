@@ -85,9 +85,9 @@ class TestCreateAIIA:
         assert len(curated) == 1
         assert curated[0].response is None
 
-        # snapshotted facts present as USER_PROVIDED with source_ref
+        # snapshotted facts present as USER_PROVIDED with source_ref (system.name)
         snapshotted = [i for i in by_section["system_overview"] if i.provenance == ProvenanceConfidence.USER_PROVIDED]
-        assert any(i.source_ref == "use_case.purpose" for i in snapshotted)
+        assert any(i.source_ref == "system.name" for i in snapshotted)
 
         # proposed risk present, identity-only, with selection_basis
         risk_items = by_section[RISK_SECTION_KEY]

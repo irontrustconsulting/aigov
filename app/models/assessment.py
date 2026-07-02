@@ -78,6 +78,12 @@ class Classification(Base, TimestampMixin):
         default=ClassificationStatus.PENDING_REVIEW,
         nullable=False,
     )
+    # True when the system has a catalogue product but no membership category was
+    # declared ("Other / not listed"). Full assessment proceeds; off-envelope is
+    # recorded, not blocked (D-72).
+    off_label: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", default=False,
+    )
 
     use_case: Mapped["UseCase"] = relationship(back_populates="classifications")
 

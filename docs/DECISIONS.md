@@ -714,3 +714,18 @@ Rejected: storing curated values in `taxonomy_tags` JSONB (no FK integrity, no t
 The two derived `field_prefills` (`operator_role_id: deployer, basis: derived` and `lifecycle_stage: production, basis: derived`) are computed only when `catalogue_product_id` is non-null and `is_custom` is false. `get_prefill_by_product(None, db)` returns an empty response with `field_prefills: null`; the `usePrefill` hook is disabled when `catalogueProductId` is null; `SEED_INTAKE` never fires for custom systems. Custom-system intake starts with all blank selects; the INV-81 placeholder renders for every empty select.
 Rejected: seeding derived fields for custom systems (operator role and lifecycle stage are deployment-context specific, not universal defaults; a custom system owner may not be the EU AI Act deployer for their system).
 ↳ origin: DM-S4a · refs: D-68, D-69, INV-81
+
+**D-71** · `resolve_classification` governs per-use-case from the declared membership category
+When a use case carries `product_category_id`, `resolve_classification` resolves the EU tier from that category's primary mapping rather than from the product-wide-highest. Two use cases on the same system can therefore carry different tiers when they declare different membership categories. `ClassificationDisposition` (`AUTHORITATIVE` / `DOWN_SELECTION`) signals whether the declared tier equals the product-wide-highest (direct stamp) or falls below it (reviewer round-trip — D-73).
+Rejected: (a) always govern from the product-wide-highest — collapses intra-system granularity; a lower-risk use of a high-risk product would inherit the highest tier, which over-regulates; (b) a separate "tier override" flow for the declared-category case — the existing gate-1/gate-2/override ladder already handles this; a new seam duplicates the invariants.
+↳ origin: DM-S4b · refs: INV-82, D-72, D-73
+
+**D-72** · Off-label triage is an envelope signal, not a gate
+When `catalogue_product_id` is non-null but `intended_use_category_id` is null (user selects "Other / not listed"), `classification.off_label=True` is recorded on the snapshot. The classification routes through the existing `REQUIRES_CONTEXT` path (no declared category → no primary mapping). `off_label` is a triage signal for the reviewer and appears in the export pack. It does not create a distinct lifecycle branch or additional gate.
+Rejected: (a) a dedicated `OFF_LABEL` disposition — adds a third wizard branch for a triage signal that the existing gate-2 flow handles adequately; (b) routing off-label directly to `DOWN_SELECTION` — the reviewer cannot sign off without gate-2 answers, so the gate-2 seam is the correct path.
+↳ origin: DM-S4b · refs: D-71, INV-82
+
+**D-73** · DOWN_SELECTION routes to reviewer sign-off before `eu_tier` is stamped
+When `resolve_classification` returns `DOWN_SELECTION` (declared tier < product-wide-highest), `snapshot_classification` writes `status=PENDING_REVIEW` and does NOT stamp `use_case.eu_tier`. The existing `POST .../classification/sign-off` endpoint (reviewer gate, D-9) is the canonical stamp path: sign-off moves the snapshot to `APPROVED` and stamps `eu_tier`. `ClassificationRead` carries `status` (WI-6b) so the wizard can branch on `status=pending_review` → whose-court step without a separate lifecycle call.
+Rejected: (a) stamp `eu_tier` immediately to the declared tier and require an override to escalate — misleads the state machine; a confirmed-lower-tier use case bypasses the reviewer round-trip that D-9 requires; (b) a new `AWAITING_DOWNSELECT` lifecycle state — `PENDING_REVIEW` classification status is the correct signal; a new state duplicates it and incurs migration cost.
+↳ origin: DM-S4b · refs: D-9, D-71, INV-82

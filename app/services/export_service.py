@@ -560,6 +560,7 @@ def _use_case_record(
             basis_legal_ref=c.basis_legal_ref,
             status=c.status,
             version=c.version,
+            off_label=c.off_label,
             signed_off_by=signed_off_actors.get(c.id),
         )
         for c in classifications
@@ -890,6 +891,7 @@ def build_ato_document(
                 basis_legal_ref=current_classification.basis_legal_ref,
                 status=current_classification.status,
                 version=current_classification.version,
+                off_label=current_classification.off_label,
                 signed_off_by=signed_off.get(current_classification.id),
             )
 

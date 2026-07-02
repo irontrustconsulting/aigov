@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button, FreeText, MultiSelectInput, PageHeader, PageScaffold, SingleSelect, Skeleton, ErrorState, type SelectOption } from "@irontrust/ui";
+import { Button, MultiSelectInput, PageHeader, PageScaffold, SingleSelect, Skeleton, ErrorState, type SelectOption } from "@irontrust/ui";
 import type { RegistrationRead, SystemLifecycleStage } from "@irontrust/api-client";
 import {
   useAffectedParties,
   useDataCategories,
   useHumanOversightTypes,
+  useProductCategoryMemberships,
   useRegister,
   useUsageContexts,
 } from "@/lib/intake";
@@ -33,12 +34,18 @@ export interface UseCaseCreateStepProps {
   ) => void;
 }
 
+const OTHER_OPTION_VALUE = "__other__";
+
 /**
  * WI-9 (DM-S2): POST /v1/registrations — the atomic boundary. System-stable
  * facts come from wizard state (props); use-distinguishing context is
  * captured here (DF-D2-1, closes DF-D1-2). The branch on the response
  * (requires_context / prohibited / resolved) is encoded once, in the
  * wizard reducer — this component only creates and hands the result up.
+ *
+ * FE-31: intended-use category replaces free-text purpose. Membership-
+ * constrained SingleSelect for catalogue products; custom systems present
+ * only "Other / not listed" (no product → no memberships).
  */
 export function UseCaseCreateStep({
   name,
@@ -52,12 +59,13 @@ export function UseCaseCreateStep({
   onCreated,
 }: UseCaseCreateStepProps) {
   const [title, setTitle] = useState("");
-  const [useCasePurpose, setUseCasePurpose] = useState("");
+  const [intendedUseCategoryId, setIntendedUseCategoryId] = useState("");
   const [usageContextId, setUsageContextId] = useState("");
   const [humanOversightTypeId, setHumanOversightTypeId] = useState("");
   const [dataCategoryIds, setDataCategoryIds] = useState<string[]>([]);
   const [affectedPartyIds, setAffectedPartyIds] = useState<string[]>([]);
 
+  const categoryMemberships = useProductCategoryMemberships(catalogueProductId);
   const usageContexts = useUsageContexts();
   const humanOversightTypes = useHumanOversightTypes();
   const dataCategories = useDataCategories();
@@ -65,14 +73,18 @@ export function UseCaseCreateStep({
   const register = useRegister();
 
   const vocabQueries = [usageContexts, humanOversightTypes, dataCategories, affectedParties];
-  if (vocabQueries.some((q) => q.isLoading)) return <Skeleton />;
-  if (vocabQueries.some((q) => q.isError)) {
+  const isLoading = vocabQueries.some((q) => q.isLoading) || categoryMemberships.isLoading;
+  const isError = vocabQueries.some((q) => q.isError) || categoryMemberships.isError;
+
+  if (isLoading) return <Skeleton />;
+  if (isError) {
+    const errorQueries = [...vocabQueries, categoryMemberships].filter((q) => q.isError);
     return (
       <PageScaffold>
         <PageHeader title="Describe your use case" />
         <ErrorState
           message="Could not load form options."
-          onRetry={() => vocabQueries.filter((q) => q.isError).forEach((q) => q.refetch())}
+          onRetry={() => errorQueries.forEach((q) => q.refetch())}
         />
       </PageScaffold>
     );
@@ -82,8 +94,18 @@ export function UseCaseCreateStep({
     return (items ?? []).map((i) => ({ value: i.id, label: i.label }));
   }
 
+  const categoryOptions: SelectOption[] = [
+    ...(categoryMemberships.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+    { value: OTHER_OPTION_VALUE, label: "Other / not listed" },
+  ];
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const selectedCategoryId =
+      intendedUseCategoryId && intendedUseCategoryId !== OTHER_OPTION_VALUE
+        ? intendedUseCategoryId
+        : null;
+
     register.mutate(
       {
         // system-stable (from wizard state)
@@ -97,7 +119,7 @@ export function UseCaseCreateStep({
         purpose,
         // first use case (local state)
         title,
-        use_case_purpose: useCasePurpose || null,
+        intended_use_category_id: selectedCategoryId,
         context_blob: {},
         usage_context_id: usageContextId || null,
         human_oversight_type_id: humanOversightTypeId || null,
@@ -126,7 +148,14 @@ export function UseCaseCreateStep({
           <label htmlFor="use-case-title" className="text-sm font-medium">What are you using this for?</label>
           <input id="use-case-title" value={title} onChange={(e) => setTitle(e.target.value)} required className="border-hairline w-full rounded border px-3 py-1.5 text-sm" />
         </div>
-        <FreeText id="use-case-purpose" label="Purpose (optional)" value={useCasePurpose} onChange={setUseCasePurpose} />
+
+        <SingleSelect
+          id="intended-use-category"
+          label="Intended-use category"
+          value={intendedUseCategoryId}
+          options={categoryOptions}
+          onChange={setIntendedUseCategoryId}
+        />
 
         <SingleSelect
           id="usage-context"
