@@ -14,17 +14,63 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import System
-from app.models.domain import CatalogueFact
-from app.schemas.system import CatalogueFactOut, PrefillResponse
+from app.models.domain import CatalogueFact, CatalogueProduct
+from app.models.intake import EUOperatorRole
+from app.models.base import SystemLifecycleStage
+from app.schemas.system import (
+    CatalogueFactOut, FieldPrefill, FieldPrefills, PrefillResponse,
+)
+
+
+def _build_field_prefills(product: CatalogueProduct, db: Session) -> FieldPrefills:
+    """Compute typed field prefills for a catalogue-linked product.
+
+    Derived fields (operator_role_id, lifecycle_stage) are always returned.
+    Catalogue fields (hosting_model_id, purpose) are omitted when the product
+    has no curated value.
+    """
+    deployer = db.scalar(
+        select(EUOperatorRole).where(EUOperatorRole.code == "deployer")
+    )
+
+    fp: dict[str, FieldPrefill] = {}
+
+    if deployer is not None:
+        fp["operator_role_id"] = FieldPrefill(
+            value=str(deployer.id), basis="derived"
+        )
+
+    fp["lifecycle_stage"] = FieldPrefill(
+        value=SystemLifecycleStage.PRODUCTION.value, basis="derived"
+    )
+
+    if product.hosting_model_id is not None:
+        fp["hosting_model_id"] = FieldPrefill(
+            value=str(product.hosting_model_id), basis="catalogue"
+        )
+
+    if product.intended_use is not None:
+        fp["purpose"] = FieldPrefill(value=product.intended_use, basis="catalogue")
+
+    return FieldPrefills(**fp)
 
 
 def get_prefill_by_product(
     catalogue_product_id: uuid.UUID | None,
     db: Session,
 ) -> PrefillResponse:
-    """Return catalogue facts for a product. Empty list when product is None."""
+    """Return catalogue facts and typed field prefills for a product.
+
+    Empty response when product is None (custom / no-product path).
+    """
     if catalogue_product_id is None:
         return PrefillResponse(catalogue_product_id=None, facts=[])
+
+    product = db.scalar(
+        select(CatalogueProduct).where(CatalogueProduct.id == catalogue_product_id)
+    )
+    if product is None:
+        return PrefillResponse(catalogue_product_id=catalogue_product_id, facts=[])
 
     facts = db.scalars(
         select(CatalogueFact)
@@ -35,6 +81,7 @@ def get_prefill_by_product(
     return PrefillResponse(
         catalogue_product_id=catalogue_product_id,
         facts=[CatalogueFactOut.model_validate(f) for f in facts],
+        field_prefills=_build_field_prefills(product, db),
     )
 
 

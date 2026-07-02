@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useReducer } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import { ErrorState, ResumePrompt, Skeleton } from "@irontrust/ui";
 import {
   useActiveDraft,
@@ -8,6 +8,7 @@ import {
   useGetOrCreateDraft,
   useMe,
   usePatchDraft,
+  usePrefill,
 } from "@/lib/intake";
 import {
   PRE_BOUNDARY_STEPS,
@@ -67,6 +68,20 @@ export default function NewSystemPage() {
   const getOrCreate = useGetOrCreateDraft();
   const patchDraft = usePatchDraft(state.draftId ?? "");
   const discard = useDiscardDraft();
+
+  // DM-S4a: seed intake fields from catalogue/derived prefill (FE-30).
+  // Disabled for custom systems (catalogueProductId null → hook is no-op).
+  const prefillQuery = usePrefill(state.catalogueProductId);
+  useEffect(() => {
+    if (!prefillQuery.data) return;
+    dispatch({
+      type: "SEED_INTAKE",
+      catalogueProductName: state.catalogueProductName,
+      fieldPrefills: prefillQuery.data.field_prefills,
+    });
+  // Re-seed only when the prefill data or the product changes (not on every render).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillQuery.data]);
 
   /**
    * Called after every pre-boundary dispatch. On the first advance, creates
@@ -148,25 +163,16 @@ export default function NewSystemPage() {
       return (
         <IntakeCaptureStep
           isCustom={state.isCustom}
-          catalogueProductId={state.catalogueProductId}
-          onSubmit={(facts) => {
-            const nextState = {
-              ...state,
-              name: facts.name,
-              operatorRoleId: facts.operatorRoleId,
-              hostingModelId: facts.hostingModelId,
-              lifecycleStage: facts.lifecycleStage,
-              purpose: facts.purpose,
-            };
-            dispatch({
-              type: "INTAKE_DONE",
-              name: facts.name,
-              operatorRoleId: facts.operatorRoleId,
-              hostingModelId: facts.hostingModelId,
-              lifecycleStage: facts.lifecycleStage,
-              purpose: facts.purpose,
-            });
-            persistTransition(nextState, "prefill");
+          name={state.name}
+          operatorRoleId={state.operatorRoleId}
+          hostingModelId={state.hostingModelId}
+          lifecycleStage={state.lifecycleStage}
+          purpose={state.purpose}
+          prefillBases={state.intakePrefillBases}
+          onFieldChange={(field, value) => dispatch({ type: "SET_INTAKE_FIELD", field, value })}
+          onSubmit={() => {
+            dispatch({ type: "INTAKE_DONE" });
+            persistTransition(state, "prefill");
           }}
         />
       );

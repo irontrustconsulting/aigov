@@ -129,14 +129,16 @@ describe("ResolvedTierStep", () => {
 
     await waitFor(() => screen.getByLabelText("Subcategory"));
     const subcategorySelect = screen.getByLabelText("Subcategory") as HTMLSelectElement;
-    const optionValues = Array.from(subcategorySelect.options).map((o) => o.value);
+    // Filter out the placeholder "" added by the SingleSelect FE-4 ALTER (INV-81).
+    const optionValues = Array.from(subcategorySelect.options).map((o) => o.value).filter((v) => v !== "");
     expect(optionValues).toEqual(["HR-1"]); // limited_risk sub excluded — tier defaults to classification.tier (high_risk)
     expect(optionValues).not.toContain("LR-1");
 
     fireEvent.change(screen.getByLabelText("Tier"), { target: { value: "limited_risk" } });
     await waitFor(() => {
       const updated = screen.getByLabelText("Subcategory") as HTMLSelectElement;
-      expect(Array.from(updated.options).map((o) => o.value)).toEqual(["LR-1"]);
+      const values = Array.from(updated.options).map((o) => o.value).filter((v) => v !== "");
+      expect(values).toEqual(["LR-1"]);
     });
   });
 

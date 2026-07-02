@@ -5,6 +5,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.base import LifecycleState, ProvenanceConfidence, SystemLifecycleStage
@@ -125,9 +127,22 @@ class CatalogueFactOut(BaseModel):
     provenance: ProvenanceConfidence
 
 
+class FieldPrefill(BaseModel):
+    value: str
+    basis: Literal["catalogue", "derived"]
+
+
+class FieldPrefills(BaseModel):
+    hosting_model_id: FieldPrefill | None = None
+    operator_role_id: FieldPrefill | None = None
+    lifecycle_stage: FieldPrefill | None = None
+    purpose: FieldPrefill | None = None
+
+
 class PrefillResponse(BaseModel):
     catalogue_product_id: uuid.UUID | None
     facts: list[CatalogueFactOut]
+    field_prefills: FieldPrefills | None = None
 
 
 # ---------------------------------------------------------------------------

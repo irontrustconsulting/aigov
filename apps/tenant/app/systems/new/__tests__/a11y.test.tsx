@@ -61,7 +61,17 @@ describe("WI-11 axe pass — wizard screens", () => {
     const fetchMock = jest.fn(() => jsonResponse([]));
     global.fetch = fetchMock as jest.Mock;
     const { container, getByLabelText } = render(
-      <IntakeCaptureStep isCustom={false} catalogueProductId="p1" onSubmit={jest.fn()} />,
+      <IntakeCaptureStep
+        isCustom={false}
+        name=""
+        operatorRoleId={null}
+        hostingModelId={null}
+        lifecycleStage={null}
+        purpose={null}
+        prefillBases={null}
+        onFieldChange={jest.fn()}
+        onSubmit={jest.fn()}
+      />,
       { wrapper }
     );
     await waitFor(() => getByLabelText("System name"));

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Button, ErrorState, FreeText, PageHeader, PageScaffold, SingleSelect, Skeleton, TextInput, type SelectOption } from "@irontrust/ui";
 import type { SystemLifecycleStage } from "@irontrust/api-client";
 import {
   useHostingModels,
   useOperatorRoles,
 } from "@/lib/intake";
+import type { IntakeFieldBasis, IntakeFieldName, IntakePrefillBases } from "../wizard-state";
 
 const LIFECYCLE_STAGE_OPTIONS: SelectOption[] = [
   { value: "development", label: "Development" },
@@ -15,34 +15,46 @@ const LIFECYCLE_STAGE_OPTIONS: SelectOption[] = [
   { value: "retired", label: "Retired" },
 ];
 
-export interface IntakeCaptureFacts {
+const BASIS_LABELS: Record<Exclude<IntakeFieldBasis, "user-set">, string> = {
+  catalogue: "Catalogue curated — confirm or update",
+  derived: "Derived — confirm or update",
+};
+
+function BasisCaption({ basis }: { basis: IntakeFieldBasis | undefined }) {
+  if (!basis || basis === "user-set") return null;
+  return <p className="text-xs text-ink-muted">{BASIS_LABELS[basis]}</p>;
+}
+
+export interface IntakeCaptureStepProps {
+  isCustom: boolean;
+  // Wizard-state-controlled values (DM-S4a)
   name: string;
   operatorRoleId: string | null;
   hostingModelId: string | null;
   lifecycleStage: SystemLifecycleStage | null;
   purpose: string | null;
-}
-
-export interface IntakeCaptureStepProps {
-  isCustom: boolean;
-  catalogueProductId: string | null;
-  onSubmit: (facts: IntakeCaptureFacts) => void;
+  prefillBases: IntakePrefillBases | null;
+  onFieldChange: (field: IntakeFieldName, value: string | null) => void;
+  onSubmit: () => void;
 }
 
 /**
- * WI-7 (DM-S2): system-stable capture only — name, operator role, hosting
- * model, lifecycle stage, purpose. No network call here; facts are held in
- * wizard state and sent with the use-case facts in POST /v1/registrations
- * at the use-case step (DF-D2-3). The four use-distinguishing context
- * controls moved to use-case-create-step (DF-D2-1, closes DF-D1-2).
+ * WI-7 (DM-S2): system-stable capture — name, operator role, hosting model,
+ * lifecycle stage, purpose. Fully wizard-state-controlled (DM-S4a): values
+ * come from props, changes dispatch to the reducer; seeded fields render
+ * FE-30 basis captions; a user edit clears the caption to user-set.
  */
-export function IntakeCaptureStep({ isCustom, catalogueProductId, onSubmit }: IntakeCaptureStepProps) {
-  const [name, setName] = useState("");
-  const [operatorRoleId, setOperatorRoleId] = useState("");
-  const [hostingModelId, setHostingModelId] = useState("");
-  const [lifecycleStage, setLifecycleStage] = useState<SystemLifecycleStage | "">("");
-  const [purpose, setPurpose] = useState("");
-
+export function IntakeCaptureStep({
+  isCustom: _isCustom,
+  name,
+  operatorRoleId,
+  hostingModelId,
+  lifecycleStage,
+  purpose,
+  prefillBases,
+  onFieldChange,
+  onSubmit,
+}: IntakeCaptureStepProps) {
   const operatorRoles = useOperatorRoles();
   const hostingModels = useHostingModels();
 
@@ -66,44 +78,62 @@ export function IntakeCaptureStep({ isCustom, catalogueProductId, onSubmit }: In
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onSubmit({
-      name,
-      operatorRoleId: operatorRoleId || null,
-      hostingModelId: hostingModelId || null,
-      lifecycleStage: (lifecycleStage || null) as SystemLifecycleStage | null,
-      purpose: purpose || null,
-    });
+    onSubmit();
   }
 
   return (
     <PageScaffold>
       <PageHeader title="Register a system" />
       <form aria-label="intake-capture" onSubmit={handleSubmit} className="border-hairline space-y-4 rounded-lg border p-4">
-        <TextInput id="system-name" label="System name" value={name} onChange={setName} />
-
-        <SingleSelect
-          id="operator-role"
-          label="Operator role"
-          value={operatorRoleId}
-          options={toOptions(operatorRoles.data)}
-          onChange={setOperatorRoleId}
-        />
-        <SingleSelect
-          id="hosting-model"
-          label="Hosting model"
-          value={hostingModelId}
-          options={toOptions(hostingModels.data)}
-          onChange={setHostingModelId}
-        />
-        <SingleSelect
-          id="lifecycle-stage"
-          label="Lifecycle stage"
-          value={lifecycleStage}
-          options={LIFECYCLE_STAGE_OPTIONS}
-          onChange={(v) => setLifecycleStage(v as SystemLifecycleStage)}
+        <TextInput
+          id="system-name"
+          label="System name"
+          value={name}
+          onChange={(v) => onFieldChange("name", v)}
         />
 
-        <FreeText id="purpose" label="Purpose (optional)" value={purpose} onChange={setPurpose} />
+        <div className="space-y-1">
+          <SingleSelect
+            id="operator-role"
+            label="Operator role"
+            value={operatorRoleId ?? ""}
+            options={toOptions(operatorRoles.data)}
+            onChange={(v) => onFieldChange("operatorRoleId", v || null)}
+          />
+          <BasisCaption basis={prefillBases?.operatorRoleId} />
+        </div>
+
+        <div className="space-y-1">
+          <SingleSelect
+            id="hosting-model"
+            label="Hosting model"
+            value={hostingModelId ?? ""}
+            options={toOptions(hostingModels.data)}
+            onChange={(v) => onFieldChange("hostingModelId", v || null)}
+          />
+          <BasisCaption basis={prefillBases?.hostingModelId} />
+        </div>
+
+        <div className="space-y-1">
+          <SingleSelect
+            id="lifecycle-stage"
+            label="Lifecycle stage"
+            value={lifecycleStage ?? ""}
+            options={LIFECYCLE_STAGE_OPTIONS}
+            onChange={(v) => onFieldChange("lifecycleStage", v || null)}
+          />
+          <BasisCaption basis={prefillBases?.lifecycleStage} />
+        </div>
+
+        <div className="space-y-1">
+          <FreeText
+            id="purpose"
+            label="Purpose (optional)"
+            value={purpose ?? ""}
+            onChange={(v) => onFieldChange("purpose", v || null)}
+          />
+          <BasisCaption basis={prefillBases?.purpose} />
+        </div>
 
         <Button type="submit">
           Continue

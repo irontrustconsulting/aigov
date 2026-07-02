@@ -52,7 +52,20 @@ export interface CatalogueFactOut {
   provenance: ProvenanceConfidence;
 }
 
+export interface FieldPrefill {
+  value: string;
+  basis: "catalogue" | "derived";
+}
+
+export interface FieldPrefills {
+  hosting_model_id?: FieldPrefill;
+  operator_role_id?: FieldPrefill;
+  lifecycle_stage?: FieldPrefill;
+  purpose?: FieldPrefill;
+}
+
 export interface PrefillResponse {
   catalogue_product_id: string | null;
   facts: CatalogueFactOut[];
+  field_prefills?: FieldPrefills | null;
 }

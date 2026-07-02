@@ -80,6 +80,14 @@ class CatalogueProduct(Base, TimestampMixin):
     # always derived from the tenant's deployment context (PRD 4.3 CAT-3).
     taxonomy_tags: Mapped[list] = mapped_column(JSONB, default=list)
     last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Curated prefill knowledge (D-69): drives typed field_prefills in the
+    # intake wizard when this product is selected.
+    hosting_model_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("hosting_model.id", ondelete="SET NULL"),
+        nullable=True, index=True,
+    )
+    intended_use: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     vendor: Mapped["CatalogueVendor"] = relationship(back_populates="products")
     facts: Mapped[List["CatalogueFact"]] = relationship(

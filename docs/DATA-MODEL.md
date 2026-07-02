@@ -29,7 +29,7 @@
 | Table | Plane | Notes |
 |---|---|---|
 | `catalogue_vendor` | GLOBAL | `logo_url varchar` column present (nullable). Plumbed to `CatalogueVendorRef.logo_url` in `ProductDetailOut` response (UI-C2, additive — no DDL change). |
-| `catalogue_product` | GLOBAL | Belongs to a vendor. `logo_url varchar` column present (nullable). Plumbed to `ProductDetailOut.logo_url` (UI-C2, additive — no DDL change). Assets at `apps/tenant/public/logos/<slug>.png`; seeded via `scripts/seed/seed_logos.py` (D-55). |
+| `catalogue_product` | GLOBAL | Belongs to a vendor. `logo_url varchar` column present (nullable). Plumbed to `ProductDetailOut.logo_url` (UI-C2, additive — no DDL change). Assets at `apps/tenant/public/logos/<slug>.png`; seeded via `scripts/seed/seed_logos.py` (D-55). **DM-S4a:** gains `hosting_model_id uuid NULL` (FK `hosting_model.id`, `ON DELETE SET NULL`, indexed — migration `cce02cda26a4`) and `intended_use text NULL` — curated prefill knowledge for the intake wizard (D-69); populated via `scripts/seed/seed_catalogue_prefill.py`. |
 | `catalogue_fact` | GLOBAL | Prefill facts with provenance (CAT-4); facts only, never tier (D-8). |
 | `catalogue_product_risk` | GLOBAL | Typical risks per product (RSK-4). |
 

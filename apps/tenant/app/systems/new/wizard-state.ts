@@ -1,4 +1,4 @@
-import type { ClassificationRead, DraftRegistrationRead, RegistrationRead, SystemDetail, SystemLifecycleStage } from "@irontrust/api-client";
+import type { ClassificationRead, DraftRegistrationRead, FieldPrefills, RegistrationRead, SystemDetail, SystemLifecycleStage } from "@irontrust/api-client";
 
 /**
  * UI-F1-INTAKE: the wizard's cross-step state. The wizard reads lifecycle
@@ -31,6 +31,22 @@ export function clampStep(step: WizardStep): WizardStep {
   return (PRE_BOUNDARY_STEPS as string[]).includes(step) ? step : "use-case";
 }
 
+/** Basis of a seeded intake field (DM-S4a, FE-30). */
+export type IntakeFieldBasis = "catalogue" | "derived" | "user-set";
+
+/** Field names that carry prefill basis captions. */
+export type IntakePrefillFieldName = "operatorRoleId" | "hostingModelId" | "lifecycleStage" | "purpose";
+
+/** All five intake field names (including name, which has no basis caption). */
+export type IntakeFieldName = "name" | IntakePrefillFieldName;
+
+export interface IntakePrefillBases {
+  operatorRoleId?: IntakeFieldBasis;
+  hostingModelId?: IntakeFieldBasis;
+  lifecycleStage?: IntakeFieldBasis;
+  purpose?: IntakeFieldBasis;
+}
+
 export interface WizardState {
   step: WizardStep;
   // Drill-down selection
@@ -43,6 +59,8 @@ export interface WizardState {
   hostingModelId: string | null;
   lifecycleStage: SystemLifecycleStage | null;
   purpose: string | null;
+  // Basis captions for seeded intake fields (DM-S4a, FE-30); null until SEED_INTAKE fires.
+  intakePrefillBases: IntakePrefillBases | null;
   // Use-distinguishing context captured at use-case step (closes DF-D1-2)
   usageContextId: string | null;
   humanOversightTypeId: string | null;
@@ -66,6 +84,7 @@ export const initialWizardState: WizardState = {
   hostingModelId: null,
   lifecycleStage: null,
   purpose: null,
+  intakePrefillBases: null,
   usageContextId: null,
   humanOversightTypeId: null,
   dataCategoryIds: [],
@@ -83,14 +102,16 @@ export type WizardAction =
       catalogueProductId: string | null;
       catalogueProductName: string | null;
     }
+  /** DM-S4a: seed wizard-state intake fields from prefill data (empty-guarded;
+   * draft-restored values take precedence). */
   | {
-      type: "INTAKE_DONE";
-      name: string;
-      operatorRoleId: string | null;
-      hostingModelId: string | null;
-      lifecycleStage: SystemLifecycleStage | null;
-      purpose: string | null;
+      type: "SEED_INTAKE";
+      catalogueProductName: string | null;
+      fieldPrefills: FieldPrefills | null | undefined;
     }
+  /** DM-S4a: single-field update from controlled intake step; clears basis to user-set. */
+  | { type: "SET_INTAKE_FIELD"; field: IntakeFieldName; value: string | null }
+  | { type: "INTAKE_DONE" }
   | { type: "PREFILL_DONE" }
   | {
       type: "REGISTERED";
@@ -120,16 +141,36 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         catalogueProductName: action.catalogueProductName,
       };
 
-    case "INTAKE_DONE":
+    case "SEED_INTAKE": {
+      const fp = action.fieldPrefills;
       return {
         ...state,
-        step: "prefill",
-        name: action.name,
-        operatorRoleId: action.operatorRoleId,
-        hostingModelId: action.hostingModelId,
-        lifecycleStage: action.lifecycleStage,
-        purpose: action.purpose,
+        // name: seed only when empty (draft-restored > catalogueProductName > blank)
+        name: state.name || action.catalogueProductName || "",
+        // Structured fields: seed only when currently null (empty-guard)
+        operatorRoleId: state.operatorRoleId ?? fp?.operator_role_id?.value ?? null,
+        hostingModelId: state.hostingModelId ?? fp?.hosting_model_id?.value ?? null,
+        lifecycleStage: state.lifecycleStage ?? (fp?.lifecycle_stage?.value as SystemLifecycleStage | null) ?? null,
+        purpose: state.purpose ?? fp?.purpose?.value ?? null,
+        intakePrefillBases: {
+          operatorRoleId: state.operatorRoleId ? "user-set" : (fp?.operator_role_id?.basis as IntakeFieldBasis | undefined),
+          hostingModelId: state.hostingModelId ? "user-set" : (fp?.hosting_model_id?.basis as IntakeFieldBasis | undefined),
+          lifecycleStage: state.lifecycleStage ? "user-set" : (fp?.lifecycle_stage?.basis as IntakeFieldBasis | undefined),
+          purpose: state.purpose ? "user-set" : (fp?.purpose?.basis as IntakeFieldBasis | undefined),
+        },
       };
+    }
+
+    case "SET_INTAKE_FIELD": {
+      const { field, value } = action;
+      const bases = field !== "name" && state.intakePrefillBases
+        ? { ...state.intakePrefillBases, [field]: "user-set" as IntakeFieldBasis }
+        : state.intakePrefillBases;
+      return { ...state, [field]: value, intakePrefillBases: bases };
+    }
+
+    case "INTAKE_DONE":
+      return { ...state, step: "prefill" };
 
     case "PREFILL_DONE":
       return { ...state, step: "use-case" };
@@ -179,6 +220,9 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         hostingModelId: blob.hostingModelId ?? null,
         lifecycleStage: blob.lifecycleStage ?? null,
         purpose: blob.purpose ?? null,
+        // intakePrefillBases starts null; SEED_INTAKE re-fires but the
+        // empty-guard means draft-restored values are never overwritten.
+        intakePrefillBases: null,
         step: clampStep((blob.step as WizardStep | undefined) ?? "drill-down"),
         draftId: action.draft.id,
       };
