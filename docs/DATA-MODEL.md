@@ -4,7 +4,7 @@
 **Purpose:** The structural schema map and the DB-enforced-guarantee catalogue — every table's plane and RLS status, the enums and their label landmines, the manually-managed indexes and constraints, each linked to the `INV-n` it backs.
 **Scope (deliberate):** structure + guarantees, **not** a column-by-column dump. Columns drift fastest and the **ORM models in `app/models/` are their authoritative source** (D-21). Read the model for columns; read this for shape, plane, RLS, enums, indexes, and guarantees. Conceptual relationships → `DOMAIN.md`.
 
-**Authoritative inventory:** the table list below is the live `\dt` output (52 tables). Model-file attributions are confirmed against CLAUDE §3.1 where marked, and flagged `verify` where the table post-dates that map.
+**Authoritative inventory:** the table list below is the live `\dt` output (53 tables). Model-file attributions are confirmed against CLAUDE §3.1 where marked, and flagged `verify` where the table post-dates that map.
 
 **Legend** — Plane / RLS:
 - `TENANT` — tenant-scoped, carries `tenant_id`, under RLS.
@@ -45,6 +45,11 @@
 | Table | Plane | Notes |
 |---|---|---|
 | `draft_registration` | TENANT (RLS) | **DM-S3 addition.** Server-side draft staging for the registration wizard. `UniqueConstraint(tenant_id, owner_user_id)` enforces one active draft per user (`uq_draft_one_per_user`). RLS policy `tenant_isolation` scopes to `current_setting('app.current_tenant', true)::uuid`; application layer additionally filters `owner_user_id = ctx.user_id` (DF-D3-4). `draft_blob JSONB` stores pre-boundary wizard fields + clamped step cursor. CASCADE FKs to `tenant` and `app_user`. `updated_at` managed by trigger. INV-79, D-66. |
+
+### Prefill provenance — `domain.py` (CAT-4)
+| Table | Plane | Notes |
+|---|---|---|
+| `prefill_disposition` | TENANT (RLS) | **CAT-4 addition.** Per-field provenance record for intake-field and catalogue-fact prefill. `UNIQUE(system_id, field_key)` (`uq_prefill_disposition_system_field`) allows upsert on re-disposition (PATCH path, D-75). `field_key` is the API snake_case name for intake fields (`operator_role_id`, `lifecycle_stage`, `hosting_model_id`, `purpose`, `name`) or `"fact:<key>"` / `"fact_amended:<key>"` for catalogue facts (namespace isolation). `provenance provenance_confidence NOT NULL` — only `USER_CONFIRMED` / `USER_AMENDED` written here (AI_SUGGESTED / CATALOGUE_CURATED belong to assessment items). FK `system.id ON DELETE CASCADE`. RLS policy `tenant_isolation`: `USING (tenant_id = current_setting('app.current_tenant', true)::uuid)`. Migration: `c7e2f1a3b4d5`. INV-83, D-74, D-75. |
 
 ### Approvals — `domain.py` (confirmed)
 | Table | Plane | Notes |

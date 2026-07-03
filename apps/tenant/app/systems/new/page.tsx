@@ -169,7 +169,9 @@ export default function NewSystemPage() {
           lifecycleStage={state.lifecycleStage}
           purpose={state.purpose}
           prefillBases={state.intakePrefillBases}
+          confirmedIntakeFields={state.confirmedIntakeFields}
           onFieldChange={(field, value) => dispatch({ type: "SET_INTAKE_FIELD", field, value })}
+          onConfirmField={(field) => dispatch({ type: "CONFIRM_INTAKE_FIELD", field })}
           onSubmit={() => {
             dispatch({ type: "INTAKE_DONE" });
             persistTransition(state, "prefill");
@@ -181,8 +183,8 @@ export default function NewSystemPage() {
       return (
         <PrefillStep
           catalogueProductId={state.catalogueProductId}
-          onContinue={() => {
-            dispatch({ type: "PREFILL_DONE" });
+          onContinue={(confirmedFactKeys, amendedFactKeys) => {
+            dispatch({ type: "PREFILL_DONE", confirmedFactKeys, amendedFactKeys });
             persistTransition(state, "use-case");
           }}
         />
@@ -199,6 +201,9 @@ export default function NewSystemPage() {
           lifecycleStage={state.lifecycleStage}
           purpose={state.purpose}
           draftId={state.draftId}
+          confirmedIntakeFields={state.confirmedIntakeFields}
+          confirmedFactKeys={state.confirmedFactKeys}
+          amendedFactKeys={state.amendedFactKeys}
           onCreated={(result, context) =>
             dispatch({
               type: "REGISTERED",

@@ -61,6 +61,15 @@ export interface WizardState {
   purpose: string | null;
   // Basis captions for seeded intake fields (DM-S4a, FE-30); null until SEED_INTAKE fires.
   intakePrefillBases: IntakePrefillBases | null;
+  // Explicitly confirmed derived intake fields (FE-32, INV-83, B1). Transient —
+  // not in draft_blob; RESUME_FROM_DRAFT resets to [] so derived fields re-gate.
+  // Stores UI camelCase field names; converted to API snake_case at payload time.
+  confirmedIntakeFields: string[];
+  // Catalogue fact dispositions (WI-6, INV-83, B1). Transient — not in draft_blob.
+  // confirmedFactKeys: raw fact.key values for facts confirmed as-is (USER_CONFIRMED).
+  // amendedFactKeys: raw fact.key values for facts overridden (USER_AMENDED).
+  confirmedFactKeys: string[];
+  amendedFactKeys: string[];
   // Intended-use category captured at use-case step (FE-31, D-71)
   intendedUseCategoryId: string | null;
   // Use-distinguishing context captured at use-case step (closes DF-D1-2)
@@ -87,6 +96,9 @@ export const initialWizardState: WizardState = {
   lifecycleStage: null,
   purpose: null,
   intakePrefillBases: null,
+  confirmedIntakeFields: [],
+  confirmedFactKeys: [],
+  amendedFactKeys: [],
   intendedUseCategoryId: null,
   usageContextId: null,
   humanOversightTypeId: null,
@@ -112,10 +124,14 @@ export type WizardAction =
       catalogueProductName: string | null;
       fieldPrefills: FieldPrefills | null | undefined;
     }
-  /** DM-S4a: single-field update from controlled intake step; clears basis to user-set. */
+  /** DM-S4a: single-field update from controlled intake step; clears basis to user-set
+   * and removes the field from confirmedIntakeFields (value now differs → server derives USER_AMENDED). */
   | { type: "SET_INTAKE_FIELD"; field: IntakeFieldName; value: string | null }
+  /** FE-32: user explicitly confirms a derived intake field at its seed value. */
+  | { type: "CONFIRM_INTAKE_FIELD"; field: IntakeFieldName }
   | { type: "INTAKE_DONE" }
-  | { type: "PREFILL_DONE" }
+  /** WI-6: carry fact dispositions out of the prefill step (transient, B1). */
+  | { type: "PREFILL_DONE"; confirmedFactKeys: string[]; amendedFactKeys: string[] }
   | {
       type: "REGISTERED";
       result: RegistrationRead;
@@ -169,14 +185,28 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
       const bases = field !== "name" && state.intakePrefillBases
         ? { ...state.intakePrefillBases, [field]: "user-set" as IntakeFieldBasis }
         : state.intakePrefillBases;
-      return { ...state, [field]: value, intakePrefillBases: bases };
+      const confirmedIntakeFields = state.confirmedIntakeFields.filter(f => f !== field);
+      return { ...state, [field]: value, intakePrefillBases: bases, confirmedIntakeFields };
     }
+
+    case "CONFIRM_INTAKE_FIELD":
+      return {
+        ...state,
+        confirmedIntakeFields: state.confirmedIntakeFields.includes(action.field)
+          ? state.confirmedIntakeFields
+          : [...state.confirmedIntakeFields, action.field],
+      };
 
     case "INTAKE_DONE":
       return { ...state, step: "prefill" };
 
     case "PREFILL_DONE":
-      return { ...state, step: "use-case" };
+      return {
+        ...state,
+        step: "use-case",
+        confirmedFactKeys: action.confirmedFactKeys,
+        amendedFactKeys: action.amendedFactKeys,
+      };
 
     case "REGISTERED": {
       const { system, use_case, classification } = action.result;
@@ -228,6 +258,10 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         // intakePrefillBases starts null; SEED_INTAKE re-fires but the
         // empty-guard means draft-restored values are never overwritten.
         intakePrefillBases: null,
+        // Derived fields re-gate on resume (B1, INV-83) — not persisted in draft_blob.
+        confirmedIntakeFields: [],
+        confirmedFactKeys: [],
+        amendedFactKeys: [],
         intendedUseCategoryId: blob.intendedUseCategoryId ?? null,
         step: clampStep((blob.step as WizardStep | undefined) ?? "drill-down"),
         draftId: action.draft.id,

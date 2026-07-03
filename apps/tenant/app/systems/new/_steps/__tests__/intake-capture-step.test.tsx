@@ -24,7 +24,9 @@ const DEFAULT_PROPS = {
   lifecycleStage: null,
   purpose: null,
   prefillBases: null,
+  confirmedIntakeFields: [] as string[],
   onFieldChange: jest.fn(),
+  onConfirmField: jest.fn(),
   onSubmit: jest.fn(),
 } as const;
 

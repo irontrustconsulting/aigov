@@ -31,6 +31,10 @@ class RegistrationCreate(BaseModel):
     affected_party_ids: list[uuid.UUID] = Field(default_factory=list)
     # When present, the draft is deleted in the same transaction (D-66/SV-3).
     draft_id: uuid.UUID | None = None
+    # Transient action signal for derived-field disposition (D-74, INV-83).
+    # Not persisted in draft_blob (B1). Intake bare keys (e.g. "operator_role_id")
+    # and catalogue-fact keys ("fact:<key>") share this list.
+    confirmed_fields: list[str] = Field(default_factory=list)
 
 
 class RegistrationRead(BaseModel):

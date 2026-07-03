@@ -303,6 +303,43 @@ class DraftRegistration(Base, TimestampMixin):
     draft_blob: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 
 
+class PrefillDisposition(Base):
+    """Server-derived provenance record for each intake prefill and catalogue
+    fact disposed at registration (D-74, D-75, INV-83).
+
+    One row per (system, field_key); UNIQUE constraint enforces single-home.
+    Intake fields use bare keys (e.g. 'operator_role_id'); catalogue facts use
+    a 'fact:<key>' prefix to avoid namespace collision (N4).
+    Upserted by PATCH /systems when a provenance-bearing field changes.
+    RLS isolates by tenant (INV-4).
+    """
+    __tablename__ = "prefill_disposition"
+    __table_args__ = (
+        UniqueConstraint("system_id", "field_key", name="uq_prefill_disposition_system_field"),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("tenant.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    system_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("system.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    field_key: Mapped[str] = mapped_column(String(120), nullable=False)
+    provenance: Mapped[ProvenanceConfidence] = mapped_column(
+        SAEnum(ProvenanceConfidence, name="provenance_confidence", create_constraint=False),
+        nullable=False,
+    )
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default="now()", nullable=False,
+    )
+
+
 # ---------------------------------------------------------------------------
 # THREE INHERITING APPROVAL SCOPES (PRD 4.1.4)
 # ---------------------------------------------------------------------------

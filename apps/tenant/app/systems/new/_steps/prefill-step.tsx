@@ -19,7 +19,9 @@ const NOT_APPLICABLE_OPTION = [{ value: "not_applicable", label: "Not applicable
 
 export interface PrefillStepProps {
   catalogueProductId: string | null;
-  onContinue: () => void;
+  /** WI-6: called with fact dispositions so the wizard can record them for
+   * submission. Confirmed = fact accepted as-is; amended = fact overridden. */
+  onContinue: (confirmedKeys: string[], amendedKeys: string[]) => void;
 }
 
 /**
@@ -41,7 +43,7 @@ export function PrefillStep({ catalogueProductId, onContinue }: PrefillStepProps
     return (
       <PageScaffold>
         <section aria-label="prefill-confirm">
-          <Button type="button" onClick={onContinue}>
+          <Button type="button" onClick={() => onContinue([], [])}>
             Continue
           </Button>
         </section>
@@ -78,7 +80,17 @@ export function PrefillStep({ catalogueProductId, onContinue }: PrefillStepProps
             ))}
           </ul>
         )}
-        <Button type="button" onClick={onContinue}>
+        <Button
+          type="button"
+          onClick={() => {
+            // WI-6: all non-amended facts are confirmed as-is on Continue (INV-83).
+            const amendedKeys = Object.keys(amended);
+            const confirmedKeys = facts
+              .map((f: CatalogueFactOut) => f.key)
+              .filter((k: string) => !amendedKeys.includes(k));
+            onContinue(confirmedKeys, amendedKeys);
+          }}
+        >
           Continue
         </Button>
       </section>

@@ -23,6 +23,13 @@ export interface UseCaseCreateStepProps {
   purpose: string | null;
   /** DM-S3: when set, the draft is atomically discarded on successful registration (D-66). */
   draftId: string | null;
+  /** FE-32/INV-83: camelCase UI keys for explicitly confirmed derived intake fields.
+   * Converted to API snake_case at payload time. */
+  confirmedIntakeFields: string[];
+  /** WI-6: raw fact.key values confirmed as-is in the prefill step (USER_CONFIRMED). */
+  confirmedFactKeys: string[];
+  /** WI-6: raw fact.key values overridden in the prefill step (USER_AMENDED). */
+  amendedFactKeys: string[];
   onCreated: (
     result: RegistrationRead,
     context: {
@@ -47,6 +54,15 @@ const OTHER_OPTION_VALUE = "__other__";
  * constrained SingleSelect for catalogue products; custom systems present
  * only "Other / not listed" (no product → no memberships).
  */
+/** Map UI camelCase intake field names to API snake_case keys (D-74). */
+const INTAKE_FIELD_API_KEY: Record<string, string> = {
+  operatorRoleId: "operator_role_id",
+  lifecycleStage: "lifecycle_stage",
+  hostingModelId: "hosting_model_id",
+  purpose: "purpose",
+  name: "name",
+};
+
 export function UseCaseCreateStep({
   name,
   isCustom,
@@ -56,6 +72,9 @@ export function UseCaseCreateStep({
   lifecycleStage,
   purpose,
   draftId,
+  confirmedIntakeFields,
+  confirmedFactKeys,
+  amendedFactKeys,
   onCreated,
 }: UseCaseCreateStepProps) {
   const [title, setTitle] = useState("");
@@ -127,6 +146,14 @@ export function UseCaseCreateStep({
         affected_party_ids: affectedPartyIds,
         // DM-S3: discard draft atomically on success (D-66)
         draft_id: draftId ?? undefined,
+        // FE-32/INV-83: disposition signal (D-74).
+        // Intake fields: camelCase → API snake_case.
+        // Fact keys: "fact:<key>" for confirmed, "fact_amended:<key>" for amended (WI-6).
+        confirmed_fields: [
+          ...confirmedIntakeFields.map((f) => INTAKE_FIELD_API_KEY[f] ?? f),
+          ...confirmedFactKeys.map((k) => `fact:${k}`),
+          ...amendedFactKeys.map((k) => `fact_amended:${k}`),
+        ],
       },
       {
         onSuccess: (data: RegistrationRead) =>

@@ -17,11 +17,13 @@ import uuid
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth.context import TenantContext
 from app.models import Membership, System, User
-from app.models.domain import CatalogueProduct, CatalogueVendor
+from app.models.base import ProvenanceConfidence
+from app.models.domain import CatalogueProduct, CatalogueVendor, PrefillDisposition
 from app.models.intake import EUOperatorRole, HostingModel
 from app.models.lifecycle import AuditEvent
 from app.schemas.system import (
@@ -118,6 +120,7 @@ def _build_detail(
     vendor=None,
     op_role=None,
     hm=None,
+    field_provenance: dict[str, str] | None = None,
 ) -> SystemDetail:
     """Assemble a SystemDetail from a loaded System ORM object and pre-fetched refs."""
     use_cases = system.use_cases or []
@@ -147,6 +150,7 @@ def _build_detail(
         ],
         created_at=system.created_at,
         updated_at=system.updated_at,
+        field_provenance=field_provenance or None,
     )
 
 
@@ -281,6 +285,19 @@ def update_system(
     elif payload.catalogue_vendor_id is not None and not product_changed:
         system.catalogue_vendor_id = payload.catalogue_vendor_id
 
+    # Capture provenance-bearing field changes before applying (WI-PATCH, D-75).
+    changed_provenance: list[tuple[str, str]] = []
+    if payload.name is not None and payload.name != system.name:
+        changed_provenance.append(("name", payload.name))
+    if payload.operator_role_id is not None and payload.operator_role_id != system.operator_role_id:
+        changed_provenance.append(("operator_role_id", str(payload.operator_role_id)))
+    if payload.hosting_model_id is not None and payload.hosting_model_id != system.hosting_model_id:
+        changed_provenance.append(("hosting_model_id", str(payload.hosting_model_id)))
+    if payload.lifecycle_stage is not None and payload.lifecycle_stage != system.lifecycle_stage:
+        changed_provenance.append(("lifecycle_stage", payload.lifecycle_stage.value))
+    if payload.purpose is not None and payload.purpose != (system.metadata_blob or {}).get("purpose"):
+        changed_provenance.append(("purpose", payload.purpose))
+
     # Apply field updates (only supplied non-None values)
     if payload.name is not None:
         system.name = payload.name
@@ -303,6 +320,34 @@ def update_system(
         blob["purpose"] = payload.purpose
     system.metadata_blob = blob
 
+    # Upsert prefill_disposition to USER_AMENDED for each changed provenance field.
+    for field_key, new_val in changed_provenance:
+        db.execute(
+            pg_insert(PrefillDisposition).values(
+                id=uuid.uuid4(),
+                tenant_id=ctx.tenant_id,
+                system_id=system_id,
+                field_key=field_key,
+                provenance=ProvenanceConfidence.USER_AMENDED,
+                actor_user_id=ctx.user_id,
+            ).on_conflict_do_update(
+                constraint="uq_prefill_disposition_system_field",
+                set_={
+                    "provenance": ProvenanceConfidence.USER_AMENDED.value,
+                    "actor_user_id": ctx.user_id,
+                },
+            )
+        )
+        db.add(AuditEvent(
+            id=uuid.uuid4(),
+            tenant_id=ctx.tenant_id,
+            actor_user_id=ctx.user_id,
+            action="system.field_amended",
+            entity_type="system",
+            entity_id=system_id,
+            detail={"field": field_key, "value": new_val},
+        ))
+
     # Stage audit event
     _stage_audit(db, tenant_id=ctx.tenant_id, actor_user_id=ctx.user_id,
                  action="system.updated", system=system)
@@ -321,10 +366,16 @@ def get_system_detail(
     """
     system = _load_system_full(system_id, db)
 
+    dispositions = db.scalars(
+        select(PrefillDisposition).where(PrefillDisposition.system_id == system_id)
+    ).all()
+    fp = {d.field_key: d.provenance.value for d in dispositions} if dispositions else None
+
     return _build_detail(
         system,
         product=db.get(CatalogueProduct, system.catalogue_product_id) if system.catalogue_product_id else None,
         vendor=db.get(CatalogueVendor, system.catalogue_vendor_id) if system.catalogue_vendor_id else None,
         op_role=db.get(EUOperatorRole, system.operator_role_id) if system.operator_role_id else None,
         hm=db.get(HostingModel, system.hosting_model_id) if system.hosting_model_id else None,
+        field_provenance=fp,
     )

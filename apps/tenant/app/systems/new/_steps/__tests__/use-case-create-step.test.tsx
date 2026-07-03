@@ -58,6 +58,9 @@ test("a successful register hands the full RegistrationRead up via onCreated", a
       lifecycleStage={null}
       purpose={null}
       draftId={null}
+      confirmedIntakeFields={[]}
+      confirmedFactKeys={[]}
+      amendedFactKeys={[]}
       onCreated={onCreated}
     />,
     { wrapper },

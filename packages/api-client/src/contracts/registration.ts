@@ -25,6 +25,10 @@ export interface RegistrationCreate {
   affected_party_ids: string[];
   /** When present, the draft is deleted in the same transaction (D-66/SV-3). */
   draft_id?: string | null;
+  /** Transient disposition signal (D-74, INV-83). Bare intake keys (e.g.
+   * "operator_role_id") for explicitly confirmed derived fields; "fact:<key>"
+   * for confirmed catalogue facts. Not persisted in draft_blob (B1). */
+  confirmed_fields?: string[];
 }
 
 /** Response from POST /v1/registrations — full system + use case + classification,

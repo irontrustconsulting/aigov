@@ -111,6 +111,9 @@ class SystemDetail(BaseModel):
     use_case_lifecycle_states: list[UseCaseStateSummary]
     created_at: datetime
     updated_at: datetime
+    # Per-field provenance from prefill_disposition (D-75, INV-83). Null when
+    # no dispositions exist (custom system or pre-sprint registration).
+    field_provenance: dict[str, str] | None = None
 
 
 # ---------------------------------------------------------------------------
