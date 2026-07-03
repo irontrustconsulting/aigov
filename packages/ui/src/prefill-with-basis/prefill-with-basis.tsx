@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Button } from "../primitives/button";
 import { ProvenanceBadge, type Provenance } from "./provenance-badge";
 
@@ -10,10 +10,17 @@ export interface StructuredOption {
 }
 
 export interface PrefillWithBasisProps {
-  /** The current value's display label — server-derived. */
+  /** Optional field label rendered in the card header (left). */
+  label?: string;
+  /** The current value's display label — server-derived. Rendered as the value
+   * when valueContent is not provided. */
   valueLabel: string;
-  /** The shown basis for the current value — server-derived. */
-  basis: string;
+  /** Optional typed value node (A2=b). When provided, rendered as the value
+   * instead of valueLabel. Back-compat: omitting this renders valueLabel. */
+  valueContent?: ReactNode;
+  /** The shown basis for the current value — may be a string or a ReactNode
+   * (e.g. a source link). Server-derived. */
+  basis: ReactNode;
   /** Server-derived provenance (PAT-8, INV-13) — never client-set. */
   provenance: Provenance;
   /** The override is itself a structured pick (FE-4), never free text. */
@@ -29,9 +36,15 @@ export interface PrefillWithBasisProps {
  * FE-5: the §1.5 spine at field level. Renders the server-derived
  * provenance badge, the shown basis, and a one-click override whose input
  * is also a structured pick plus optional justification.
+ *
+ * FE-33 ALTER: badge re-anchored to the header row (top-right, aligned to
+ * label); label and valueContent props added (A2=b, back-compat via
+ * valueLabel). basis accepts ReactNode for source links (R5).
  */
 export function PrefillWithBasis({
+  label,
   valueLabel,
+  valueContent,
   basis,
   provenance,
   options,
@@ -43,10 +56,19 @@ export function PrefillWithBasis({
 
   return (
     <div className="space-y-2 rounded border border-hairline bg-surface p-4">
+      {/* Header: label (left) + ProvenanceBadge (right, R4). */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-ink">{valueLabel}</span>
-        <ProvenanceBadge provenance={provenance} />
+        {label && <span className="text-sm font-medium text-ink">{label}</span>}
+        <span className="ml-auto">
+          <ProvenanceBadge provenance={provenance} />
+        </span>
       </div>
+
+      {/* Value slot: typed node when provided, else valueLabel string (back-compat). */}
+      <div className="text-sm text-ink">
+        {valueContent ?? <span>{valueLabel}</span>}
+      </div>
+
       <p className="text-xs text-ink-muted">{basis}</p>
 
       {!overriding && (
