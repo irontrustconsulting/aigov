@@ -1,0 +1,63 @@
+# UI-F9-MEMBERS — Sprint Handoff (execution-only)
+
+Rationale lives in `UI-F9-MEMBERS-design-final.md`. This file is execution-only. Build to the rendered specimen `members_sod_role_assignment_spec` (binding visual). **INV-68: do not originate layout, composition, or UX; flag and stop.** Single plane (tenant). **0 backend delta** expected; if any work item appears to require a backend change, **stop and escalate** (do not add routes/fields/migrations).
+
+---
+
+## Pre-flight (all must pass before WI-1; D-21)
+
+- [ ] **P0** Read live ceilings for INV-n / D-n / FE-n / DF-n. Record them. New IDs in WI-CANON mint **above the live ceiling**, renumbered contiguously if live > INDEX's (INV-70 / D-52 / FE-23).
+- [ ] **P1** Read `assert_governance_assignable` body. Confirm: (a) `acting == subject` self-block; (b) matrix conflict check sourced from `governance_role_conflict`, membership-scoped, granter-independent. **Do not modify.** Divergence from this model → **stop and escalate**.
+- [ ] **P2** Read live `governance_role` keys + `governance_role_conflict` rows. Confirm 5 keys and 9 conflicting pairs (only `system_owner+contributor` composable). Bind the SoD control to these verbatim.
+- [ ] **P3** Confirm `MeRead.role` literal casing (`"admin"`/`"member"` vs `ADMIN`/`MEMBER`). All nav/page predicates compare against this literal.
+- [ ] **P4** Confirm contract shapes at HEAD: `MemberCreate`, `MemberCreated`, `MemberRead`, `MemberListResponse`, `GovernanceRoleAssignmentCreate`, `GovernanceRoleAssignmentRead`, `GovernanceCatalogueRead`. `MemberRead` carries no governance roles.
+- [ ] **P5** Determine whether a **tenant-wide** `GET /governance-roles/assignments` (no membership filter) exists. Result gates WI-6. **If absent, do not add it.**
+- [ ] **P6** Confirm no tenant-plane route lists member identity beyond `GET /members`.
+
+---
+
+## Work items (dependency-ordered)
+
+### WI-1 — Members nav entry + page root-branch gate (DF-F9-3)
+Add the **Members** sidebar entry below `Audit`, rendered iff `MeRead.role == admin` (P3 literal). Root-branch the page route on the same predicate; non-admin direct-nav returns the established not-authorised treatment and issues **no** `GET /v1/members` (pattern: DF7-1 / DF2-5 / DF5-7).
+- **Done-check:** unit/integration test — a `member`-role `MeRead` renders no Members entry and the page issues zero member-route calls; an `admin`-role renders the entry and reaches the list.
+
+### WI-2 — Members list region (FE-23 kit, INV-70 states)
+Compose from FE-23 `DataTable`/`PageHeader`/`EmptyState`/`Skeleton`/`ErrorState`. Columns: name, email, administrative role, **accept-status chip (neutral chrome)**, row action → role panel. `GET /v1/members` (keyset). Accept-status chip is **non-semantic chrome** (accepted = muted fill, pending = outline per specimen); **no `--verdict-*` tokens**.
+- **Done-checks:** owner-only renders the first-run/empty path; loading renders `Skeleton`; a forced fetch error renders `ErrorState`; snapshot/test asserts the status chip uses no `--verdict-*` class (FE-16 guard).
+
+### WI-3 — Invite member (FE-23 kit)
+`POST /v1/members` (`MemberCreate{email,name}`) → on success invalidate `["members"]`; new row appears `pending`. Compose from kit.
+- **Done-check:** test — successful invite adds a `pending` row; the query cache invalidates.
+
+### WI-4 — Per-member role panel data wiring
+For a selected member: read held grants `GET /governance-roles/assignments/member/{membership_id}` + catalogue `GET /governance-roles/catalogue`; assign `POST /governance-roles/assignments`; revoke `DELETE /governance-roles/assignments/{assignment_id}`. Invalidate the member's grants on assign/revoke.
+- **Done-check:** test — assign then revoke round-trips; the panel reflects held state from the member-scoped route.
+
+### WI-5 — SoD-visible assign control (INV-71) — build to specimen
+Per `members_sod_role_assignment_spec`:
+- **Conflict (other members):** list all 5 catalogue roles; a role conflicting with a held grant is **disabled-with-reason** ("Conflicts with {held role}: separation of duties" — colon, **no em dash**). Held role shows as held + revocable. The composable second role (`system_owner+contributor`) is assignable. Affordance computed from the matrix client-side.
+- **Self (acting admin's own membership):** assignment control **absent**; render the FE-22 note "Governance roles are assigned by another administrator, to preserve separation of duties." No disabled control.
+- **Done-checks:** (1) given a member holding `system_owner`, `contributor` is assignable and `reviewer`/`authoriser`/`auditor` are disabled-with-reason; (2) the self panel renders no assign/revoke control, only the note; (3) integration — a forged `POST /governance-roles/assignments` that the client would disable still returns 403 from `assert_governance_assignable` (server is authority, INV-71).
+
+### WI-6 — Roles-held list column (CONDITIONAL on P5)
+**Only if** P5 confirmed a tenant-wide `GET /governance-roles/assignments`: add a compact roles-held column, single grouped fetch keyed by `membership_id`, role names joined from the catalogue (no N+1). **If P5 was negative: skip this WI**; roles-held stays panel-only (WI-4). Do not add a backend route.
+- **Done-check:** if built — one network call populates all rows' roles (no per-row fetch); if skipped — documented as panel-only in WI-CANON STATE note.
+
+### WI-CANON — Canonical update (last)
+- Update **STATE**: UI-F9-MEMBERS surface built (Members list + invite + SoD-visible role panel); note roles-held home (column vs panel per P5); composition-debt register — Members entry marked born-compliant/cleared.
+- Update **DATA-MODEL**: **no schema change** (record explicitly: 0 migrations this sprint).
+- Append **INVARIANTS**: `INV-71` (mint above live ceiling, P0).
+- Append **DECISIONS**: `D-53`, sprint-locals `DF-F9-1`, `DF-F9-3` (mint above live ceiling). Record `DF-F9-2` as struck/retired. **OPEN-4 remains open** (record the deferral; do not close).
+- Append **FRONTEND**: `FE-24` (mint above live ceiling).
+- **Never renumber a live INV-n / D-n / FE-n.** Leave the stable tier untouched: D-5, INV-7, INV-28, INV-56, FE-8, FE-16, DOMAIN §7, WKF-6 are **not** edited.
+- **Done-check:** canon diff shows only additive STATE/DATA-MODEL edits and appended INV-71/FE-24/D-53/DF-F9-1/DF-F9-3 above the live ceiling; no stable-tier file modified; OPEN-4 still open.
+
+---
+
+## Binding constraints for the agent
+- Build §4.4 to the specimen; **do not originate** alternative layouts (INV-68).
+- **0 backend delta.** Any apparent need for a new route/field/migration → stop and escalate (esp. WI-6 / P5).
+- Accept-status chip carries **no** `--verdict-*` token (FE-16 orthogonality).
+- Self-case is control-**absent** + note; never a disabled control (FE-8/INV-56).
+- Server authority is `assert_governance_assignable`; client affordance never substitutes for it.
