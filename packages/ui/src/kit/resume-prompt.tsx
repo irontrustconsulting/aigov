@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Button } from "../primitives/button";
 
 export interface ResumePromptProps {
@@ -8,7 +11,7 @@ export interface ResumePromptProps {
   /** ISO 8601 string from draft.updated_at. */
   lastEditedAt: string;
   onResume: () => void;
-  onStartOver: () => void;
+  onDiscard: () => void;
 }
 
 function formatDate(iso: string): string {
@@ -27,8 +30,10 @@ export function ResumePrompt({
   savedStep,
   lastEditedAt,
   onResume,
-  onStartOver,
+  onDiscard,
 }: ResumePromptProps) {
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+
   return (
     <div
       className="rounded-lg border border-hairline bg-paper p-6 space-y-4"
@@ -44,12 +49,28 @@ export function ResumePrompt({
           {" "}· Step: {savedStep}
         </p>
       </div>
-      <div className="flex gap-3">
-        <Button onClick={onResume}>Resume</Button>
-        <Button variant="ghost" onClick={onStartOver}>
-          Start over
-        </Button>
-      </div>
+      {confirmingDiscard ? (
+        <div className="space-y-3">
+          <p className="text-sm text-ink">
+            Discard this registration and start fresh? This cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <Button variant="ghost" onClick={onDiscard}>
+              Discard
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirmingDiscard(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-3">
+          <Button onClick={onResume}>Resume</Button>
+          <Button variant="ghost" onClick={() => setConfirmingDiscard(true)}>
+            Discard
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

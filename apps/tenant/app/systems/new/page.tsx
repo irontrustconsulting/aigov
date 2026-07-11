@@ -120,9 +120,10 @@ export default function NewSystemPage() {
     return isAssurance ? <AssuranceReadOnly /> : <NeedsSystemOwner />;
   }
 
-  // Front-door resume (FE-28, DM-S3): show ResumePrompt when an active draft
-  // exists and the wizard has not yet advanced (draftId null, step drill-down).
-  if (activeDraft.data && state.draftId === null && state.step === "drill-down") {
+  // Front-door resume (FE-28, DM-S3, INV-85): show ResumePrompt whenever an
+  // active draft exists and the user has not yet explicitly resolved it —
+  // gated on resumeResolved, not the step/draftId navigation cursor.
+  if (activeDraft.data && !state.resumeResolved) {
     const draft = activeDraft.data;
     const savedStep = (draft.draft_blob.step as string | undefined) ?? "drill-down";
     const productName = (draft.draft_blob.catalogueProductName as string | null | undefined) ?? null;
@@ -132,7 +133,7 @@ export default function NewSystemPage() {
         savedStep={savedStep}
         lastEditedAt={draft.updated_at}
         onResume={() => dispatch({ type: "RESUME_FROM_DRAFT", draft })}
-        onStartOver={() => discard.mutate(draft.id)}
+        onDiscard={() => discard.mutate(draft.id, { onSuccess: () => dispatch({ type: "DRAFT_DISCARDED" }) })}
       />
     );
   }

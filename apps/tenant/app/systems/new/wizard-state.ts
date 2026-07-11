@@ -83,6 +83,9 @@ export interface WizardState {
   classification: ClassificationRead | null;
   // Draft staging (DM-S3, D-66)
   draftId: string | null;
+  // Front-door resolution signal (UI-DRAFT-RESUME-GATE, INV-85). Transient —
+  // not in draft_blob; gates ResumePrompt independent of the step/draftId cursor.
+  resumeResolved: boolean;
 }
 
 export const initialWizardState: WizardState = {
@@ -108,6 +111,7 @@ export const initialWizardState: WizardState = {
   useCaseId: null,
   classification: null,
   draftId: null,
+  resumeResolved: false,
 };
 
 export type WizardAction =
@@ -147,7 +151,9 @@ export type WizardAction =
   /** DM-S3: draft was created/confirmed; store its id for subsequent PATCHes. */
   | { type: "DRAFT_CREATED"; draftId: string }
   /** DM-S3: resume from an existing active draft. */
-  | { type: "RESUME_FROM_DRAFT"; draft: DraftRegistrationRead };
+  | { type: "RESUME_FROM_DRAFT"; draft: DraftRegistrationRead }
+  /** UI-DRAFT-RESUME-GATE: draft discarded from the front-door; resets to a fresh wizard. */
+  | { type: "DRAFT_DISCARDED" };
 
 export function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
@@ -241,7 +247,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
       return { ...state, step: "terminal-prohibited" };
 
     case "DRAFT_CREATED":
-      return { ...state, draftId: action.draftId };
+      return { ...state, draftId: action.draftId, resumeResolved: true };
 
     case "RESUME_FROM_DRAFT": {
       const blob = action.draft.draft_blob as Partial<WizardState>;
@@ -265,8 +271,12 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         intendedUseCategoryId: blob.intendedUseCategoryId ?? null,
         step: clampStep((blob.step as WizardStep | undefined) ?? "drill-down"),
         draftId: action.draft.id,
+        resumeResolved: true,
       };
     }
+
+    case "DRAFT_DISCARDED":
+      return { ...initialWizardState, resumeResolved: true };
 
     default:
       return state;

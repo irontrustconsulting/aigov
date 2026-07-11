@@ -741,3 +741,9 @@ Why a dedicated table rather than columns on `system`: (a) the field set is open
 Rejected: (a) store in `system.metadata_blob` — loses type safety, FK integrity, and audit capability; (b) one `AuditEvent` per field with no disposition table — no stable queryable projection for the UI; (c) store disposition in the `confirmed_fields` payload only and not persist — loses the provenance record after registration.
 ↳ origin: CAT-4 · refs: INV-83, D-74, PAT-8
 ↳ origin: DM-S4b · refs: D-9, D-71, INV-82
+
+**D-76** · "Start over" retired for **Discard** with an inline confirm; single-draft-per-user held; FE-28 is the sole resume/discard authority
+`ResumePrompt`'s (FE-28) secondary action is renamed from "Start over" (fire-and-forget, no dispatch) to "Discard", which reveals an inline two-button confirm ("Discard this registration and start fresh? This cannot be undone." + Discard/Cancel) before calling `onDiscard`. The single-draft-per-user model (INV-79, D-66) is retained — this is a client-state + UI fix, not a schema change. The FE-28 front-door remains the sole place discard is reachable; the dashboard's `DraftResumeIndicator` (FE-29) stays navigation-only and gains no mutation.
+Why: the prior "Start over" gave no visible reaction between click and the DELETE round-trip landing, reading as broken; a destructive action also warrants a confirm step.
+Rejected: (a) a modal confirm via the existing `Dialog` primitive (`packages/ui/src/primitives/dialog.tsx`) — considered at the SV-D pre-flight check, but rejected because it contradicts the explicit inline, non-modal UX call already made for this affordance; (b) optimistic UI with a toast/undo instead of a blocking confirm — bigger surface change than this fix warrants.
+↳ origin: UI-DRAFT-RESUME-GATE · refs: INV-79, INV-85, D-66

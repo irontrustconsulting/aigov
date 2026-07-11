@@ -1,5 +1,5 @@
-import { initialWizardState, wizardReducer, type WizardAction } from "../wizard-state";
-import type { ClassificationRead, RegistrationRead } from "@irontrust/api-client";
+import { initialWizardState, wizardReducer, clampStep, type WizardAction } from "../wizard-state";
+import type { ClassificationRead, DraftRegistrationRead, RegistrationRead } from "@irontrust/api-client";
 
 function classification(overrides: Partial<ClassificationRead>): ClassificationRead {
   return {
@@ -106,5 +106,44 @@ describe("wizardReducer context-gate outcomes", () => {
   test("CONTEXT_RESOLVED routes to whose-court", () => {
     const next = wizardReducer(initialWizardState, { type: "CONTEXT_RESOLVED", useCaseId: "uc-1" });
     expect(next.step).toBe("whose-court");
+  });
+});
+
+describe("resumeResolved (UI-DRAFT-RESUME-GATE, INV-85)", () => {
+  test("initialWizardState.resumeResolved is false", () => {
+    expect(initialWizardState.resumeResolved).toBe(false);
+  });
+
+  function draft(blob: Record<string, unknown>): DraftRegistrationRead {
+    return {
+      id: "draft-1",
+      tenant_id: "t1",
+      owner_user_id: "u1",
+      draft_blob: blob,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    };
+  }
+
+  test("RESUME_FROM_DRAFT sets resumeResolved true and preserves draftId/step restore", () => {
+    const d = draft({ step: "intake", name: "Test" });
+    const next = wizardReducer(initialWizardState, { type: "RESUME_FROM_DRAFT", draft: d });
+    expect(next.resumeResolved).toBe(true);
+    expect(next.draftId).toBe(d.id);
+    expect(next.step).toBe(clampStep("intake"));
+  });
+
+  test("DRAFT_CREATED sets resumeResolved true", () => {
+    const next = wizardReducer(initialWizardState, { type: "DRAFT_CREATED", draftId: "draft-1" });
+    expect(next.resumeResolved).toBe(true);
+    expect(next.draftId).toBe("draft-1");
+  });
+
+  test("DRAFT_DISCARDED resets to a fresh wizard with resumeResolved true", () => {
+    const dirty = wizardReducer(initialWizardState, { type: "DRAFT_CREATED", draftId: "draft-1" });
+    const next = wizardReducer(dirty, { type: "DRAFT_DISCARDED" });
+    expect(next).toEqual({ ...initialWizardState, resumeResolved: true });
+    expect(next.step).toBe("drill-down");
+    expect(next.draftId).toBeNull();
   });
 });
