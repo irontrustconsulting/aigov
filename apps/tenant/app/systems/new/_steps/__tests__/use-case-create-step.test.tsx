@@ -77,3 +77,80 @@ test("a successful register hands the full RegistrationRead up via onCreated", a
   expect(result.use_case.id).toBe("uc-1");
   expect(result.classification.requires_context).toBe(true);
 });
+
+const DATA_CATEGORIES = [
+  { id: "dc-1", code: "health", label: "Health Data", is_special_category: true },
+  { id: "dc-2", code: "identifiers", label: "Identifiers", is_special_category: false },
+];
+const AFFECTED_PARTIES = [
+  { id: "ap-1", code: "children", label: "Children", is_vulnerable_group: true },
+  { id: "ap-2", code: "employees", label: "Employees", is_vulnerable_group: false },
+];
+
+function mockVocabFetch() {
+  global.fetch = jest.fn().mockImplementation((url: RequestInfo | URL, init?: RequestInit) => {
+    if ((init?.method ?? "GET").toUpperCase() === "POST") {
+      return Promise.resolve({
+        ok: true, status: 201,
+        text: async () => JSON.stringify(REGISTRATION_RESPONSE),
+      } as Response);
+    }
+    const path = String(url);
+    if (path.includes("/data-categories")) {
+      return Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify(DATA_CATEGORIES) } as Response);
+    }
+    if (path.includes("/affected-parties")) {
+      return Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify(AFFECTED_PARTIES) } as Response);
+    }
+    return Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify([]) } as Response);
+  }) as jest.Mock;
+}
+
+test("title renders as the TextInput primitive with a placeholder", async () => {
+  mockVocabFetch();
+  render(
+    <UseCaseCreateStep
+      name="Test" isCustom={true} catalogueProductId={null} operatorRoleId={null}
+      hostingModelId={null} lifecycleStage={null} purpose={null} draftId={null}
+      confirmedIntakeFields={[]} confirmedFactKeys={[]} amendedFactKeys={[]}
+      onCreated={jest.fn()}
+    />,
+    { wrapper },
+  );
+
+  const titleInput = await screen.findByLabelText(/what are you using this for/i);
+  expect(titleInput).toHaveAttribute("placeholder", "e.g. Screening inbound support tickets");
+  expect(titleInput).toHaveValue("");
+});
+
+test("renders both SectionGroup headings and both grouped clusters with duty/other subgroups", async () => {
+  mockVocabFetch();
+  render(
+    <UseCaseCreateStep
+      name="Test" isCustom={true} catalogueProductId={null} operatorRoleId={null}
+      hostingModelId={null} lifecycleStage={null} purpose={null} draftId={null}
+      confirmedIntakeFields={[]} confirmedFactKeys={[]} amendedFactKeys={[]}
+      onCreated={jest.fn()}
+    />,
+    { wrapper },
+  );
+
+  await screen.findByLabelText(/what are you using this for/i);
+
+  expect(screen.getByText("Use & oversight")).toBeInTheDocument();
+  expect(screen.getByText("Data & affected parties")).toBeInTheDocument();
+
+  // data-categories: duty (special-category) + other subgroup
+  expect(screen.getByText("GDPR Art. 9, heightened duty")).toBeInTheDocument();
+  expect(screen.getByText("Health Data")).toBeInTheDocument();
+  expect(screen.getByText("Identifiers")).toBeInTheDocument();
+
+  // affected-parties: duty (vulnerable-group) + other subgroup
+  expect(screen.getByText("EU AI Act Art. 27, heightened duty")).toBeInTheDocument();
+  expect(screen.getByText("Children")).toBeInTheDocument();
+  expect(screen.getByText("Employees")).toBeInTheDocument();
+
+  // all fields empty on first render — no chip pre-checked
+  const checkboxes = screen.getAllByRole("checkbox");
+  checkboxes.forEach((cb) => expect(cb).not.toBeChecked());
+});

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Button, MultiSelectInput, PageHeader, PageScaffold, SingleSelect, Skeleton, ErrorState, type SelectOption } from "@irontrust/ui";
+import { Button, PageHeader, PageScaffold, SectionGroup, SingleSelect, Skeleton, ErrorState, TextInput, type SelectOption } from "@irontrust/ui";
 import type { RegistrationRead, SystemLifecycleStage } from "@irontrust/api-client";
 import {
+  GroupedMultiSelect,
   useAffectedParties,
   useDataCategories,
   useHumanOversightTypes,
@@ -170,48 +171,75 @@ export function UseCaseCreateStep({
   return (
     <PageScaffold>
       <PageHeader title="Describe your use case" />
-      <form aria-label="use-case-create" onSubmit={handleSubmit} className="border-hairline space-y-4 rounded-lg border p-4">
-        <div className="space-y-1">
-          <label htmlFor="use-case-title" className="text-sm font-medium">What are you using this for?</label>
-          <input id="use-case-title" value={title} onChange={(e) => setTitle(e.target.value)} required className="border-hairline w-full rounded border px-3 py-1.5 text-sm" />
-        </div>
+      <form aria-label="use-case-create" onSubmit={handleSubmit} className="bg-paper shadow-[var(--elevation-raised)] space-y-4 rounded-lg p-4">
+        <SectionGroup title="Use & oversight">
+          <div className="space-y-4">
+            <TextInput
+              id="use-case-title"
+              label="What are you using this for?"
+              value={title}
+              onChange={setTitle}
+              required
+              placeholder="e.g. Screening inbound support tickets"
+            />
 
-        <SingleSelect
-          id="intended-use-category"
-          label="Intended-use category"
-          value={intendedUseCategoryId}
-          options={categoryOptions}
-          onChange={setIntendedUseCategoryId}
-        />
+            <SingleSelect
+              id="intended-use-category"
+              label="Intended-use category"
+              value={intendedUseCategoryId}
+              options={categoryOptions}
+              onChange={setIntendedUseCategoryId}
+            />
 
-        <SingleSelect
-          id="usage-context"
-          label="Usage context"
-          value={usageContextId}
-          options={toOptions(usageContexts.data)}
-          onChange={setUsageContextId}
-        />
-        <SingleSelect
-          id="human-oversight-type"
-          label="Human oversight"
-          value={humanOversightTypeId}
-          options={toOptions(humanOversightTypes.data)}
-          onChange={setHumanOversightTypeId}
-        />
-        <MultiSelectInput
-          id="data-categories"
-          label="Data categories"
-          values={dataCategoryIds}
-          options={toOptions(dataCategories.data)}
-          onChange={setDataCategoryIds}
-        />
-        <MultiSelectInput
-          id="affected-parties"
-          label="Affected parties"
-          values={affectedPartyIds}
-          options={toOptions(affectedParties.data)}
-          onChange={setAffectedPartyIds}
-        />
+            <SingleSelect
+              id="usage-context"
+              label="Usage context"
+              value={usageContextId}
+              options={toOptions(usageContexts.data)}
+              onChange={setUsageContextId}
+            />
+            <SingleSelect
+              id="human-oversight-type"
+              label="Human oversight"
+              value={humanOversightTypeId}
+              options={toOptions(humanOversightTypes.data)}
+              onChange={setHumanOversightTypeId}
+            />
+          </div>
+        </SectionGroup>
+
+        <SectionGroup title="Data & affected parties">
+          <div className="space-y-4">
+            <GroupedMultiSelect
+              id="data-categories"
+              label="Data categories"
+              values={dataCategoryIds}
+              options={(dataCategories.data ?? []).map((c) => ({
+                value: c.id,
+                label: c.label,
+                group: c.is_special_category ? "duty" : "other",
+              }))}
+              onChange={setDataCategoryIds}
+              dutyHeading="Special-category data"
+              dutyCaption="GDPR Art. 9, heightened duty"
+              otherHeading="Other personal data"
+            />
+            <GroupedMultiSelect
+              id="affected-parties"
+              label="Affected parties"
+              values={affectedPartyIds}
+              options={(affectedParties.data ?? []).map((p) => ({
+                value: p.id,
+                label: p.label,
+                group: p.is_vulnerable_group ? "duty" : "other",
+              }))}
+              onChange={setAffectedPartyIds}
+              dutyHeading="Vulnerable groups"
+              dutyCaption="EU AI Act Art. 27, heightened duty"
+              otherHeading="Other affected parties"
+            />
+          </div>
+        </SectionGroup>
 
         {register.isError && (
           <div role="alert" className="text-sm text-danger">Could not register this system and use case. Check the form and try again.</div>

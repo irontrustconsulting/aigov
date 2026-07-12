@@ -133,6 +133,12 @@ describe("resumeResolved (UI-DRAFT-RESUME-GATE, INV-85)", () => {
     expect(next.step).toBe(clampStep("intake"));
   });
 
+  test("RESUME_FROM_DRAFT resolves intendedUseCategoryId to null (DF-UC-5, DF-D3-1: use-case fields are never persisted to draft_blob)", () => {
+    const d = draft({ step: "intake", name: "Test" });
+    const next = wizardReducer(initialWizardState, { type: "RESUME_FROM_DRAFT", draft: d });
+    expect(next.intendedUseCategoryId).toBeNull();
+  });
+
   test("DRAFT_CREATED sets resumeResolved true", () => {
     const next = wizardReducer(initialWizardState, { type: "DRAFT_CREATED", draftId: "draft-1" });
     expect(next.resumeResolved).toBe(true);

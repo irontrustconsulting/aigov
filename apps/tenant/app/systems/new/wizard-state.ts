@@ -268,7 +268,6 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         confirmedIntakeFields: [],
         confirmedFactKeys: [],
         amendedFactKeys: [],
-        intendedUseCategoryId: blob.intendedUseCategoryId ?? null,
         step: clampStep((blob.step as WizardStep | undefined) ?? "drill-down"),
         draftId: action.draft.id,
         resumeResolved: true,

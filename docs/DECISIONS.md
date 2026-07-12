@@ -747,3 +747,29 @@ Rejected: (a) store in `system.metadata_blob` — loses type safety, FK integrit
 Why: the prior "Start over" gave no visible reaction between click and the DELETE round-trip landing, reading as broken; a destructive action also warrants a confirm step.
 Rejected: (a) a modal confirm via the existing `Dialog` primitive (`packages/ui/src/primitives/dialog.tsx`) — considered at the SV-D pre-flight check, but rejected because it contradicts the explicit inline, non-modal UX call already made for this affordance; (b) optimistic UI with a toast/undo instead of a blocking confirm — bigger surface change than this fix warrants.
 ↳ origin: UI-DRAFT-RESUME-GATE · refs: INV-79, INV-85, D-66
+
+**DF-UC-1** · Scope: presentational only; defaults deferred (sprint-local)
+Ships composition (title primitive, FE-27 sectioning, FE-34 heightened-duty grouping) plus the DF-UC-5 canon fix. No default or prefill added to any use-case-create field this sprint.
+Why: even the smallest default trips INV-83 — a single-membership `intended_use_category` preselect is a derived default that must be dispositioned before the registration transaction commits, a backend and near-stable-tier change. Product-derived `data_category`/`affected_party` prefill additionally needs a catalogue bridge that does not exist: `_build_field_prefills` seeds only `operator_role_id`/`hosting_model_id`/`lifecycle_stage`/`purpose`; `catalogue_fact` (CAT-4, D-69) is display-only provenance, not typed default data; the typed curated columns (`catalogue_product.hosting_model_id`/`intended_use`, D-69) don't cover these two fields. A wrongly pre-ticked special-category selection a user rubber-stamps is a worse governance defect than an empty field.
+Rejected: (a) smuggle the one obvious `intended_use_category` default in now — drags in the full INV-83 disposition extension anyway; (b) pull the whole prefill bridge plus INV-83 extension into this sprint — a multi-item backend sprint that blocks the visual fix and contradicts deferred-queue ordering.
+↳ origin: UI-UC-CREATE-COMPOSE (sprint-local DF) · refs: INV-83, D-74, D-69, FE-30
+
+**DF-UC-2** · Grouping: labelled heightened-duty subgroups, partition follows the flag not the label (sprint-local)
+`data_category` and `affected_party` multiselects partition into a heightened-duty subgroup and an "Other" subgroup, driven by `is_special_category`/`is_vulnerable_group` on the read (FE-34). Treatment is structural: neutral hairline left rule, subheading, muted Art. reference caption — no `--verdict-*`, no alarm colour, no brand on the subgroup rule (petrol stays reserved to the FE-27 section level, D-57).
+Rejected: keep flat and weight only special-category chips — leaves the affected-parties wall unsolved and gives weaker structural clarity than a labelled subgroup.
+↳ origin: UI-UC-CREATE-COMPOSE (sprint-local DF) · refs: FE-34, INV-73, D-57
+
+**DF-UC-3** · Data-category taxonomy expansion: separate seed/reference track, deferred (sprint-local)
+The live `data_category` seed (14 rows: 8 GDPR Art. 9 special categories + 6 common categories) is GDPR Art. 9-led and may be non-exhaustive for a typical AI SaaS (candidate gaps: Art. 10 criminal-offence data, communications content, usage/telemetry, device/technical, audio/voice, imagery). A `data_category` seed/taxonomy change (GLOBAL, INV-48) is a separate track, gated on further product-scope review — not folded into this presentational pass.
+Rejected: block this sprint on the taxonomy gap — couples a data-model decision to a UI pass and stalls a zero-risk fix.
+↳ origin: UI-UC-CREATE-COMPOSE (sprint-local DF) · refs: INV-48
+
+**DF-UC-4** · `GroupedMultiSelect` home: tenant-local, not `packages/ui` (sprint-local)
+`GroupedMultiSelect` lives at `apps/tenant/lib/intake/grouped-multi-select.tsx` — single consumer (`UseCaseCreateStep`), tenant-local composition wrapping the shared `MultiSelectInput` primitive (FE-4, `packages/ui`, INV-73 locus stays there). Governing precedent: `FactValue` (`apps/tenant/lib/intake/fact-value.tsx`, INV-84) — the same locus for a single-consumer tenant composition over shared primitives.
+Rejected: promote to `packages/ui` now — no second consumer justifies a shared primitive yet.
+↳ origin: UI-UC-CREATE-COMPOSE (sprint-local DF) · refs: INV-84, FE-4, FE-34
+
+**DF-UC-5** · FE-31 restore clause corrected to match DF-D3-1; use-case fields hold local state, not draft-blob state (sprint-local)
+DF-D3-1 stores only pre-boundary fields in `draft_blob` and explicitly excludes use-case fields (title, vocab selections), which are captured at the atomic boundary step. `toDraftBlob` (`apps/tenant/app/systems/new/page.tsx`) confirms it: use-case fields are never written. The `RESUME_FROM_DRAFT` line `intendedUseCategoryId: blob.intendedUseCategoryId ?? null` read a key `toDraftBlob` never writes, so it always resolved to null, and the step never consumed `WizardState.intendedUseCategoryId` (local `useState` instead) — doubly dead. The dead line is removed; FE-31's "persisted to draft blob; restored on `RESUME_FROM_DRAFT`" clause is struck and corrected. `GroupedMultiSelect` takes `values` + `onChange` and is agnostic to whether the parent holds state locally or in wizard state, so the forward-compat guarantee for a future prefill bridge holds regardless of this fix.
+Rejected: reverse DF-D3-1 and persist use-case fields to `draft_blob` so resume repopulates them — a `draft_blob` shape change and a reversal of a shipped decision for near-zero functional gain (the use-case step is the terminal pre-commit step); a DM-track sprint, not this pass.
+↳ origin: UI-UC-CREATE-COMPOSE (sprint-local DF) · refs: DF-D3-1, D-66, FE-31

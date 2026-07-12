@@ -8,12 +8,16 @@ export function MultiSelectInput({
   values,
   options,
   onChange,
+  hideLabel,
 }: {
   id: string;
   label: string;
   values: string[];
   options: SelectOption[];
   onChange: (values: string[]) => void;
+  /** Keep the legend as the accessible name but visually hide it — for callers
+   *  that render their own visible heading above the cluster (e.g. GroupedMultiSelect). */
+  hideLabel?: boolean;
 }) {
   function toggle(value: string) {
     onChange(values.includes(value) ? values.filter((v) => v !== value) : [...values, value]);
@@ -21,7 +25,7 @@ export function MultiSelectInput({
 
   return (
     <fieldset id={id} className="space-y-2">
-      <legend className="text-sm font-medium text-ink">{label}</legend>
+      <legend className={hideLabel ? "sr-only" : "text-sm font-medium text-ink"}>{label}</legend>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
           const checked = values.includes(opt.value);
