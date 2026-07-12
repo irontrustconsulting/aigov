@@ -25,6 +25,10 @@ next-env.d.ts
 .idea/
 .vscode/
 
+# Claude Code local overrides (may contain secrets)
+.claude/settings.local.json
+.claude/worktrees/
+
 # Terraform
 infra/.terraform/
 infra/terraform.tfstate
