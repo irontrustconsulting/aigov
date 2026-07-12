@@ -15,6 +15,7 @@ async function parseBody(res: Response): Promise<unknown> {
 export interface ApiClient {
   get<T>(path: string, options?: RequestOptions): Promise<T>;
   post<T, B = unknown>(path: string, body: MutationBody<B>, options?: RequestOptions): Promise<T>;
+  put<T, B = unknown>(path: string, body: MutationBody<B>, options?: RequestOptions): Promise<T>;
   patch<T, B = unknown>(
     path: string,
     body: MutationBody<B>,
@@ -62,6 +63,7 @@ export function createApiClient({ baseUrl }: ApiClientOptions): ApiClient {
   return {
     get: (path, options) => request("GET", path, undefined, options),
     post: (path, body, options) => request("POST", path, body, options),
+    put: (path, body, options) => request("PUT", path, body, options),
     patch: (path, body, options) => request("PATCH", path, body, options),
     delete: (path, options) => request("DELETE", path, undefined, options),
   };

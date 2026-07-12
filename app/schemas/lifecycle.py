@@ -84,6 +84,38 @@ class SystemRollupRead(BaseModel):
     use_cases: list[UseCaseRollupEntry]
 
 
+class ProductClearanceEntry(BaseModel):
+    catalogue_product_id: uuid.UUID
+    product_name: str
+    status: ApprovalStatus
+    valid_until: datetime | None
+    decided_by_name: str | None
+    decided_at: datetime | None
+    note: str | None
+    vendor_cleared: bool
+    awaiting_use_case_count: int
+    affected_use_case_count: int
+    affected_system_count: int
+
+
+class VendorClearanceEntry(BaseModel):
+    catalogue_vendor_id: uuid.UUID
+    vendor_name: str
+    status: ApprovalStatus
+    valid_until: datetime | None
+    decided_by_name: str | None
+    decided_at: datetime | None
+    note: str | None
+    awaiting_use_case_count: int
+    affected_use_case_count: int
+    affected_system_count: int
+    products: list[ProductClearanceEntry]
+
+
+class ClearanceQueueRead(BaseModel):
+    vendors: list[VendorClearanceEntry]
+
+
 class AuthoriseRequest(BaseModel):
     residual_risk_statement: str
 

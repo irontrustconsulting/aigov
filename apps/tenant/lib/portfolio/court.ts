@@ -39,6 +39,7 @@ export interface ResolvedCourt {
   partyLabel: string;
   roleKey: GovernanceRoleKey | null;
   reason: string;
+  reasonCode: string;
 }
 
 /** `blocking` is the first non-"advance" gate result (or null if nothing is
@@ -52,6 +53,7 @@ export function resolveCourt(blocking: GateResultRead | null): ResolvedCourt | n
     partyLabel: PARTY_LABEL[party] ?? party,
     roleKey: PARTY_TO_ROLE[party] ?? null,
     reason: blocking.reason,
+    reasonCode: blocking.reason_code,
   };
 }
 
@@ -60,4 +62,21 @@ export function resolveCourt(blocking: GateResultRead | null): ResolvedCourt | n
  * backend remains the authz authority (FE-8). */
 export function isYourCourt(court: ResolvedCourt | null, callerRoleKeys: ReadonlySet<string>): boolean {
   return court !== null && court.roleKey !== null && callerRoleKeys.has(court.roleKey);
+}
+
+/**
+ * UI-F10-CLEARANCE (DF-CLR-13, V-a): `responsible_party === "authoriser"`
+ * is not vendor/product-exclusive — `authorisation_gate`'s
+ * `no_current_authorisation` also emits it (deployment-authorisation,
+ * INV-30's existing AuthorisePanel). Discriminate on `reason_code`: only
+ * the vendor_gate/product_gate family (`vendor_*`/`product_*`) is the
+ * clearance act; route those to /clearances, everything else keeps its
+ * current /systems/{id} destination.
+ */
+export function isClearanceBlock(court: ResolvedCourt | null): boolean {
+  return (
+    court !== null &&
+    court.party === "authoriser" &&
+    (court.reasonCode.startsWith("vendor_") || court.reasonCode.startsWith("product_"))
+  );
 }

@@ -7,12 +7,30 @@ import { Sidebar, type SidebarNavItem } from "@irontrust/ui";
 import { api } from "@/lib/api";
 import type { MeRead } from "@irontrust/api-client";
 
-const BASE_NAV: Omit<SidebarNavItem, "isActive">[] = [
-  { href: "/dashboard", label: "Portfolio" },
-  { href: "/review-queue", label: "Review queue" },
-  { href: "/evidence", label: "Evidence" },
-  { href: "/audit", label: "Audit" },
-];
+const PORTFOLIO_ENTRY: Omit<SidebarNavItem, "isActive"> = {
+  href: "/dashboard",
+  label: "Portfolio",
+};
+
+const REVIEW_QUEUE_ENTRY: Omit<SidebarNavItem, "isActive"> = {
+  href: "/review-queue",
+  label: "Review queue",
+};
+
+const CLEARANCES_ENTRY: Omit<SidebarNavItem, "isActive"> = {
+  href: "/clearances",
+  label: "Clearances",
+};
+
+const EVIDENCE_ENTRY: Omit<SidebarNavItem, "isActive"> = {
+  href: "/evidence",
+  label: "Evidence",
+};
+
+const AUDIT_ENTRY: Omit<SidebarNavItem, "isActive"> = {
+  href: "/audit",
+  label: "Audit",
+};
 
 const MEMBERS_ENTRY: Omit<SidebarNavItem, "isActive"> = {
   href: "/members",
@@ -43,9 +61,21 @@ export function TenantSidebar() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const baseItems = me?.role === "admin"
-    ? [...BASE_NAV, MEMBERS_ENTRY]
-    : BASE_NAV;
+  const governanceRoleKeys = new Set(me?.governance_roles.map((r) => r.key) ?? []);
+
+  /* DF-CLR-10/11 / INV-91: Review queue is hidden from non-reviewers (SoD —
+   * reviewer/authoriser conflict, D-4). Clearances is navigable by any
+   * governance role (reading clearance status breaches no SoD; the
+   * set-clearance act is gated inside the surface, INV-86). Evidence,
+   * Audit, Portfolio carry no SoD constraint and stay unconditional. */
+  const baseItems = [
+    PORTFOLIO_ENTRY,
+    ...(governanceRoleKeys.has("reviewer") ? [REVIEW_QUEUE_ENTRY] : []),
+    ...(governanceRoleKeys.size > 0 ? [CLEARANCES_ENTRY] : []),
+    EVIDENCE_ENTRY,
+    AUDIT_ENTRY,
+    ...(me?.role === "admin" ? [MEMBERS_ENTRY] : []),
+  ];
 
   const navItems: SidebarNavItem[] = baseItems.map((item) => ({
     ...item,

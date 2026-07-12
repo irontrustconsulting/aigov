@@ -63,3 +63,7 @@ export type TreatmentDecision = "mitigate" | "accept" | "transfer" | "avoid";
 
 /** ReviewDecision (UI-F4-ASSURE) — wire values from app/models/base.py ReviewDecision. */
 export type ReviewDecision = "approved" | "changes_requested";
+
+/** ApprovalStatus (UI-F10-CLEARANCE) — vendor/product clearance, wire
+ * values from app/models/base.py ApprovalStatus. */
+export type ApprovalStatus = "not_started" | "under_review" | "approved" | "rejected" | "expired";

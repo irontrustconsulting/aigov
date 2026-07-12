@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { useMe, useActiveDraft } from "@/lib/intake";
-import { isYourCourt, resolveCourt, useSystems, usePortfolio } from "@/lib/portfolio";
+import { isClearanceBlock, isYourCourt, resolveCourt, useSystems, usePortfolio } from "@/lib/portfolio";
 import {
   WhoseCourtIndicator,
   VerdictChip,
@@ -12,6 +13,7 @@ import {
   PageHeader,
   StatCard,
   SectionHeader,
+  SectionGroup,
   DataTable,
   DataTableHeader,
   DataTableBody,
@@ -184,36 +186,89 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
           <EmptyState message="Nothing is waiting on you right now." />
         ) : (
           <ul className="space-y-2">
-            {yourCourtEntries.map(({ system, useCase, court }) => (
-              <li key={useCase.use_case_id} className="flex flex-wrap items-center gap-2 text-sm">
-                <Link href={`/systems/${system.system_id}`} className="font-medium underline">
-                  {system.system_name}
-                </Link>
-                <span className="text-ink-muted">—</span>
-                <span>
-                  {useCase.title}: {court?.reason}
-                </span>
-              </li>
-            ))}
+            {yourCourtEntries.map(({ system, useCase, court }) => {
+              // DF-CLR-13/V-a: authoriser-court rows blocked on the vendor/
+              // product clearance gates route to /clearances; every other
+              // court (including a deployment-authorisation block, still
+              // handled by AuthorisePanel on the system drill-in) keeps its
+              // existing /systems/{id} destination.
+              const href = isClearanceBlock(court)
+                ? "/clearances"
+                : `/systems/${system.system_id}`;
+              return (
+                <li key={useCase.use_case_id}>
+                  <Link
+                    href={href}
+                    className="block rounded-lg border border-hairline bg-paper p-4 transition-colors hover:bg-surface-sunken"
+                    style={{ boxShadow: "var(--elevation-raised)" }}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {court && (
+                            <WhoseCourtIndicator partyLabel={court.partyLabel} isYourCourt />
+                          )}
+                          <VerdictChip value={useCase.state} />
+                          <span className="truncate text-sm font-medium">{system.system_name}</span>
+                          <span className="text-ink-muted">·</span>
+                          <span className="truncate text-sm text-ink-muted">{useCase.title}</span>
+                        </div>
+                        {court?.reason && (
+                          <p className="text-xs text-ink-muted">{court.reason}</p>
+                        )}
+                      </div>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden="true" />
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
     </section>
   );
 
+  // Client-side tally of use_cases[].state, already loaded with the
+  // portfolio read — no new API call (DF6-9). Counts only, no percentage
+  // (INV-52). Most-prevalent state first.
+  const stateCounts = new Map<string, number>();
+  for (const system of portfolio.data) {
+    for (const useCase of system.use_cases) {
+      stateCounts.set(useCase.state, (stateCounts.get(useCase.state) ?? 0) + 1);
+    }
+  }
+  const stateDistribution = [...stateCounts.entries()].sort((a, b) => b[1] - a[1]);
+
   const postureSection = (
     <section aria-label="portfolio-posture">
-      <SectionHeader title="Portfolio posture" />
-      <div className="mt-2 space-y-2">
-        <p className="text-sm text-ink-muted">
-          {portfolio.data.length} system{portfolio.data.length === 1 ? "" : "s"} with at least one
-          use case under governance.
-        </p>
-        {/* Navigation only — no coverage truth rendered here (DF6-9). */}
-        <Link href="/audit" className="block text-sm underline">
-          View control coverage and audit packs →
-        </Link>
-      </div>
+      <SectionGroup title="Portfolio posture">
+        <div className="space-y-3">
+          <p className="text-sm text-ink-muted">
+            {portfolio.data.length} system{portfolio.data.length === 1 ? "" : "s"} with at least one
+            use case under governance.
+          </p>
+          <div
+            className="flex flex-wrap items-center gap-3"
+            role="list"
+            aria-label="lifecycle-state distribution"
+          >
+            {stateDistribution.map(([state, count]) => (
+              <span key={state} role="listitem" className="inline-flex items-center gap-1.5 text-sm">
+                <span className="font-medium">{count}</span>
+                <VerdictChip value={state} />
+              </span>
+            ))}
+          </div>
+          {/* Navigation only — no coverage truth rendered here (DF6-9). */}
+          <Link
+            href="/audit"
+            className="inline-flex items-center gap-1 rounded-md border border-hairline px-3 py-1.5 text-sm font-medium text-ink hover:bg-surface-sunken"
+          >
+            View control coverage and audit packs →
+          </Link>
+        </div>
+      </SectionGroup>
     </section>
   );
 

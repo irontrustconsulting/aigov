@@ -13,6 +13,7 @@ export const LIVE_STATE_KEYS = [
   "deployment-authorisation",
   "portfolio",
   "system-rollup",
+  "clearance-queue",
 ] as const;
 
 export type LiveStateKey = (typeof LIVE_STATE_KEYS)[number];

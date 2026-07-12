@@ -821,3 +821,48 @@ Rejected: a resume-to-intake or resume-to-earlier-step clamp (the original OPEN-
 
 **Forward item (Appendix A, post-MVP):** intelligent wizard — conditional field presentation and inline per-field disposition keyed off product archetype or classification (a note-taker sees a reduced field set; an autonomous HR screener the full battery). Requires a rule layer; adjacent to deferred #1 (product-driven prefill, UI-UC-CREATE-COMPOSE Appendix A) and OPEN-3 (applicability). E-compact (DF-RR-1) generalises into the per-screen gate this implies, so nothing built this sprint is throwaway.
 ↳ origin: FIX-RESUME-REGATE · refs: DF-RR-1, OPEN-3
+
+---
+
+## UI-F10-CLEARANCE decisions
+
+Design-doc provisional ids `D-77`/`D-78` collided with the live ceiling (both already taken by `FIX-RESUME-REGATE`, shipped the same day) — re-based to `D-79`/`D-80` at implementation (SV-6, never renumber a live id).
+
+**D-79** · Clearance is surfaced via a dedicated queue plus a single read endpoint (`GET /clearance-queue`, `gov:ALL` read, act authoriser-only), court-resolved routing, no dependence on the confirmed-absent `GET /systems/{id}/approval-status`
+Rejected: embedding clearance on the system drill-in (implies system-scope against a vendor/product-scoped fan-out); deriving clearance from the portfolio rollup (no vendor/product identity to act against).
+↳ origin: UI-F10-CLEARANCE · refs: D-22, APR-2, INV-86..88
+
+**D-80** · Tenant-nav visibility rule: a sidebar entry is navigation, not a worklist — hide it only when SoD bars the caller from the surface's purpose
+Review queue is hidden from non-reviewers on SoD grounds (D-4/D-10); Clearances is a read-everywhere, act-restricted destination, the same shape as Portfolio.
+Rejected: authoriser-only Clearances nav (treats navigation as a worklist, contradicts DF-CLR-17's read-for-all posture); reading FE-8 as act-controls-only (leaves the pre-existing Review-queue leak unspecified).
+↳ origin: UI-F10-CLEARANCE · refs: FE-8, UX-5, D-4, FE-24, INV-91
+
+**Pre-flight deviations from the design doc (WI-0), resolved before build — see the design doc's own V-a/SV-14 for the anticipated contingencies:**
+
+**DF-CLR-21** · Court-resolved routing keys on `reason_code`, not `responsible_party` alone (sprint-local)
+Live `lifecycle_gates.py` showed `responsible_party == "authoriser"` is emitted by `authorisation_gate`'s `no_current_authorisation` (deployment-authorisation, existing `AuthorisePanel`/INV-30) as well as by `vendor_gate`/`product_gate` — contradicting V-a's premise that only the clearance gates emit it. V-a itself pre-authorised the fix if this happened: discriminate on `reason_code`. `reason_code` is always `vendor_*`/`product_*` from the clearance gates, `no_current_authorisation`/`authorised_for_current_cycle` from the authorisation gate — cleanly distinguishable. `isClearanceBlock()` (`apps/tenant/lib/portfolio/court.ts`) implements the discriminator; `ResolvedCourt` gained a `reasonCode` field to carry it.
+Rejected: routing every authoriser-court row to `/clearances` as the design doc's DF-CLR-13 literally read — would have sent deployment-authorisation-blocked rows to a queue with nothing to clear for them, stranding the authoriser away from the existing `AuthorisePanel`.
+↳ origin: UI-F10-CLEARANCE (sprint-local DF) · refs: DF-CLR-13, V-a, INV-30
+
+**DF-CLR-22** · `valid_until` help copy states the real gating effect, not "informational" (sprint-local, user-confirmed)
+Live `_approval_verdict` (`lifecycle_gates.py`) re-parks a use case (`{kind}_expired`) when an `APPROVED` approval's `valid_until` has lapsed — contradicting SV-14/DF-CLR-18's "informational, gate reads status only" framing. The set-clearance form's date-field helper text was corrected to state the real effect ("An expired date re-blocks affected use cases at this gate until cleared again") instead of shipping a knowingly false "informational" claim. No other part of DF-CLR-18 changed: still optional, still prefilled today+1yr on `APPROVED`, still a client-side past-date guard only.
+↳ origin: UI-F10-CLEARANCE (sprint-local DF) · refs: DF-CLR-18, SV-14
+
+**Sprint-local forks (`DF-CLR-1..20`), all confirmed at design, condensed here — full rationale in `designs/UI-F10-CLEARANCE.design.md` §2/Appendix A:**
+
+- **DF-CLR-1..2** — Build the clearance-act mechanism (not a bare authorise CTA); surface and read endpoint ship in the same sprint.
+- **DF-CLR-3..4** — The clearance queue is the backbone; portfolio hub stays read-only (A1), whose-court gains navigation only.
+- **DF-CLR-5** (OPEN-CLR-1 confirmed) — Queue lists only entries currently awaiting clearance; managing already-cleared records is deferred.
+- **DF-CLR-6** — `GET /clearance-queue` is the single read home; no dependence on the confirmed-absent `approval-status` route.
+- **DF-CLR-7** — Vendor-grouped, nested products; product control disabled-with-reason until the parent vendor is `APPROVED` (INV-88).
+- **DF-CLR-8** (V-b confirmed) — No optimistic concurrency: no `lock_version`, no `If-Match`, no 412; last-write-wins upsert.
+- **DF-CLR-9/20** (B1/OPEN-CLR-6 confirmed) — Status renders through the existing `VerdictChip` label map; `approval_status` was confirmed fully keyed at pre-flight — no map change shipped.
+- **DF-CLR-10/11** — Tenant-nav rule (see D-80/INV-91): Review queue hidden from non-reviewers; Clearances shown to all governance roles; Evidence/Audit/Portfolio unchanged.
+- **DF-CLR-12** — F2 your-court/posture re-treatment folded into this sprint, composition only, within D-58 restraint.
+- **DF-CLR-13** — Your-court forward affordance is court-resolved (see DF-CLR-21 for the reason_code correction applied at build).
+- **DF-CLR-14** — Posture gains a lifecycle-state distribution strip (counts, no %, client-derived, no new call).
+- **DF-CLR-15/16** (OPEN-CLR-1/2 confirmed) — Already-cleared record management deferred; backend-unguarded status transitions accepted for MVP.
+- **DF-CLR-17** (OPEN-CLR-3 confirmed) — `GET /clearance-queue` is `gov:ALL` read; set-clearance is authoriser-only; admin (zero governance roles) gets the empty-state, no queue call.
+- **DF-CLR-18** (OPEN-CLR-4 confirmed) — Status select offers `{UNDER_REVIEW, APPROVED, REJECTED}`; `valid_until` optional on `APPROVED`, prefilled today+1yr, client-side past-date guard (see DF-CLR-22 for the shipped help-copy correction).
+- **DF-CLR-19** (OPEN-CLR-5 confirmed) — Audit nav stays ungated this sprint; audience deferred to F6.
+↳ origin: UI-F10-CLEARANCE (sprint-local DF) · refs: designs/UI-F10-CLEARANCE.design.md §2

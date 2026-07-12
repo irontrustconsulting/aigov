@@ -1,4 +1,4 @@
-import { isYourCourt, resolveCourt } from "../court";
+import { isClearanceBlock, isYourCourt, resolveCourt } from "../court";
 import type { GateResultRead } from "@irontrust/api-client";
 
 function blocking(overrides: Partial<GateResultRead>): GateResultRead {
@@ -86,5 +86,39 @@ describe("isYourCourt", () => {
   test("a caller without the matching role does not get a false-positive highlight", () => {
     const court = resolveCourt(blocking({ responsible_party: "reviewer" }));
     expect(isYourCourt(court, new Set(["system_owner"]))).toBe(false);
+  });
+});
+
+describe("isClearanceBlock (UI-F10-CLEARANCE, DF-CLR-13/V-a)", () => {
+  test("null court is never a clearance block", () => {
+    expect(isClearanceBlock(null)).toBe(false);
+  });
+
+  test("authoriser + vendor_* reason_code is a clearance block", () => {
+    const court = resolveCourt(
+      blocking({ responsible_party: "authoriser", reason_code: "vendor_not_started" })
+    );
+    expect(isClearanceBlock(court)).toBe(true);
+  });
+
+  test("authoriser + product_* reason_code is a clearance block", () => {
+    const court = resolveCourt(
+      blocking({ responsible_party: "authoriser", reason_code: "product_expired" })
+    );
+    expect(isClearanceBlock(court)).toBe(true);
+  });
+
+  test("authoriser + no_current_authorisation is NOT a clearance block (deployment-authorisation, AuthorisePanel)", () => {
+    const court = resolveCourt(
+      blocking({ responsible_party: "authoriser", reason_code: "no_current_authorisation" })
+    );
+    expect(isClearanceBlock(court)).toBe(false);
+  });
+
+  test("a non-authoriser party is never a clearance block, even with a vendor_*-shaped reason_code", () => {
+    const court = resolveCourt(
+      blocking({ responsible_party: "reviewer", reason_code: "vendor_not_started" })
+    );
+    expect(isClearanceBlock(court)).toBe(false);
   });
 });

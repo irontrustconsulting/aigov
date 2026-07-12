@@ -121,6 +121,7 @@ Three routers share this file: `router` (`/use-cases/...`), `approvals_router` (
 | `PUT /products/{product_id}/approval` | `gov:authoriser` | `ProductApprovalCreate` | `ProductApprovalRead` | — | Same shape as vendor approval. |
 | `GET /systems/{system_id}/rollup` | `gov:ALL` | — | `SystemRollupRead` | — | Use cases + states + highest tier + per-use-case `blocking`, recomputed live. |
 | `GET /portfolio` | `gov:ALL` | — | `SystemRollupRead[]` | — | Tenant-wide, one entry per system with ≥1 use case. |
+| `GET /clearance-queue` | `gov:ALL` | — | `ClearanceQueueRead` | — | UI-F10-CLEARANCE. Vendor-grouped clearance status, recomputed live; `awaiting_use_case_count`/`affected_use_case_count`/`affected_system_count` reuse the same `System.catalogue_vendor_id`/`catalogue_product_id` join `fan_out_vendor_approval`/`fan_out_product_approval` use. Read is `gov:ALL`; the set-clearance act stays on the existing `PUT /vendors\|products/{id}/approval` rows above, `gov:authoriser`. |
 
 **`POST /use-cases/{id}/advance` does not exist** — see §4.
 
@@ -253,7 +254,7 @@ All three routes share gate `operator:create` (`require_permission("operator:cre
 Routes that sound plausible given the domain model, but do not exist at repo HEAD as of this sprint (`UI-F1-INTAKE` §0 pre-flight). If a future design wants one of these, that's a new route to build, not a gap in this map.
 
 - **`POST /v1/use-cases/{id}/advance`** — no generic "advance" verb. The lifecycle auto-advances on every classification/assessment/treatment write; the only *explicit* state-advancing acts are `POST .../authorise` (→ `authorised`) and `POST .../lifecycle/re-evaluate` (re-settle, not force-advance).
-- **`GET /v1/systems/{id}/approval-status`** — no dedicated approval-status field/route. Vendor/product clearance is read via `GET /v1/use-cases/{id}/lifecycle`'s `blocking` vector (`responsible_party == "authoriser"`) or `GET /v1/systems/{id}/rollup`'s per-use-case `blocking`.
+- **`GET /v1/systems/{id}/approval-status`** — no dedicated approval-status field/route, still absent as of `UI-F10-CLEARANCE`. Vendor/product clearance is read via `GET /v1/use-cases/{id}/lifecycle`'s `blocking` vector (`responsible_party == "authoriser"`), `GET /v1/systems/{id}/rollup`'s per-use-case `blocking`, or the dedicated vendor-grouped `GET /v1/clearance-queue` (`UI-F10-CLEARANCE`).
 - **`POST /v1/tenants`** — intentionally removed (`D-23`). Provisioning is operator-only, `POST /platform/provision`.
 - **A vocab-list route for `SystemLifecycleStage`** — it's a 4-value fixed enum (`development`/`pilot`/`production`/`retired`), not a vocab table; there is nothing to list. Render it as a static client-side option set, but confirm casing against `pg_enum` first (`D-21` — wire values are the enum's lowercase `.value`, not the uppercase DB label name; see `DATA-MODEL.md` enum-label note).
 - **A member-list route usable for `SystemCreate.owner_user_id`** — `GET /v1/members` exists but is `admin`-gated, not `gov:*`; there is no member-level "pick a tenant member" read. `owner_user_id` is optional and FK-validated on write only.
@@ -356,3 +357,11 @@ Evidence linking (`POST .../evidence-links`) and coverage (`GET /assessments/{id
 - `GET /evidence/{id}` — on-intent manifest download (presigned URL + `evidence.access` audit; same DF5-3 pattern as F5)
 
 **Zero backend/schema delta:** all routes built at Sprint 7a/7b; response shapes (`CoverageMatrixRead`, `UseCaseExportRead`, `SystemExportRead`, `FrameworkExportRead`, `AtoDocumentRead`) mirrored into `packages/api-client/src/contracts/coverage.ts` and `export.ts` — no server change.
+
+**`UI-F10-CLEARANCE`** — **1 NEW route** (`GET /clearance-queue`, `gov:ALL`; additive schema, no table/enum/migration). Backend + frontend. Routes consumed:
+
+- `GET /me` — pre-flight role branch; zero governance roles (admin) → no `GET /clearance-queue` call issued (DF-CLR-17)
+- `GET /clearance-queue` — vendor-grouped clearance status (`gov:ALL`; live state, `staleTime: 0`); read for every governance role, set-clearance action rendered only for `authoriser`
+- `PUT /vendors/{vendor_id}/approval` — unchanged, now also consumed from the new `apps/tenant/app/clearances` surface (`gov:authoriser`)
+- `PUT /products/{product_id}/approval` — unchanged, same surface (`gov:authoriser`)
+- `GET /portfolio` — unchanged; dashboard your-court/posture re-treatment reads already-loaded data, no new call (DF6-9)

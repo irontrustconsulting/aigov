@@ -24,14 +24,29 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import select, text, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.models.base import ApprovalStatus, EUAIActTier, LifecycleState
-from app.models.domain import ProductApproval, System, UseCase, VendorApproval
+from app.models.domain import (
+    CatalogueProduct,
+    CatalogueVendor,
+    ProductApproval,
+    System,
+    UseCase,
+    VendorApproval,
+)
+from app.models.identity import Membership, User
 from app.models.lifecycle import AuditEvent, LifecycleTransition
-from app.schemas.lifecycle import GateResultRead, SystemRollupRead, UseCaseRollupEntry
+from app.schemas.lifecycle import (
+    ClearanceQueueRead,
+    GateResultRead,
+    ProductClearanceEntry,
+    SystemRollupRead,
+    UseCaseRollupEntry,
+    VendorClearanceEntry,
+)
 from app.services.lifecycle_gates import (
     GateResult,
     assessment_gate,
@@ -721,3 +736,207 @@ def portfolio_rollup(db: Session, tenant_id: uuid.UUID) -> list[SystemRollupRead
         )
     )
     return [system_rollup(db, tenant_id, s) for s in systems]
+
+
+# ---------------------------------------------------------------------------
+# Clearance queue (UI-F10-CLEARANCE, WI-1) — vendor-grouped read of the
+# clearance act's blocking state, the single home GET /clearance-queue
+# serves.
+# ---------------------------------------------------------------------------
+
+
+def _resolve_decider_names(
+    db: Session, tenant_id: uuid.UUID, user_ids: set[uuid.UUID]
+) -> dict[uuid.UUID, str]:
+    """Batch INV-34 membership-join name resolution (D-25-guarded): a
+    decider whose membership/user row is gone is simply absent from the
+    result — never a fabricated placeholder (same posture as
+    authorisation_service._resolve_actor_identity, batched here for a
+    queue read)."""
+    if not user_ids:
+        return {}
+    rows = db.execute(
+        select(User.id, User.display_name)
+        .join(Membership, Membership.user_id == User.id)
+        .where(Membership.tenant_id == tenant_id, User.id.in_(user_ids))
+    ).all()
+    return {row.id: row.display_name for row in rows}
+
+
+def clearance_queue(db: Session, tenant_id: uuid.UUID) -> ClearanceQueueRead:
+    """Vendor-grouped read of every vendor/product currently awaiting
+    clearance (design doc §4, DF-CLR-5): a vendor entry is shown if it has
+    its own awaiting use case or hosts a product that does; a product entry
+    is shown if its vendor is shown-for-being-in-queue (inert until
+    vendor_cleared, INV-88) or it has its own awaiting use case. Both
+    awaiting and affected counts derive from the same
+    System.catalogue_vendor_id/catalogue_product_id join
+    fan_out_vendor_approval/fan_out_product_approval use, so preview and
+    actual fan-out cannot diverge (V-c)."""
+    vendor_ids = set(
+        db.scalars(
+            select(System.catalogue_vendor_id)
+            .where(
+                System.tenant_id == tenant_id,
+                System.catalogue_vendor_id.is_not(None),
+            )
+            .distinct()
+        )
+    )
+    product_ids = set(
+        db.scalars(
+            select(System.catalogue_product_id)
+            .where(
+                System.tenant_id == tenant_id,
+                System.catalogue_product_id.is_not(None),
+            )
+            .distinct()
+        )
+    )
+    if not vendor_ids and not product_ids:
+        return ClearanceQueueRead(vendors=[])
+
+    products = (
+        list(db.scalars(select(CatalogueProduct).where(CatalogueProduct.id.in_(product_ids))))
+        if product_ids
+        else []
+    )
+    all_vendor_ids = vendor_ids | {p.vendor_id for p in products}
+    vendors = (
+        list(db.scalars(select(CatalogueVendor).where(CatalogueVendor.id.in_(all_vendor_ids))))
+        if all_vendor_ids
+        else []
+    )
+    vendors_by_id = {v.id: v for v in vendors}
+    products_by_vendor: dict[uuid.UUID, list[CatalogueProduct]] = {}
+    for p in products:
+        products_by_vendor.setdefault(p.vendor_id, []).append(p)
+
+    vendor_approvals = {
+        a.catalogue_vendor_id: a
+        for a in db.scalars(
+            select(VendorApproval).where(
+                VendorApproval.tenant_id == tenant_id,
+                VendorApproval.catalogue_vendor_id.in_(all_vendor_ids),
+            )
+        )
+    } if all_vendor_ids else {}
+    product_approvals = {
+        a.catalogue_product_id: a
+        for a in db.scalars(
+            select(ProductApproval).where(
+                ProductApproval.tenant_id == tenant_id,
+                ProductApproval.catalogue_product_id.in_(product_ids),
+            )
+        )
+    } if product_ids else {}
+
+    decider_ids = {a.decided_by_user_id for a in vendor_approvals.values() if a.decided_by_user_id}
+    decider_ids |= {
+        a.decided_by_user_id for a in product_approvals.values() if a.decided_by_user_id
+    }
+    names_by_user_id = _resolve_decider_names(db, tenant_id, decider_ids)
+
+    def _counts(
+        catalogue_id_column, ids: set[uuid.UUID], awaiting_state: LifecycleState
+    ) -> tuple[dict[uuid.UUID, int], dict[uuid.UUID, int], dict[uuid.UUID, int]]:
+        """(awaiting, affected_use_cases, affected_systems) keyed by
+        catalogue id — affected_* is the full fan-out set (any state), not
+        merely those parked at the gate."""
+        if not ids:
+            return {}, {}, {}
+        awaiting = dict(
+            db.execute(
+                select(catalogue_id_column, func.count(UseCase.id))
+                .join(UseCase, UseCase.system_id == System.id)
+                .where(
+                    System.tenant_id == tenant_id,
+                    catalogue_id_column.in_(ids),
+                    UseCase.state == awaiting_state,
+                )
+                .group_by(catalogue_id_column)
+            ).all()
+        )
+        affected_rows = db.execute(
+            select(
+                catalogue_id_column,
+                func.count(func.distinct(UseCase.id)),
+                func.count(func.distinct(System.id)),
+            )
+            .join(UseCase, UseCase.system_id == System.id)
+            .where(System.tenant_id == tenant_id, catalogue_id_column.in_(ids))
+            .group_by(catalogue_id_column)
+        ).all()
+        affected_use_cases = {row[0]: row[1] for row in affected_rows}
+        affected_systems = {row[0]: row[2] for row in affected_rows}
+        return awaiting, affected_use_cases, affected_systems
+
+    vendor_awaiting, vendor_affected_uc, vendor_affected_sys = _counts(
+        System.catalogue_vendor_id, vendor_ids, LifecycleState.VENDOR_CHECK
+    )
+    product_awaiting, product_affected_uc, product_affected_sys = _counts(
+        System.catalogue_product_id, product_ids, LifecycleState.PRODUCT_CHECK
+    )
+
+    in_queue_vendor_ids = {vid for vid, cnt in vendor_awaiting.items() if cnt > 0}
+    in_queue_product_ids = {pid for pid, cnt in product_awaiting.items() if cnt > 0}
+    vendor_ids_to_show = in_queue_vendor_ids | {
+        product.vendor_id for product in products if product.id in in_queue_product_ids
+    }
+
+    entries: list[VendorClearanceEntry] = []
+    for vendor_id in vendor_ids_to_show:
+        vendor = vendors_by_id.get(vendor_id)
+        if vendor is None:
+            continue
+        v_approval = vendor_approvals.get(vendor_id)
+        vendor_status = v_approval.status if v_approval else ApprovalStatus.NOT_STARTED
+        vendor_cleared = vendor_status == ApprovalStatus.APPROVED
+
+        product_entries: list[ProductClearanceEntry] = []
+        for product in products_by_vendor.get(vendor_id, []):
+            if not (vendor_id in in_queue_vendor_ids or product.id in in_queue_product_ids):
+                continue
+            p_approval = product_approvals.get(product.id)
+            p_status = p_approval.status if p_approval else ApprovalStatus.NOT_STARTED
+            product_entries.append(
+                ProductClearanceEntry(
+                    catalogue_product_id=product.id,
+                    product_name=product.name,
+                    status=p_status,
+                    valid_until=p_approval.valid_until if p_approval else None,
+                    decided_by_name=(
+                        names_by_user_id.get(p_approval.decided_by_user_id)
+                        if p_approval and p_approval.decided_by_user_id
+                        else None
+                    ),
+                    decided_at=p_approval.decided_at if p_approval else None,
+                    note=p_approval.note if p_approval else None,
+                    vendor_cleared=vendor_cleared,
+                    awaiting_use_case_count=product_awaiting.get(product.id, 0),
+                    affected_use_case_count=product_affected_uc.get(product.id, 0),
+                    affected_system_count=product_affected_sys.get(product.id, 0),
+                )
+            )
+
+        entries.append(
+            VendorClearanceEntry(
+                catalogue_vendor_id=vendor.id,
+                vendor_name=vendor.name,
+                status=vendor_status,
+                valid_until=v_approval.valid_until if v_approval else None,
+                decided_by_name=(
+                    names_by_user_id.get(v_approval.decided_by_user_id)
+                    if v_approval and v_approval.decided_by_user_id
+                    else None
+                ),
+                decided_at=v_approval.decided_at if v_approval else None,
+                note=v_approval.note if v_approval else None,
+                awaiting_use_case_count=vendor_awaiting.get(vendor_id, 0),
+                affected_use_case_count=vendor_affected_uc.get(vendor_id, 0),
+                affected_system_count=vendor_affected_sys.get(vendor_id, 0),
+                products=product_entries,
+            )
+        )
+
+    return ClearanceQueueRead(vendors=entries)

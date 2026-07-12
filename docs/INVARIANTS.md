@@ -361,3 +361,27 @@ The `FactValue` component (`apps/tenant/lib/intake/fact-value.tsx`) implements f
 **INV-85** · CONVENTION · The registration front-door gates on an explicit draft-resolution flag (`resumeResolved`), never on the wizard `step`/`draftId` cursor
 While an active-draft fetch succeeds (`activeDraft.data` truthy) and the draft is unresolved (`state.resumeResolved === false`), no wizard step renders: a server-side draft is never reachable-for-overwrite (guards `uq_draft_one_per_user`, INV-79) nor orphaned-from-view behind a first-paint race. `resumeResolved` flips `true` in exactly three reducer transitions — `RESUME_FROM_DRAFT`, `DRAFT_CREATED`, `DRAFT_DISCARDED` — and is client-transient: it is never written into `draft_blob` (`toDraftBlob` in `page.tsx` does not carry it), consistent with the transience rule for other UI-only disposition state (INV-83). On `activeDraft.isError`, `activeDraft.data` is `undefined`, the gate is false, and the wizard renders directly (unchanged fallback behaviour; clobber prevention falls back to `getOrCreate` SELECT-first plus last-write-wins, DF-D3-5/DF-D3-6).
 ↳ origin: UI-DRAFT-RESUME-GATE · locus: `apps/tenant/app/systems/new/wizard-state.ts`, `apps/tenant/app/systems/new/page.tsx` · refs: INV-79, INV-83, DF-D3-1, DF-D3-5, DF-D3-6, D-66, D-76
+
+**INV-86** · CONVENTION · Setting a vendor/product clearance is an authoriser-only act; reading the clearance queue is not gated by this invariant
+The set-clearance control (`apps/tenant/app/clearances`) renders only for a caller holding `authoriser` (`SodAction barred={!isAuthoriser}`), absent otherwise — never merely disabled. `GET /clearance-queue` itself is `gov:ALL` (DF-CLR-17); the server `PUT /vendors|products/{id}/approval` stays `gov:authoriser` regardless of what the UI renders.
+↳ origin: UI-F10-CLEARANCE · locus: `apps/tenant/app/clearances/_components/clearance-queue-list.tsx`, `app/routers/v1/lifecycle.py` · refs: FE-8, D-4, DF-CLR-17
+
+**INV-87** · CONVENTION · The clearance surface shows the fan-out blast radius — the full set of use cases re-evaluated on commit, not merely those parked — before the act commits
+Each vendor/product entry in `ClearanceQueueRead` carries both `awaiting_use_case_count` (parked at the gate) and `affected_use_case_count`/`affected_system_count` (the full fan-out set). Both derive from the same `System.catalogue_vendor_id`/`catalogue_product_id` join `fan_out_vendor_approval`/`fan_out_product_approval` use, so the confirm-step preview and the actual fan-out cannot diverge. The set-clearance dialog's confirm stage renders the affected counts before the `PUT` fires.
+↳ origin: UI-F10-CLEARANCE · locus: `app/services/lifecycle_service.py::clearance_queue`, `apps/tenant/app/clearances/_components/clearance-dialog.tsx` · refs: APR-2
+
+**INV-88** · CONVENTION · A product's clearance control renders disabled-with-reason until its parent vendor is `APPROVED`
+`ProductClearanceEntry.vendor_cleared` (`vendor.status == APPROVED`) drives `SodAction blockedReason="Clear the vendor first"` on the product row's set-clearance button, for an authoriser caller. A non-authoriser caller never sees the control at all (`barred`, INV-86) — the disabled-with-reason state is reachable only within an authoriser's own view.
+↳ origin: UI-F10-CLEARANCE · locus: `apps/tenant/app/clearances/_components/clearance-queue-list.tsx` · refs: APR-2, FE-8, INV-86
+
+**INV-89** · CONVENTION · The clearance surface is born INV-69/INV-70 compliant
+`apps/tenant/app/clearances` composes exclusively from the shipped C0 kit (`PageScaffold`/`PageHeader`, `SectionGroup`, `DataTable`, `Skeleton`/`ErrorState`/`EmptyState`, `VerdictChip`, `SodAction`, `Dialog`) — no bespoke chrome. No composition-debt row is owed for this surface.
+↳ origin: UI-F10-CLEARANCE · locus: `apps/tenant/app/clearances/` · refs: INV-68, INV-69, INV-70
+
+**INV-90** · CONVENTION · The portfolio hub remains read-only; whose-court supplies navigation only
+The F2 dashboard's your-court re-treatment (raised card, `VerdictChip`, trailing chevron) and `system-detail-client.tsx`'s additive clearance deep-link only add navigation affordances — no clearance action is exposed from either surface. Setting a clearance happens exclusively on `apps/tenant/app/clearances`.
+↳ origin: UI-F10-CLEARANCE · locus: `apps/tenant/app/dashboard/page.tsx`, `apps/tenant/app/systems/[id]/system-detail-client.tsx` · refs: A1, D-38, FE-11
+
+**INV-91** · CONVENTION · A tenant sidebar entry is hidden only when the caller is barred from that surface's purpose by separation of duties
+Review queue renders iff the caller holds `reviewer` (the reviewer/authoriser hard conflict, D-4/D-10); Clearances renders for every governance role (reading the clearance status list breaches no SoD — the set-clearance action is gated inside the surface itself, INV-86); Evidence, Audit, Portfolio are navigable by any governance role, unconditionally. The server gate and each surface's own empty-state remain the authority — the sidebar gate is presentational (FE-8).
+↳ origin: UI-F10-CLEARANCE · locus: `apps/tenant/app/_components/tenant-sidebar.tsx` · refs: FE-8, UX-5, D-4, D-10, FE-24, INV-71, INV-86

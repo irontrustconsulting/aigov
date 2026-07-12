@@ -102,9 +102,36 @@ describe("SystemDetailClient (UI-F2-PORTFOLIO drill-in)", () => {
     render(<SystemDetailClient systemId="sys-1" />, { wrapper });
 
     await waitFor(() => expect(screen.getByText("Acme Resume Screener")).toBeInTheDocument());
-    const links = screen.getAllByRole("link");
-    expect(links).toHaveLength(rollup.use_cases.length);
-    expect(links[0]).toHaveAttribute("href", `/use-cases/${rollup.use_cases[0].use_case_id}`);
+    // Scoped to /use-cases/{id} links specifically — UI-F10-CLEARANCE WI-7
+    // adds an additive /clearances deep-link on authoriser-court rows
+    // alongside these, so the page's total link count is no longer 1:1
+    // with use_cases.length.
+    const useCaseLinks = screen
+      .getAllByRole("link")
+      .filter((a) => a.getAttribute("href")?.startsWith("/use-cases/"));
+    expect(useCaseLinks).toHaveLength(rollup.use_cases.length);
+    expect(useCaseLinks[0]).toHaveAttribute("href", `/use-cases/${rollup.use_cases[0].use_case_id}`);
+  });
+
+  test("UI-F10-CLEARANCE WI-7: authoriser-court row blocked on the vendor gate gets an additive /clearances link", async () => {
+    mockFetch(me(["authoriser"]), rollup);
+
+    render(<SystemDetailClient systemId="sys-1" />, { wrapper });
+
+    await waitFor(() => expect(screen.getByText("Acme Resume Screener")).toBeInTheDocument());
+    const clearancesLink = screen.getByRole("link", { name: /go to clearances/i });
+    expect(clearancesLink).toHaveAttribute("href", "/clearances");
+    // The other (non-blocked) use case gets no such link.
+    expect(screen.getAllByRole("link", { name: /go to clearances/i })).toHaveLength(1);
+  });
+
+  test("UI-F10-CLEARANCE WI-7: a non-authoriser caller sees no /clearances deep-link even on the same authoriser-court row", async () => {
+    mockFetch(me(["reviewer"]), rollup);
+
+    render(<SystemDetailClient systemId="sys-1" />, { wrapper });
+
+    await waitFor(() => expect(screen.getByText("Acme Resume Screener")).toBeInTheDocument());
+    expect(screen.queryByRole("link", { name: /go to clearances/i })).not.toBeInTheDocument();
   });
 });
 

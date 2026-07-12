@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMe } from "@/lib/intake";
-import { isYourCourt, resolveCourt, useSystemRollup } from "@/lib/portfolio";
+import { isClearanceBlock, isYourCourt, resolveCourt, useSystemRollup } from "@/lib/portfolio";
 import { useSystemCoverage, useSystemExport } from "@/lib/audit";
 import { useEvidenceDetail } from "@/lib/evidence";
 import { WhoseCourtIndicator, CoverageMatrix, AuditPackView } from "@irontrust/ui";
@@ -52,6 +52,17 @@ export function SystemDetailClient({ systemId }: { systemId: string }) {
                     isYourCourt={isYourCourt(court, roleKeys)}
                   />{" "}
                   {court.reason}
+                  {/* DF-CLR-13/V-a: additive deep-link, authoriser-court
+                   * rows blocked on the vendor/product clearance gates
+                   * only — other courts unchanged. */}
+                  {isYourCourt(court, roleKeys) && isClearanceBlock(court) && (
+                    <>
+                      {" "}
+                      <Link href="/clearances" className="underline">
+                        Go to clearances →
+                      </Link>
+                    </>
+                  )}
                 </p>
               ) : (
                 <p className="mt-1 text-sm">Nothing is blocking this use case right now.</p>

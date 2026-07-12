@@ -57,6 +57,8 @@
 | `vendor_approval` | TENANT (RLS) | Tenant's clearance of a global vendor. Status = `ApprovalStatus`. |
 | `product_approval` | TENANT (RLS) | Tenant's clearance of a global product. |
 
+**Route inventory (`UI-F10-CLEARANCE`):** no table/enum/migration delta. `GET /clearance-queue` (`gov:ALL`, additive schema `ClearanceQueueRead`) is the vendor-grouped read of both tables above, recomputed live — see `API-ROUTES.md` §2 for the full route contract. Set/update remains `PUT /vendors\|products/{id}/approval` (`gov:authoriser`, unchanged).
+
 ### Classification & decision tree
 | Table | Plane | Notes |
 |---|---|---|

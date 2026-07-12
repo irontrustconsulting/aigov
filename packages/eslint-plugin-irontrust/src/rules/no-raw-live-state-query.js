@@ -17,6 +17,7 @@ const LIVE_STATE_KEYS = new Set([
   "deployment-authorisation",
   "portfolio",
   "system-rollup",
+  "clearance-queue",
 ]);
 
 export default {

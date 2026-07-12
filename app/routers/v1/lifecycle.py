@@ -14,6 +14,8 @@ Lifecycle status + manual lever + approval endpoints (v1, tenant plane).
   GET  /v1/systems/{id}/rollup                     use cases + states +
                                                     highest tier + obligations
   GET  /v1/portfolio                               tenant-wide rollup
+  GET  /v1/clearance-queue                         vendor-grouped clearance
+                                                    status (gov:ALL read)
 """
 
 from __future__ import annotations
@@ -29,6 +31,7 @@ from app.models.domain import CatalogueProduct, CatalogueVendor, System, UseCase
 from app.models.lifecycle import DeploymentAuthorisation
 from app.schemas.lifecycle import (
     AuthoriseRequest,
+    ClearanceQueueRead,
     DeploymentAuthorisationRead,
     GateResultRead,
     ProductApprovalCreate,
@@ -40,6 +43,7 @@ from app.schemas.lifecycle import (
 )
 from app.services.authorisation_service import authorise_use_case
 from app.services.lifecycle_service import (
+    clearance_queue,
     fan_out_product_approval,
     fan_out_vendor_approval,
     full_vector,
@@ -267,3 +271,15 @@ def get_portfolio(
 ) -> list[SystemRollupRead]:
     """Tenant-wide rollup — one entry per system with at least one use case."""
     return portfolio_rollup(db, ctx.tenant_id)
+
+
+@approvals_router.get("/clearance-queue", response_model=ClearanceQueueRead)
+def get_clearance_queue(
+    ctx: TenantContext = Depends(require_governance_role(*_ALL_GOVERNANCE_ROLES)),
+    db: Session = Depends(get_tenant_db),
+) -> ClearanceQueueRead:
+    """Vendor-grouped read of every vendor/product currently awaiting
+    clearance (design doc §4, UI-F10-CLEARANCE). Read is gov:ALL; the
+    set-clearance act itself stays gov:authoriser on the existing PUT
+    routes above (DF-CLR-17)."""
+    return clearance_queue(db, ctx.tenant_id)
