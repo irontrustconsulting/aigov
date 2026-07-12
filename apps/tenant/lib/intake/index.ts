@@ -5,3 +5,6 @@ export * from "./fact-value";
 export * from "./fact-labels";
 export * from "./fact-basis";
 export * from "./grouped-multi-select";
+export * from "./derived-unconfirmed";
+export * from "./pre-commit-disposition-gate";
+export * from "./lifecycle-stage-options";

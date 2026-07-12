@@ -3,17 +3,12 @@
 import { Button, ErrorState, FreeText, PageHeader, PageScaffold, SingleSelect, Skeleton, TextInput, type SelectOption } from "@irontrust/ui";
 import type { SystemLifecycleStage } from "@irontrust/api-client";
 import {
+  derivedUnconfirmed,
+  LIFECYCLE_STAGE_OPTIONS,
   useHostingModels,
   useOperatorRoles,
 } from "@/lib/intake";
 import type { IntakeFieldBasis, IntakeFieldName, IntakePrefillBases } from "../wizard-state";
-
-const LIFECYCLE_STAGE_OPTIONS: SelectOption[] = [
-  { value: "development", label: "Development" },
-  { value: "pilot", label: "Pilot" },
-  { value: "production", label: "Production" },
-  { value: "retired", label: "Retired" },
-];
 
 const BASIS_LABELS: Record<Exclude<IntakeFieldBasis, "user-set">, string> = {
   catalogue: "Catalogue curated — confirm or update",
@@ -110,16 +105,7 @@ export function IntakeCaptureStep({
   // FE-32: Continue is disabled until every derived field is dispositioned.
   // A derived field is dispositioned when: confirmed (in confirmedIntakeFields)
   // OR its basis is "user-set" (edited to differ from seed → server derives USER_AMENDED).
-  const derivedUnconfirmed: IntakeFieldName[] = (
-    [
-      ["operatorRoleId", prefillBases?.operatorRoleId],
-      ["lifecycleStage", prefillBases?.lifecycleStage],
-    ] as [IntakeFieldName, IntakeFieldBasis | undefined][]
-  ).filter(
-    ([field, basis]) => basis === "derived" && !confirmedIntakeFields.includes(field)
-  ).map(([field]) => field);
-
-  const canContinue = derivedUnconfirmed.length === 0;
+  const canContinue = derivedUnconfirmed(prefillBases, confirmedIntakeFields).length === 0;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

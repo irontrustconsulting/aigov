@@ -205,6 +205,10 @@ export default function NewSystemPage() {
           confirmedIntakeFields={state.confirmedIntakeFields}
           confirmedFactKeys={state.confirmedFactKeys}
           amendedFactKeys={state.amendedFactKeys}
+          intakePrefillBases={state.intakePrefillBases}
+          onConfirmField={(field) => dispatch({ type: "CONFIRM_INTAKE_FIELD", field })}
+          onFieldChange={(field, value) => dispatch({ type: "SET_INTAKE_FIELD", field, value })}
+          onReviewFacts={() => dispatch({ type: "REVIEW_FACTS" })}
           onCreated={(result, context) =>
             dispatch({
               type: "REGISTERED",

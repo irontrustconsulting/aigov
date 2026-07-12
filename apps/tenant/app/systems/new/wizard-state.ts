@@ -136,6 +136,9 @@ export type WizardAction =
   | { type: "INTAKE_DONE" }
   /** WI-6: carry fact dispositions out of the prefill step (transient, B1). */
   | { type: "PREFILL_DONE"; confirmedFactKeys: string[]; amendedFactKeys: string[] }
+  /** FE-36 (FIX-RESUME-REGATE): lateral navigation from the pre-commit disposition
+   * gate's Review-facts link back to the prefill step; not a boundary advance. */
+  | { type: "REVIEW_FACTS" }
   | {
       type: "REGISTERED";
       result: RegistrationRead;
@@ -168,20 +171,33 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
 
     case "SEED_INTAKE": {
       const fp = action.fieldPrefills;
+      const operatorRoleSeed = fp?.operator_role_id?.value ?? null;
+      const hostingModelSeed = fp?.hosting_model_id?.value ?? null;
+      const lifecycleStageSeed = (fp?.lifecycle_stage?.value as SystemLifecycleStage | undefined) ?? null;
+      const purposeSeed = fp?.purpose?.value ?? null;
+
+      // Structured fields: seed only when currently null (empty-guard)
+      const operatorRoleId = state.operatorRoleId ?? operatorRoleSeed;
+      const hostingModelId = state.hostingModelId ?? hostingModelSeed;
+      const lifecycleStage = state.lifecycleStage ?? lifecycleStageSeed;
+      const purpose = state.purpose ?? purposeSeed;
+
       return {
         ...state,
         // name: seed only when empty (draft-restored > catalogueProductName > blank)
         name: state.name || action.catalogueProductName || "",
-        // Structured fields: seed only when currently null (empty-guard)
-        operatorRoleId: state.operatorRoleId ?? fp?.operator_role_id?.value ?? null,
-        hostingModelId: state.hostingModelId ?? fp?.hosting_model_id?.value ?? null,
-        lifecycleStage: state.lifecycleStage ?? (fp?.lifecycle_stage?.value as SystemLifecycleStage | null) ?? null,
-        purpose: state.purpose ?? fp?.purpose?.value ?? null,
+        operatorRoleId,
+        hostingModelId,
+        lifecycleStage,
+        purpose,
+        // Basis is re-derived value-vs-seed, not value-presence (FIX-RESUME-REGATE,
+        // INV-83 ALTER): a resume-restored value still at its seed re-reads the
+        // seed's basis and re-gates; a value differing from the seed is "user-set".
         intakePrefillBases: {
-          operatorRoleId: state.operatorRoleId ? "user-set" : (fp?.operator_role_id?.basis as IntakeFieldBasis | undefined),
-          hostingModelId: state.hostingModelId ? "user-set" : (fp?.hosting_model_id?.basis as IntakeFieldBasis | undefined),
-          lifecycleStage: state.lifecycleStage ? "user-set" : (fp?.lifecycle_stage?.basis as IntakeFieldBasis | undefined),
-          purpose: state.purpose ? "user-set" : (fp?.purpose?.basis as IntakeFieldBasis | undefined),
+          operatorRoleId: operatorRoleId === operatorRoleSeed ? (fp?.operator_role_id?.basis as IntakeFieldBasis | undefined) : "user-set",
+          hostingModelId: hostingModelId === hostingModelSeed ? (fp?.hosting_model_id?.basis as IntakeFieldBasis | undefined) : "user-set",
+          lifecycleStage: lifecycleStage === lifecycleStageSeed ? (fp?.lifecycle_stage?.basis as IntakeFieldBasis | undefined) : "user-set",
+          purpose: purpose === purposeSeed ? (fp?.purpose?.basis as IntakeFieldBasis | undefined) : "user-set",
         },
       };
     }
@@ -213,6 +229,9 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         confirmedFactKeys: action.confirmedFactKeys,
         amendedFactKeys: action.amendedFactKeys,
       };
+
+    case "REVIEW_FACTS":
+      return { ...state, step: "prefill" };
 
     case "REGISTERED": {
       const { system, use_case, classification } = action.result;

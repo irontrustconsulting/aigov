@@ -4,14 +4,21 @@ import { useState } from "react";
 import { Button, PageHeader, PageScaffold, SectionGroup, SingleSelect, Skeleton, ErrorState, TextInput, type SelectOption } from "@irontrust/ui";
 import type { RegistrationRead, SystemLifecycleStage } from "@irontrust/api-client";
 import {
+  derivedUnconfirmed,
   GroupedMultiSelect,
+  LIFECYCLE_STAGE_OPTIONS,
+  PreCommitDispositionGate,
   useAffectedParties,
   useDataCategories,
   useHumanOversightTypes,
+  useOperatorRoles,
+  usePrefill,
   useProductCategoryMemberships,
   useRegister,
   useUsageContexts,
+  type DerivedDispositionItem,
 } from "@/lib/intake";
+import type { IntakeFieldName, IntakePrefillBases } from "../wizard-state";
 
 export interface UseCaseCreateStepProps {
   // System-stable facts from wizard state (captured at intake step)
@@ -31,6 +38,15 @@ export interface UseCaseCreateStepProps {
   confirmedFactKeys: string[];
   /** WI-6: raw fact.key values overridden in the prefill step (USER_AMENDED). */
   amendedFactKeys: string[];
+  /** FIX-RESUME-REGATE (INV-83 ALTER): basis per seeded intake field, re-derived
+   * value-vs-seed so a resume-restored derived default re-gates correctly. */
+  intakePrefillBases: IntakePrefillBases | null;
+  /** FE-36: confirm/change wiring for the pre-commit disposition gate — same
+   * actions IntakeCaptureStep dispatches (CONFIRM_INTAKE_FIELD / SET_INTAKE_FIELD). */
+  onConfirmField: (field: IntakeFieldName) => void;
+  onFieldChange: (field: IntakeFieldName, value: string | null) => void;
+  /** FE-36: Review-facts link target — navigates back to the prefill step. */
+  onReviewFacts: () => void;
   onCreated: (
     result: RegistrationRead,
     context: {
@@ -76,6 +92,10 @@ export function UseCaseCreateStep({
   confirmedIntakeFields,
   confirmedFactKeys,
   amendedFactKeys,
+  intakePrefillBases,
+  onConfirmField,
+  onFieldChange,
+  onReviewFacts,
   onCreated,
 }: UseCaseCreateStepProps) {
   const [title, setTitle] = useState("");
@@ -90,10 +110,20 @@ export function UseCaseCreateStep({
   const humanOversightTypes = useHumanOversightTypes();
   const dataCategories = useDataCategories();
   const affectedParties = useAffectedParties();
+  const operatorRoles = useOperatorRoles();
+  // V1 (FIX-RESUME-REGATE): cache-shared with page.tsx's usePrefill(state.catalogueProductId) —
+  // same query key, no duplicate fetch. Used for the facts recap count and the
+  // resume-window guard below (a catalogue-linked resume can hit this step before
+  // SEED_INTAKE has re-derived intakePrefillBases from the resolved response).
+  const prefillQuery = usePrefill(catalogueProductId);
   const register = useRegister();
 
-  const vocabQueries = [usageContexts, humanOversightTypes, dataCategories, affectedParties];
-  const isLoading = vocabQueries.some((q) => q.isLoading) || categoryMemberships.isLoading;
+  const vocabQueries = [usageContexts, humanOversightTypes, dataCategories, affectedParties, operatorRoles];
+  // Custom systems never seed field_prefills (D-70) — intakePrefillBases stays
+  // permanently null for them, so the resume-window wait only applies when a
+  // catalogue product is actually driving prefill.
+  const isPrefillPending = Boolean(catalogueProductId) && (prefillQuery.isLoading || intakePrefillBases === null);
+  const isLoading = vocabQueries.some((q) => q.isLoading) || categoryMemberships.isLoading || isPrefillPending;
   const isError = vocabQueries.some((q) => q.isError) || categoryMemberships.isError;
 
   if (isLoading) return <Skeleton />;
@@ -119,8 +149,35 @@ export function UseCaseCreateStep({
     { value: OTHER_OPTION_VALUE, label: "Other / not listed" },
   ];
 
+  // FE-36 (E-compact): the pre-commit disposition gate. derivedItems carries every
+  // derived field (confirmed or not) so an already-confirmed one still shows its
+  // indicator; Register is gated on the unconfirmed subset, computed via the same
+  // shared predicate IntakeCaptureStep uses (V2) so the two can't diverge.
+  const derivedFieldMeta: { field: IntakeFieldName; label: string; value: string | null; options: SelectOption[] }[] = [
+    { field: "operatorRoleId", label: "Operator role", value: operatorRoleId, options: toOptions(operatorRoles.data) },
+    { field: "lifecycleStage", label: "Lifecycle stage", value: lifecycleStage, options: LIFECYCLE_STAGE_OPTIONS },
+  ];
+  const derivedItems: DerivedDispositionItem[] = derivedFieldMeta
+    .filter((f) => intakePrefillBases?.[f.field as keyof IntakePrefillBases] === "derived")
+    .map((f) => ({
+      field: f.field,
+      label: f.label,
+      value: f.value ?? "",
+      options: f.options,
+      confirmed: confirmedIntakeFields.includes(f.field),
+    }));
+  const unconfirmed = derivedUnconfirmed(intakePrefillBases, confirmedIntakeFields);
+  const canRegister = unconfirmed.length === 0;
+  const gateNote =
+    unconfirmed.length > 0
+      ? `Confirm ${unconfirmed
+          .map((f) => derivedFieldMeta.find((m) => m.field === f)?.label.toLowerCase())
+          .join(" and ")} to continue.`
+      : null;
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!canRegister) return;
     const selectedCategoryId =
       intendedUseCategoryId && intendedUseCategoryId !== OTHER_OPTION_VALUE
         ? intendedUseCategoryId
@@ -241,13 +298,24 @@ export function UseCaseCreateStep({
           </div>
         </SectionGroup>
 
+        <PreCommitDispositionGate
+          derivedItems={derivedItems}
+          onConfirm={onConfirmField}
+          onChange={(field, value) => onFieldChange(field, value)}
+          factCount={prefillQuery.data?.facts.length ?? 0}
+          onReviewFacts={onReviewFacts}
+        />
+
         {register.isError && (
           <div role="alert" className="text-sm text-danger">Could not register this system and use case. Check the form and try again.</div>
         )}
 
-        <Button type="submit" disabled={register.isPending}>
-          Continue
-        </Button>
+        <div className="flex items-center gap-3.5">
+          <Button type="submit" disabled={register.isPending || !canRegister}>
+            Register
+          </Button>
+          {gateNote && <span className="text-xs text-ink-muted">{gateNote}</span>}
+        </div>
       </form>
     </PageScaffold>
   );

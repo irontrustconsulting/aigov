@@ -109,6 +109,76 @@ describe("wizardReducer context-gate outcomes", () => {
   });
 });
 
+describe("SEED_INTAKE basis re-derive (FIX-RESUME-REGATE, INV-83 ALTER)", () => {
+  const fieldPrefills = {
+    operator_role_id: { value: "role-deployer", basis: "derived" as const },
+    lifecycle_stage: { value: "production", basis: "derived" as const },
+  };
+
+  test("first seed (null prior value): basis reads the seed's basis, value is seeded", () => {
+    const next = wizardReducer(initialWizardState, {
+      type: "SEED_INTAKE",
+      catalogueProductName: "Acme",
+      fieldPrefills,
+    });
+    expect(next.operatorRoleId).toBe("role-deployer");
+    expect(next.intakePrefillBases?.operatorRoleId).toBe("derived");
+    expect(next.lifecycleStage).toBe("production");
+    expect(next.intakePrefillBases?.lifecycleStage).toBe("derived");
+  });
+
+  test("resume-restored value equal to the derived seed: basis re-reads 'derived' (the fix — was 'user-set')", () => {
+    const resumedState = {
+      ...initialWizardState,
+      operatorRoleId: "role-deployer",
+      lifecycleStage: "production" as const,
+    };
+    const next = wizardReducer(resumedState, {
+      type: "SEED_INTAKE",
+      catalogueProductName: "Acme",
+      fieldPrefills,
+    });
+    expect(next.intakePrefillBases?.operatorRoleId).toBe("derived");
+    expect(next.intakePrefillBases?.lifecycleStage).toBe("derived");
+  });
+
+  test("resume-restored value differing from the seed: basis is 'user-set'", () => {
+    const resumedState = {
+      ...initialWizardState,
+      operatorRoleId: "role-something-else",
+      lifecycleStage: "pilot" as const,
+    };
+    const next = wizardReducer(resumedState, {
+      type: "SEED_INTAKE",
+      catalogueProductName: "Acme",
+      fieldPrefills,
+    });
+    expect(next.intakePrefillBases?.operatorRoleId).toBe("user-set");
+    expect(next.intakePrefillBases?.lifecycleStage).toBe("user-set");
+  });
+
+  test("the restored value itself is never overwritten by the seed", () => {
+    const resumedState = {
+      ...initialWizardState,
+      operatorRoleId: "role-something-else",
+    };
+    const next = wizardReducer(resumedState, {
+      type: "SEED_INTAKE",
+      catalogueProductName: "Acme",
+      fieldPrefills,
+    });
+    expect(next.operatorRoleId).toBe("role-something-else");
+  });
+});
+
+describe("REVIEW_FACTS (FE-36, FIX-RESUME-REGATE)", () => {
+  test("routes to the prefill step (lateral navigation, not a boundary advance)", () => {
+    const useCaseState = { ...initialWizardState, step: "use-case" as const };
+    const next = wizardReducer(useCaseState, { type: "REVIEW_FACTS" });
+    expect(next.step).toBe("prefill");
+  });
+});
+
 describe("resumeResolved (UI-DRAFT-RESUME-GATE, INV-85)", () => {
   test("initialWizardState.resumeResolved is false", () => {
     expect(initialWizardState.resumeResolved).toBe(false);

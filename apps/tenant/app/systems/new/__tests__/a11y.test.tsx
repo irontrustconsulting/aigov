@@ -70,7 +70,9 @@ describe("WI-11 axe pass — wizard screens", () => {
         lifecycleStage={null}
         purpose={null}
         prefillBases={null}
+        confirmedIntakeFields={[]}
         onFieldChange={jest.fn()}
+        onConfirmField={jest.fn()}
         onSubmit={jest.fn()}
       />,
       { wrapper }
@@ -117,6 +119,13 @@ describe("WI-11 axe pass — wizard screens", () => {
         lifecycleStage={null}
         purpose={null}
         draftId={null}
+        confirmedIntakeFields={[]}
+        confirmedFactKeys={[]}
+        amendedFactKeys={[]}
+        intakePrefillBases={null}
+        onConfirmField={jest.fn()}
+        onFieldChange={jest.fn()}
+        onReviewFacts={jest.fn()}
         onCreated={jest.fn()}
       />,
       { wrapper }
