@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 
 beforeAll(() => {
+  process.env.COGNITO_REGION = "eu-west-2";
+  process.env.COGNITO_USER_POOL_ID = "eu-west-2_test";
+  process.env.COGNITO_APP_CLIENT_ID = "test-client-id";
+  process.env.COGNITO_DOMAIN = "irontrustai-users-dev";
   process.env.APP_ORIGIN = "http://localhost:3000";
 });
 

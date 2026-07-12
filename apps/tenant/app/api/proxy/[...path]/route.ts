@@ -56,6 +56,12 @@ async function handle(
   });
 
   const responseBody = await apiResponse.text();
+  // Null-body statuses (204/205/304) must not be passed a body, even "" —
+  // the Response constructor throws.
+  const NULL_BODY_STATUSES = new Set([204, 205, 304]);
+  if (NULL_BODY_STATUSES.has(apiResponse.status)) {
+    return new NextResponse(null, { status: apiResponse.status });
+  }
   return new NextResponse(responseBody, {
     status: apiResponse.status,
     headers: {

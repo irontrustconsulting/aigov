@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { isSameOriginRequest } from "@/lib/auth/csrf";
 import { sessionStore } from "@/lib/auth/in-memory-session-store";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
+import { buildLogoutUrl } from "@/lib/auth/cognito";
 
 export async function POST(request: NextRequest) {
   if (!isSameOriginRequest(request)) {
@@ -14,7 +15,10 @@ export async function POST(request: NextRequest) {
     await sessionStore.destroy(sessionId);
   }
 
-  const response = NextResponse.json({ ok: true, redirectTo: "/" });
+  // Also clear Cognito's own SSO cookie (via its hosted-UI /logout endpoint) —
+  // destroying only the local session leaves Cognito's SSO session alive, so
+  // the very next /api/auth/login silently re-authenticates with no prompt.
+  const response = NextResponse.json({ ok: true, redirectTo: buildLogoutUrl() });
   response.cookies.delete(SESSION_COOKIE_NAME);
   return response;
 }

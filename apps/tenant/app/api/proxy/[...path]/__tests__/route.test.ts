@@ -75,6 +75,32 @@ describe("BFF proxy route", () => {
     expect((init.headers as Record<string, string>)["If-Match"]).toBe("3");
   });
 
+  test("passes through a 204 with no body instead of throwing", async () => {
+    const { getSession } = await import("@/lib/auth/get-session");
+    (getSession as jest.Mock).mockResolvedValue({
+      idToken: "the-id-token",
+      refreshToken: "r",
+      expiresAt: Date.now() + 1000,
+      createdAt: Date.now(),
+      lastSeenAt: Date.now(),
+      userSub: "sub-1",
+    });
+
+    jest.spyOn(global, "fetch").mockResolvedValue({
+      status: 204,
+      text: async () => "",
+      headers: new Headers(),
+    } as Response);
+
+    const { GET } = await import("../route");
+    const request = new NextRequest("http://localhost:3000/api/proxy/v1/draft-registrations/active", {
+      headers: { "sec-fetch-site": "same-origin" },
+    });
+
+    const response = await GET(request, paramsFor(["v1", "draft-registrations", "active"]));
+    expect(response.status).toBe(204);
+  });
+
   test("401s when there is no session", async () => {
     const { getSession } = await import("@/lib/auth/get-session");
     (getSession as jest.Mock).mockResolvedValue(null);

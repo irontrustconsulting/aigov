@@ -13,14 +13,24 @@ export function TopUtilityBar() {
 
   const displayName = data?.name ?? data?.email ?? null;
 
+  const handleSignOut = async () => {
+    const res = await fetch("/api/auth/logout", { method: "POST" });
+    const { redirectTo } = (await res.json()) as { redirectTo: string };
+    window.location.href = redirectTo;
+  };
+
   return (
     <div className="flex h-10 shrink-0 items-center justify-end gap-4 border-b border-hairline bg-surface px-4">
       {displayName && (
         <span className="truncate text-xs text-ink-muted">{displayName}</span>
       )}
-      <a href="/api/auth/logout" className="text-xs text-ink-muted hover:text-ink">
+      <button
+        type="button"
+        onClick={handleSignOut}
+        className="text-xs text-ink-muted hover:text-ink"
+      >
         Sign out
-      </a>
+      </button>
     </div>
   );
 }
