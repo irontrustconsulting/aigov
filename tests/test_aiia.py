@@ -85,8 +85,8 @@ class TestCreateAIIA:
         assert len(curated) == 1
         assert curated[0].response is None
 
-        # snapshotted facts present as USER_PROVIDED with source_ref (system.name)
-        snapshotted = [i for i in by_section["system_overview"] if i.provenance == ProvenanceConfidence.USER_PROVIDED]
+        # snapshotted facts present as USER_CONFIRMED with source_ref (system.name)
+        snapshotted = [i for i in by_section["system_overview"] if i.provenance == ProvenanceConfidence.USER_CONFIRMED]
         assert any(i.source_ref == "system.name" for i in snapshotted)
 
         # proposed risk present, identity-only, with selection_basis
@@ -398,7 +398,7 @@ class TestItemMutation:
         ))
         assert len(events) == 0
 
-    def test_curated_answer_transitions_to_user_provided(
+    def test_curated_answer_transitions_to_user_amended(
         self, db_session, tenant, member, gov_roles, client,
     ):
         aiia, _ = _create_aiia(client, db_session, tenant, member, gov_roles)
@@ -418,7 +418,7 @@ class TestItemMutation:
                 headers={"If-Match": str(item.lock_version)},
             )
         assert r.status_code == 200
-        assert r.json()["provenance"] == "user_provided"
+        assert r.json()["provenance"] == "user_amended"
 
     def test_stale_if_match_412(self, db_session, tenant, member, gov_roles, client):
         aiia, _ = _create_aiia(client, db_session, tenant, member, gov_roles)
@@ -606,13 +606,54 @@ class TestDelete:
         user, m = member
         ctx = _make_ctx(user, m, tenant)
         with _ApiCtx(ctx, db_session):
-            client.patch(
+            r_patch = client.patch(
                 f"/v1/assessments/{aiia['id']}/items/{item.id}",
                 json={"response": "Answered"},
                 headers={"If-Match": str(item.lock_version)},
             )
+            # INV-94: an authored item is worked (USER_AMENDED, source_ref
+            # null) — distinct from a snapshot (USER_CONFIRMED, source_ref set).
+            assert r_patch.json()["provenance"] == "user_amended"
+            db_session.refresh(item)
+            assert item.source_ref is None
             r = client.delete(f"/v1/assessments/{aiia['id']}")
         assert r.status_code == 409
+
+    def test_source_ref_discriminates_snapshot_from_worked_item(
+        self, db_session, tenant, member, gov_roles, client,
+    ):
+        """INV-94: source_ref is the sole discriminator between a
+        USER_CONFIRMED snapshot and a USER_CONFIRMED/USER_AMENDED worked
+        item — both can carry the same provenance tag post-collapse."""
+        aiia, _ = _create_aiia(client, db_session, tenant, member, gov_roles)
+        curated_item = db_session.scalar(
+            select(AssessmentItem).where(
+                AssessmentItem.assessment_id == uuid.UUID(aiia["id"]),
+                AssessmentItem.section_key == "system_overview",
+                AssessmentItem.provenance == ProvenanceConfidence.CATALOGUE_CURATED,
+            )
+        )
+        snapshot_item = db_session.scalar(
+            select(AssessmentItem).where(
+                AssessmentItem.assessment_id == uuid.UUID(aiia["id"]),
+                AssessmentItem.provenance == ProvenanceConfidence.USER_CONFIRMED,
+                AssessmentItem.source_ref.is_not(None),
+            )
+        )
+        assert snapshot_item is not None
+        assert snapshot_item.source_ref == "system.name"
+
+        user, m = member
+        ctx = _make_ctx(user, m, tenant)
+        with _ApiCtx(ctx, db_session):
+            client.patch(
+                f"/v1/assessments/{aiia['id']}/items/{curated_item.id}",
+                json={"response": "Answered"},
+                headers={"If-Match": str(curated_item.lock_version)},
+            )
+        db_session.refresh(curated_item)
+        assert curated_item.provenance == ProvenanceConfidence.USER_AMENDED
+        assert curated_item.source_ref is None
 
     def test_delete_item_cascades_control_links(self, db_session, tenant, member, gov_roles, client):
         aiia, _ = _create_aiia(client, db_session, tenant, member, gov_roles)

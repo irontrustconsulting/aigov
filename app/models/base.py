@@ -154,9 +154,6 @@ class ProvenanceConfidence(str, enum.Enum):
     CATALOGUE_CURATED = "catalogue_curated"
     USER_CONFIRMED = "user_confirmed"
     USER_AMENDED = "user_amended"
-    # User-origin content with no system default behind it — a section
-    # answer, a from-scratch item, or a snapshotted register fact (AIIA sprint).
-    USER_PROVIDED = "user_provided"
 
 
 class SectionApplicability(str, enum.Enum):

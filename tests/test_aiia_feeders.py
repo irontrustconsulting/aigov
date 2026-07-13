@@ -132,7 +132,7 @@ class TestCreateFeeder:
             )
         ))
         snapshotted = [
-            i for i in items if i.provenance == ProvenanceConfidence.USER_PROVIDED
+            i for i in items if i.provenance == ProvenanceConfidence.USER_CONFIRMED
         ]
         assert any(i.response == "Job applicants" for i in snapshotted)
         assert any(

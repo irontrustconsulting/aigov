@@ -211,7 +211,7 @@ class TestAmendItemTreatmentPath:
         assert updated.treatment_decision == TreatmentDecision.ACCEPT
         assert updated.treatment_rationale == "Acceptable residual risk"
         # Provenance untouched (#9 / design doc §5.4, #5) — still
-        # USER_CONFIRMED, never flipped toward USER_PROVIDED.
+        # USER_CONFIRMED, never flipped toward USER_AMENDED.
         assert updated.provenance == ProvenanceConfidence.USER_CONFIRMED
 
     def test_treatment_write_on_ai_suggested_item_409(

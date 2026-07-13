@@ -10,7 +10,10 @@
  *        REQUIRES_CONTEXT/UNCLASSIFIED. F3 bootstraps without F4 sign-off.
  *   V-2  AssessmentDetail: lock_version in body; source_assessment_id for feeder surfacing.
  *   V-3  Five If-Match routes confirmed: PATCH items, confirm, submit, review, reopen.
- *   V-5  ProvenanceConfidence is 5-value (user_provided added to enum mirror).
+ *   V-5  ProvenanceConfidence is 4-value (AI_SUGGESTED, CATALOGUE_CURATED,
+ *        USER_CONFIRMED, USER_AMENDED). The ORM briefly carried a fifth
+ *        USER_PROVIDED member as undetected debt — retired by
+ *        FIX-PROVENANCE-ENUM-DRIFT; it was never intended, not a mirror.
  *   V-6  FeederRecommendationRead: {type, applicability, basis, exists}.
  *   V-7  Gates: bootstrap/submit = gov:system_owner; items = gov:write.
  *   V-8  Required feeders DO gate structural_assessment_readiness (park on

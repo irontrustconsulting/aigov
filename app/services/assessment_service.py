@@ -18,7 +18,7 @@ import uuid
 from dataclasses import dataclass
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, or_, select, update
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -95,7 +95,7 @@ _AUTHORING_FIELDS = (
     "mitigation_plan",
 )
 # Treatment fields (Sprint 5 WI-10) — same disposition gate, but written
-# provenance-neutral: never enters the CATALOGUE_CURATED -> USER_PROVIDED
+# provenance-neutral: never enters the CATALOGUE_CURATED -> USER_AMENDED
 # flip _AUTHORING_FIELDS changes do (design doc §5.4, #5).
 _TREATMENT_FIELDS = ("treatment_decision", "treatment_rationale")
 
@@ -225,7 +225,7 @@ def _add_snapshot_item(
     response: str,
     source_ref: str,
 ) -> None:
-    """USER_PROVIDED, point-in-time snapshot of a register fact — the
+    """USER_CONFIRMED, point-in-time snapshot of a register fact — the
     resolved label is frozen, never the bare FK id (design doc §5/§5.4)."""
     db.add(
         AssessmentItem(
@@ -235,7 +235,7 @@ def _add_snapshot_item(
             section_key=section_key,
             prompt=prompt,
             response=response,
-            provenance=ProvenanceConfidence.USER_PROVIDED,
+            provenance=ProvenanceConfidence.USER_CONFIRMED,
             source_ref=source_ref,
         )
     )
@@ -469,7 +469,7 @@ def create_aiia(use_case_id: uuid.UUID, ctx: TenantContext, db: Session) -> Asse
         skip_section_key=RISK_SECTION_KEY,
     )
 
-    # --- Pre-fill 2: snapshot inherited register facts (USER_PROVIDED) ------
+    # --- Pre-fill 2: snapshot inherited register facts (USER_CONFIRMED) -----
     snapshot_count = 0
     if system is not None:
         snapshot_facts: list[tuple[str, str, str]] = [
@@ -1051,7 +1051,7 @@ def create_item_from_section(
         prompt=tmpl.prompt,
         response=response,
         provenance=(
-            ProvenanceConfidence.USER_PROVIDED
+            ProvenanceConfidence.USER_AMENDED
             if response is not None
             else ProvenanceConfidence.CATALOGUE_CURATED
         ),
@@ -1125,7 +1125,7 @@ def amend_item(
     new_provenance = item.provenance
     if changes:
         new_provenance = (
-            ProvenanceConfidence.USER_PROVIDED
+            ProvenanceConfidence.USER_AMENDED
             if item.provenance == ProvenanceConfidence.CATALOGUE_CURATED
             else item.provenance
         )
@@ -1289,25 +1289,21 @@ def _is_pristine(assessment: Assessment, db: Session) -> bool:
 
     # "Worked" = a human acted on the item: confirmed/amended a proposed
     # risk, or answered a curated section prompt. System-snapshotted
-    # register facts are also USER_PROVIDED but carry a source_ref and are
-    # present from the moment of creation — they must not block the
-    # create/delete/re-create path, so they're excluded here.
+    # register facts are also USER_CONFIRMED but carry a source_ref and are
+    # present from the moment of creation — source_ref IS NULL (INV-94) is
+    # the sole discriminator that excludes them, so they must not block the
+    # create/delete/re-create path.
     worked_item = db.scalar(
         select(AssessmentItem.id)
         .where(
             AssessmentItem.assessment_id == assessment.id,
-            or_(
-                AssessmentItem.provenance.in_(
-                    [
-                        ProvenanceConfidence.USER_CONFIRMED,
-                        ProvenanceConfidence.USER_AMENDED,
-                    ]
-                ),
-                and_(
-                    AssessmentItem.provenance == ProvenanceConfidence.USER_PROVIDED,
-                    AssessmentItem.source_ref.is_(None),
-                ),
+            AssessmentItem.provenance.in_(
+                [
+                    ProvenanceConfidence.USER_CONFIRMED,
+                    ProvenanceConfidence.USER_AMENDED,
+                ]
             ),
+            AssessmentItem.source_ref.is_(None),
         )
         .limit(1)
     )

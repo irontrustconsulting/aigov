@@ -112,7 +112,7 @@ class AssessmentItemAmend(BaseModel):
     A request with every field None is a content-less no-op (no event, no
     provenance change, design doc §4). treatment_decision/treatment_rationale
     are written provenance-neutral — they never trigger the
-    CATALOGUE_CURATED -> USER_PROVIDED flip the other authoring fields do."""
+    CATALOGUE_CURATED -> USER_AMENDED flip the other authoring fields do."""
     response: str | None = None
     likelihood: int | None = None
     severity: int | None = None
