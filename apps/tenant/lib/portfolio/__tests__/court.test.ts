@@ -1,4 +1,4 @@
-import { isClearanceBlock, isYourCourt, resolveCourt } from "../court";
+import { courtHref, isClearanceBlock, isYourCourt, resolveCourt } from "../court";
 import type { GateResultRead } from "@irontrust/api-client";
 
 function blocking(overrides: Partial<GateResultRead>): GateResultRead {
@@ -120,5 +120,35 @@ describe("isClearanceBlock (UI-F10-CLEARANCE, DF-CLR-13/V-a)", () => {
       blocking({ responsible_party: "reviewer", reason_code: "vendor_not_started" })
     );
     expect(isClearanceBlock(court)).toBe(false);
+  });
+});
+
+describe("courtHref (UI-COURT-ACT-ROUTING, INV-92/D-81)", () => {
+  test("a clearance-block court routes to /clearances", () => {
+    const court = resolveCourt(
+      blocking({ responsible_party: "authoriser", reason_code: "vendor_not_started" })
+    );
+    expect(courtHref(court, "uc-1")).toBe("/clearances");
+  });
+
+  test("a 'user' court routes to /use-cases/{id}", () => {
+    const court = resolveCourt(blocking({ responsible_party: "user" }));
+    expect(courtHref(court, "uc-1")).toBe("/use-cases/uc-1");
+  });
+
+  test("an 'authoriser' + no_current_authorisation court (deployment authorisation, not clearance) routes to /use-cases/{id}", () => {
+    const court = resolveCourt(
+      blocking({ responsible_party: "authoriser", reason_code: "no_current_authorisation" })
+    );
+    expect(courtHref(court, "uc-1")).toBe("/use-cases/uc-1");
+  });
+
+  test("a 'reviewer' court routes to /use-cases/{id}", () => {
+    const court = resolveCourt(blocking({ responsible_party: "reviewer" }));
+    expect(courtHref(court, "uc-1")).toBe("/use-cases/uc-1");
+  });
+
+  test("a null court routes to /use-cases/{id} (total resolver, unreachable from either call site)", () => {
+    expect(courtHref(null, "uc-1")).toBe("/use-cases/uc-1");
   });
 });

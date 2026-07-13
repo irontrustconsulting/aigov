@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { useMe, useActiveDraft } from "@/lib/intake";
-import { isClearanceBlock, isYourCourt, resolveCourt, useSystems, usePortfolio } from "@/lib/portfolio";
+import { courtHref, isYourCourt, resolveCourt, useSystems, usePortfolio } from "@/lib/portfolio";
 import {
   WhoseCourtIndicator,
   VerdictChip,
@@ -187,14 +187,7 @@ function PortfolioHub({ roleKeys }: { roleKeys: Set<string> }) {
         ) : (
           <ul className="space-y-2">
             {yourCourtEntries.map(({ system, useCase, court }) => {
-              // DF-CLR-13/V-a: authoriser-court rows blocked on the vendor/
-              // product clearance gates route to /clearances; every other
-              // court (including a deployment-authorisation block, still
-              // handled by AuthorisePanel on the system drill-in) keeps its
-              // existing /systems/{id} destination.
-              const href = isClearanceBlock(court)
-                ? "/clearances"
-                : `/systems/${system.system_id}`;
+              const href = courtHref(court, useCase.use_case_id);
               return (
                 <li key={useCase.use_case_id}>
                   <Link

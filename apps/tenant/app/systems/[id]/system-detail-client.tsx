@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMe } from "@/lib/intake";
-import { isClearanceBlock, isYourCourt, resolveCourt, useSystemRollup } from "@/lib/portfolio";
+import { courtHref, isClearanceBlock, isYourCourt, resolveCourt, useSystemRollup } from "@/lib/portfolio";
 import { useSystemCoverage, useSystemExport } from "@/lib/audit";
 import { useEvidenceDetail } from "@/lib/evidence";
 import { WhoseCourtIndicator, CoverageMatrix, AuditPackView } from "@irontrust/ui";
@@ -58,7 +58,7 @@ export function SystemDetailClient({ systemId }: { systemId: string }) {
                   {isYourCourt(court, roleKeys) && isClearanceBlock(court) && (
                     <>
                       {" "}
-                      <Link href="/clearances" className="underline">
+                      <Link href={courtHref(court, useCase.use_case_id)} className="underline">
                         Go to clearances →
                       </Link>
                     </>

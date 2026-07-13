@@ -80,3 +80,15 @@ export function isClearanceBlock(court: ResolvedCourt | null): boolean {
     (court.reasonCode.startsWith("vendor_") || court.reasonCode.startsWith("product_"))
   );
 }
+
+/**
+ * UI-COURT-ACT-ROUTING (INV-92, D-81): single home for your-court routing.
+ * A court routes to the surface that carries its act — clearance courts
+ * (vendor/product-scoped, D-79) to /clearances, every other use-case-scoped
+ * court to /use-cases/{id} (owner start, reviewer review/sign-off, and
+ * deployment-authorisation all live there — never /systems/{id}, a
+ * read/rollup surface with no act, DOMAIN §3).
+ */
+export function courtHref(court: ResolvedCourt | null, useCaseId: string): string {
+  return court && isClearanceBlock(court) ? "/clearances" : `/use-cases/${useCaseId}`;
+}

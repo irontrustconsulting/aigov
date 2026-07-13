@@ -92,7 +92,7 @@ describe("WI-5: your-court forward routing (DF-CLR-13/V-a)", () => {
     expect(link).toHaveAttribute("href", "/clearances");
   });
 
-  test("an authoriser-court row blocked on deployment-authorisation (not a clearance gate) keeps /systems/{id}", async () => {
+  test("an authoriser-court row blocked on deployment-authorisation (not a clearance gate) routes to /use-cases/{id}", async () => {
     const portfolio: SystemRollupRead[] = [
       {
         system_id: "sys-1",
@@ -119,10 +119,10 @@ describe("WI-5: your-court forward routing (DF-CLR-13/V-a)", () => {
     await waitFor(() => expect(screen.getByLabelText("your-court")).toBeInTheDocument());
     const region = screen.getByLabelText("your-court");
     const link = within(region).getByText("Credit scoring").closest("a");
-    expect(link).toHaveAttribute("href", "/systems/sys-1");
+    expect(link).toHaveAttribute("href", "/use-cases/uc-1");
   });
 
-  test("reviewer-court and owner-court rows retain /systems/{id}", async () => {
+  test("reviewer-court and owner-court rows route to /use-cases/{id}", async () => {
     const portfolio: SystemRollupRead[] = [
       {
         system_id: "sys-owner",
@@ -170,11 +170,11 @@ describe("WI-5: your-court forward routing (DF-CLR-13/V-a)", () => {
     const region = screen.getByLabelText("your-court");
     expect(within(region).getByText("Owner task").closest("a")).toHaveAttribute(
       "href",
-      "/systems/sys-owner"
+      "/use-cases/uc-owner"
     );
     expect(within(region).getByText("Reviewer task").closest("a")).toHaveAttribute(
       "href",
-      "/systems/sys-reviewer"
+      "/use-cases/uc-reviewer"
     );
   });
 

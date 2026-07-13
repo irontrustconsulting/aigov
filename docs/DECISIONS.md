@@ -837,6 +837,11 @@ Review queue is hidden from non-reviewers on SoD grounds (D-4/D-10); Clearances 
 Rejected: authoriser-only Clearances nav (treats navigation as a worklist, contradicts DF-CLR-17's read-for-all posture); reading FE-8 as act-controls-only (leaves the pre-existing Review-queue leak unspecified).
 ↳ origin: UI-F10-CLEARANCE · refs: FE-8, UX-5, D-4, FE-24, INV-91
 
+**D-81** · Every non-clearance your-court entry routes to `/use-cases/{use_case_id}`, the surface that actually carries its act; `/systems/{id}` is retired as a court destination
+Owner (`no_aiia`, treatment items), reviewer (`tier_not_ratified`, `assessment_not_approved`), and authoriser (`no_current_authorisation`, deployment authorisation) courts all resolve their act on `/use-cases/{id}` — `NoAssessmentState`, the review panel, the sign-off panel, and `AuthorisePanel` all live there, not on the system drill-in. `/systems/{id}` is a read/rollup surface with no act (DOMAIN §3). This **supersedes DF-CLR-21's non-clearance-destination clause** (which kept the deployment-authorisation court on `/systems/{id}` on the false premise that `AuthorisePanel` was on the system drill-in) while **retaining DF-CLR-21's `reason_code` clearance discriminator** unchanged — `isClearanceBlock()` still keys on `reason_code` (`vendor_*`/`product_*`), not `responsible_party` alone, and clearance courts still route to `/clearances` (D-79).
+Rejected: adding a `Start assessment` control onto the rollup surface — violates single-home (the act's home is `/use-cases/{id}`) and only fixes the owner case, leaving the authoriser mis-route live; routing reviewer courts to `/review` — the review queue itself funnels every row to `/use-cases/{id}` (DF4-1/DF4-2), so this would reproduce the defect for reviewers.
+↳ origin: UI-COURT-ACT-ROUTING · refs: D-4, D-79, D-80, DF-CLR-13, DF-CLR-21, DF4-1, DF4-2, INV-30, INV-91, INV-92
+
 **Pre-flight deviations from the design doc (WI-0), resolved before build — see the design doc's own V-a/SV-14 for the anticipated contingencies:**
 
 **DF-CLR-21** · Court-resolved routing keys on `reason_code`, not `responsible_party` alone (sprint-local)

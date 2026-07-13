@@ -59,6 +59,8 @@
 
 **Route inventory (`UI-F10-CLEARANCE`):** no table/enum/migration delta. `GET /clearance-queue` (`gov:ALL`, additive schema `ClearanceQueueRead`) is the vendor-grouped read of both tables above, recomputed live — see `API-ROUTES.md` §2 for the full route contract. Set/update remains `PUT /vendors\|products/{id}/approval` (`gov:authoriser`, unchanged).
 
+**`UI-COURT-ACT-ROUTING`:** no schema delta. Presentational routing correction only (`courtHref()` in `apps/tenant/lib/portfolio/court.ts`) — no table, enum, migration, or route touched.
+
 ### Classification & decision tree
 | Table | Plane | Notes |
 |---|---|---|
